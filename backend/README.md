@@ -6,7 +6,7 @@ photo, plus the deterministic styling-rules engine, Vibe Profile and Action Plan
 ## Local
 
 ```bash
-docker compose up                    # API :8000 + Postgres + Redis
+docker compose up                    # API :8000 + Postgres
 .venv/Scripts/alembic upgrade head   # once; migrations are not auto-run
 .venv/Scripts/python -m pytest -q
 ```
@@ -27,10 +27,30 @@ Set these in the service's **Environment** tab — never in the repo:
 | `FIREBASE_PROJECT_ID` | for login | public value; must match the mobile app |
 | `CORS_ORIGINS` | yes | comma-separated client origins |
 | `GEMINI_API_KEY` / `GROQ_API_KEY` | no | LLM only rephrases grounded output |
-| `AWS_*` | no | without them uploads use `local://` placeholders |
+| `AWS_*` / `S3_*` | no | S3-compatible storage; see below |
 
-`REDIS_URL` is optional — `CacheService` degrades to a cache-miss when Redis is
-unreachable, so the service runs fine without it.
+There is **no cache service to provision** — the cache is in-process (TTL + LRU,
+`services/cache_service.py`). The whole deployment is this service plus Neon
+Postgres.
+
+### Image storage (optional)
+
+Without an access key, photos are analyzed in memory and never retained; the
+stored URL is a `local://` placeholder. Upload failures are non-fatal — storage
+is not on the critical path, so a scan never fails because the bucket is down.
+
+For Cloudflare R2 (free tier, zero egress):
+
+```
+AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY   R2 API token
+AWS_S3_BUCKET                               bucket name
+AWS_REGION                                  auto
+S3_ENDPOINT_URL                             https://<account-id>.r2.cloudflarestorage.com
+S3_PUBLIC_BASE_URL                          https://pub-<hash>.r2.dev  (or custom domain)
+```
+
+`S3_PUBLIC_BASE_URL` is required for R2 because its public URL is unrelated to
+its API endpoint. Leave it blank for AWS S3 and the standard URL form is used.
 
 After the first deploy, run migrations once against the hosted database:
 

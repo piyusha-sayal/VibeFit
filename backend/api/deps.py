@@ -4,7 +4,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from core.database import get_db
-from core.redis import get_redis
 from core.security import decode_token
 from core.firebase_auth import verify_firebase_token
 from models.user import User
@@ -14,6 +13,10 @@ from services.ai_service import AIService
 bearer = HTTPBearer()
 _ai_service: AIService | None = None
 
+# Process-wide so the image-hash cache actually persists between requests;
+# a per-request instance would never hit.
+_cache = CacheService()
+
 
 def get_ai_service() -> AIService:
     global _ai_service
@@ -22,8 +25,8 @@ def get_ai_service() -> AIService:
     return _ai_service
 
 
-async def get_cache(redis=Depends(get_redis)) -> CacheService:
-    return CacheService(redis)
+async def get_cache() -> CacheService:
+    return _cache
 
 
 async def get_current_user(

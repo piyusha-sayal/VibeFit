@@ -6,11 +6,8 @@ services:
     env_file: ./backend/.env
     environment:
       - DATABASE_URL=postgresql+asyncpg://vibefit:vibefit@db:5432/vibefit
-      - REDIS_URL=redis://redis:6379
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     volumes:
       - ./backend:/app
@@ -32,18 +29,5 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
 volumes:
   postgres_data:
-  redis_data:

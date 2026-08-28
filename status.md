@@ -56,7 +56,9 @@ proportion guidance, multi-photo aggregate, per-metric quality flags,
 image-hash caching, progress tracking.
 
 ## Verified State (2026-08-28)
-- Backend: **142/142 pytest passing** (was 129; +13 async-analysis, cache & migration tests)
+- Backend: **145/145 pytest passing** (was 129). Suite runtime 142s → 38s once
+  Redis connection timeouts were gone.
+- Deployment surface: **Render + Neon only** (+ optional Cloudflare R2)
 - Database: **Neon Postgres 18.6 live**, `alembic upgrade head` applied, all 9
   tables + `alembic_version` at `0002_profile_plan`
 - Mobile: **tsc 0 errors**, `expo export --platform ios` exit 0
@@ -109,6 +111,34 @@ Instead: host the backend, and stop its availability gating the UX.
   `app_port: 8000`) and the `git subtree push --prefix=backend` recipe, since a
   Space needs the Dockerfile at its root.
 - `docs/ENVIRONMENT.md` documents every backend + mobile env key.
+
+### Simplified to Render + Neon (2026-08-28)
+
+Hugging Face now gates the Docker SDK behind a paid plan, so Spaces is out.
+Retargeted to Render free tier — and **measured** the memory rather than
+assuming it: peak RSS through all 7 analyzers is **~212 MB** (197 MB of that is
+imports) against the 512 MB limit. The RAM worry that originally ruled Render
+out was wrong. Keep one uvicorn worker; each extra costs another ~200 MB.
+
+- **Redis removed entirely.** `core/redis.py` deleted, lifespan hook dropped,
+  `REDIS_URL` gone from config, `redis[hiredis]` out of requirements. The only
+  consumer was image-hash reuse in `_run_ml`, so `CacheService` is now an
+  in-process TTL + LRU cache (capped at 128 entries — results embed 468
+  landmarks each, and this runs in a 512 MB container). One fewer service, and
+  the test suite went 142s → 38s because it had been waiting on Redis timeouts.
+- **Storage is S3-compatible, pointed at Cloudflare R2.** Added
+  `S3_ENDPOINT_URL` + `S3_PUBLIC_BASE_URL` (R2's public URL is unrelated to its
+  API endpoint, unlike S3's). Upload now runs off the event loop via
+  `asyncio.to_thread` and is non-fatal on failure — storage is not on the
+  critical path, so a scan never fails because the bucket is down. With no
+  credentials, photos are analyzed in memory and never retained.
+- `Dockerfile` CMD is shell form so `${PORT:-8000}` expands — Render injects
+  `$PORT` and exec form would have passed the literal string.
+- `render.yaml` Blueprint added; every secret is `sync: false`.
+- `docker-compose.yml` no longer runs Redis.
+
+Deployment is now: **Render (compute) + Neon (Postgres)**, with R2 optional.
+GitHub is not required — Render can deploy from its own git remote or the CLI.
 
 ### Migration chain was broken (fixed 2026-08-28)
 

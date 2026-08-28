@@ -33,6 +33,20 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # Cloudflare R2 image storage (S3-compatible). Without these, photos are
+      # analyzed in memory and never retained.
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
+      - key: AWS_REGION
+        value: auto
 
       # --- fixed ---
       - key: ENVIRONMENT
@@ -42,9 +56,8 @@ services:
 
 # Notes
 # -----
-# REDIS_URL is intentionally omitted: CacheService degrades to a cache-miss when
-# Redis is unreachable, so the service runs without it. Add it later (Upstash
-# free tier) purely as an optimisation.
+# There is no cache service to provision: the cache is in-process (TTL + LRU,
+# services/cache_service.py). Deployment is this service plus Neon Postgres.
 #
 # The free plan sleeps after 15 minutes idle (~30-60s cold start). Measured peak
 # memory for the full ML pipeline is ~212 MB against the 512 MB limit, so RAM is

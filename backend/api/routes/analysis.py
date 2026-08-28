@@ -30,7 +30,12 @@ _s3_client = None
 
 
 def _get_s3():
-    """Build the boto3 S3 client once and reuse it (clients are thread-safe)."""
+    """Build the boto3 client once and reuse it (clients are thread-safe).
+
+    Works against AWS S3 or any S3-compatible store. For Cloudflare R2, set
+    S3_ENDPOINT_URL to https://<account-id>.r2.cloudflarestorage.com and
+    AWS_REGION=auto.
+    """
     global _s3_client
     if _s3_client is None:
         _s3_client = boto3.client(
@@ -38,16 +43,40 @@ def _get_s3():
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
             region_name=settings.aws_region,
+            endpoint_url=settings.s3_endpoint_url or None,
         )
     return _s3_client
 
 
+def _public_url(key: str) -> str:
+    """R2's public URL (r2.dev subdomain or custom domain) is unrelated to its
+    API endpoint, so it has to be configured explicitly; fall back to the
+    conventional AWS S3 virtual-host form."""
+    if settings.s3_public_base_url:
+        return f"{settings.s3_public_base_url.rstrip('/')}/{key}"
+    return f"https://{settings.aws_s3_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
+
+
 async def _upload_to_s3(data: bytes, content_type: str) -> str:
+    """Store the image and return its URL.
+
+    Without credentials this is a no-op returning a placeholder: the image is
+    still analyzed in memory, it just is not retained anywhere.
+    """
     if not settings.aws_access_key_id:
         return f"local://{uuid.uuid4()}"
     key = f"uploads/{uuid.uuid4()}"
-    _get_s3().put_object(Bucket=settings.aws_s3_bucket, Key=key, Body=data, ContentType=content_type)
-    return f"https://{settings.aws_s3_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
+    try:
+        await asyncio.to_thread(
+            _get_s3().put_object,
+            Bucket=settings.aws_s3_bucket, Key=key, Body=data, ContentType=content_type,
+        )
+    except Exception:
+        # Storage is not on the critical path — the analysis only needs the
+        # bytes in memory. Losing the stored copy must not fail the scan.
+        logger.exception("image upload failed; continuing without a stored copy")
+        return f"local://{uuid.uuid4()}"
+    return _public_url(key)
 
 
 async def _run_analysis_job(

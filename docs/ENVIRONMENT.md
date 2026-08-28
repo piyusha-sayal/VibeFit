@@ -29,9 +29,9 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=30
 
-# --- cache (optional) ---
-# Unreachable Redis degrades to cache-miss; it does not break analysis.
-REDIS_URL=redis://localhost:6379/0
+# --- cache ---
+# None. The cache is in-process (services/cache_service.py) — no Redis, no
+# external service. Entries are lost on restart, by design.
 
 # --- AI (all optional) ---
 # The app is fully functional with none of these set: the deterministic rules
@@ -43,12 +43,25 @@ GEMINI_MODEL=gemini-2.5-flash
 GEMINI_FALLBACK_MODEL=gemini-2.5-flash-lite
 GROQ_MODEL=llama-3.3-70b-versatile
 
-# --- image storage (optional) ---
-# Without credentials, uploads fall back to local:// placeholder URLs.
+# --- image storage (optional, S3-compatible) ---
+# Without an access key, uploads return a local:// placeholder — the photo is
+# still analyzed in memory, it is just never retained. Upload failures are also
+# non-fatal: a scan never fails because storage is down.
+#
+# Cloudflare R2 (free tier, zero egress fees):
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY = R2 API token credentials
+#   AWS_S3_BUCKET       = your R2 bucket name
+#   AWS_REGION          = auto
+#   S3_ENDPOINT_URL     = https://<account-id>.r2.cloudflarestorage.com
+#   S3_PUBLIC_BASE_URL  = https://pub-<hash>.r2.dev  (or your custom domain)
+# R2's public URL is unrelated to its API endpoint, so it must be set
+# explicitly; leave it blank for AWS S3 and the standard URL form is used.
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_S3_BUCKET=vibefit-uploads
 AWS_REGION=us-east-1
+S3_ENDPOINT_URL=
+S3_PUBLIC_BASE_URL=
 
 # --- runtime ---
 ENVIRONMENT=development
@@ -102,7 +115,7 @@ silently no-oping.
 ## Local run
 
 ```bash
-docker compose up                              # API :8000 + Postgres + Redis
+docker compose up                              # API :8000 + Postgres
 cd backend && .venv/Scripts/alembic upgrade head   # once; migrations are not auto-run
 cd mobile && npx expo start
 ```

@@ -3,7 +3,6 @@ import os
 # Provide required settings before any app module imports core.config.
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
-os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 import asyncio
 import io
