@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeFit — Mobile UI v2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; background:#080604; }
+    ::-webkit-scrollbar { display:none; }
+    * { scrollbar-width:none; }
+
+    @keyframes ringPulse {
+      0% { transform:scale(1); opacity:.55; }
+      100% { transform:scale(1.55); opacity:0; }
+    }
+    @keyframes scanLine {
+      0%,100% { transform:translateY(-80px); opacity:.8; }
+      50%     { transform:translateY(80px);  opacity:.3; }
+    }
+    @keyframes breathe {
+      0%,100% { opacity:.35; }
+      50%     { opacity:.7; }
+    }
+    @keyframes typeDot {
+      0%,80%,100% { transform:translateY(0);  opacity:.35; }
+      40%         { transform:translateY(-5px); opacity:1; }
+    }
+    @keyframes shimmer {
+      from { background-position:-200% center; }
+      to   { background-position: 200% center; }
+    }
+    @keyframes softFloat {
+      0%,100% { transform:translateY(0); }
+      50%     { transform:translateY(-4px); }
+    }
+    .ring-1 { animation: ringPulse 2.4s ease-out infinite; }
+    .ring-2 { animation: ringPulse 2.4s ease-out .8s infinite; }
+    .ring-3 { animation: ringPulse 2.4s ease-out 1.6s infinite; }
+    .scan-line { animation: scanLine 2.2s ease-in-out infinite; }
+    .breathe { animation: breathe 3s ease-in-out infinite; }
+    .float { animation: softFloat 4s ease-in-out infinite; }
+    .dot-1 { animation: typeDot 1.4s ease-in-out infinite; }
+    .dot-2 { animation: typeDot 1.4s ease-in-out .2s infinite; }
+    .dot-3 { animation: typeDot 1.4s ease-in-out .4s infinite; }
+    .gold-shimmer {
+      background: linear-gradient(90deg,#c9a87c,#f0dcb0,#c9a87c,#a87d4c,#c9a87c);
+      background-size:250% auto;
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      animation: shimmer 4s linear infinite;
+    }
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ── TOKENS ────────────────────────────────────────────────────
+const C = {
+  bg:        '#0c0a07',
+  surface:   '#1c1914',
+  surface2:  '#272219',
+  surface3:  '#322c22',
+  gold:      '#c9a87c',
+  goldLight: '#e8d5a8',
+  goldDim:   'rgba(201,168,124,0.12)',
+  goldBorder:'rgba(201,168,124,0.25)',
+  amber:     '#d4892a',
+  text:      '#f2ede4',
+  textMuted: '#8a7e6e',
+  textSubtle:'#4a4236',
+  green:     '#6db886',
+  red:       'rgba(192,112,112,0.9)',
+  redDim:    'rgba(192,112,112,0.08)',
+  redBorder: 'rgba(192,112,112,0.22)',
+};
+const cardGrad = `linear-gradient(145deg,#201b12 0%,#140f09 100%)`;
+const heroGrad = `linear-gradient(135deg,#2c2010 0%,#1a1409 50%,#0f0b07 100%)`;
+const serif = "'DM Serif Display',Georgia,serif";
+const sans  = "'Plus Jakarta Sans',system-ui,sans-serif";
+
+// ── ILLUSTRATIONS ─────────────────────────────────────────────
+
+const Face = ({ color='#c9a87c', size=70 }) => (
+  <svg width={size} height={size*1.15} viewBox="0 0 70 80" fill="none">
+    <path d="M12 36 Q12 10 35 8 Q58 10 58 36" fill={color} fillOpacity=".08" stroke={color} strokeWidth="1.2" strokeOpacity=".35"/>
+    <path d="M12 38 Q10 55 14 66" stroke={color} strokeWidth="1" strokeOpacity=".25"/>
+    <path d="M58 38 Q60 55 56 66" stroke={color} strokeWidth="1" strokeOpacity=".25"/>
+    <ellipse cx="35" cy="48" rx="21" ry="27" stroke={color} strokeWidth="1.4"/>
+    <ellipse cx="27" cy="42" rx="2.8" ry="3.2" fill={color} fillOpacity=".7"/>
+    <ellipse cx="43" cy="42" rx="2.8" ry="3.2" fill={color} fillOpacity=".7"/>
+    <path d="M35 49 L32 57 Q35 59 38 57 L35 49" stroke={color} strokeWidth="1" fill="none" strokeOpacity=".4"/>
+    <path d="M27 64 Q31 68 35 67 Q39 68 43 64" stroke={color} strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+    <path d="M27 64 Q30 62 32 63 Q35 61 38 63 Q40 62 43 64" stroke={color} strokeWidth=".9" strokeOpacity=".5" strokeLinecap="round" fill="none"/>
+  </svg>
+);
+
+const HairLob = ({ color='#c9a87c' }) => (
+  <svg viewBox="0 0 80 96" fill="none" style={{ width:'100%', height:'100%' }}>
+    <path d="M13 38 Q13 14 40 10 Q67 14 67 38 L65 68 Q55 82 40 82 Q25 82 15 68 Z" fill={color} fillOpacity=".07" stroke={color} strokeWidth="1.2" strokeOpacity=".35"/>
+    <ellipse cx="40" cy="52" rx="19" ry="24" fill="#0c0a07" stroke={color} strokeWidth="1.2"/>
+    <ellipse cx="32" cy="46" rx="2.2" ry="2.6" fill={color} fillOpacity=".55"/>
+    <ellipse cx="48" cy="46" rx="2.2" ry="2.6" fill={color} fillOpacity=".55"/>
+    <path d="M34 63 Q40 67 46 63" stroke={color} strokeWidth="1.3" strokeLinecap="round" fill="none" strokeOpacity=".7"/>
+  </svg>
+);
+
+const HairCurtain = ({ color='#c9a87c' }) => (
+  <svg viewBox="0 0 80 96" fill="none" style={{ width:'100%', height:'100%' }}>
+    <path d="M13 36 Q13 14 40 10 Q67 14 67 36 L69 58 Q61 74 40 76 Q19 74 11 58 Z" fill={color} fillOpacity=".07" stroke={color} strokeWidth="1.2" strokeOpacity=".35"/>
+    <path d="M20 38 Q27 24 33 36" stroke={color} strokeWidth="1.8" fill="none" strokeOpacity=".6" strokeLinecap="round"/>
+    <path d="M60 38 Q53 24 47 36" stroke={color} strokeWidth="1.8" fill="none" strokeOpacity=".6" strokeLinecap="round"/>
+    <ellipse cx="40" cy="52" rx="19" ry="24" fill="#0c0a07" stroke={color} strokeWidth="1.2"/>
+    <ellipse cx="32" cy="46" rx="2.2" ry="2.6" fill={color} fillOpacity=".55"/>
+    <ellipse cx="48" cy="46" rx="2.2" ry="2.6" fill={color} fillOpacity=".55"/>
+    <path d="M34 63 Q40 67 46 63" stroke={color} strokeWidth="1.3" strokeLinecap="round" fill="none" strokeOpacity=".7"/>
+  </svg>
+);
+
+const HairWaves = ({ color='#c9a87c' }) => (
+  <svg viewBox="0 0 80 96" fill="none" style={{ width:'100%', height:'100%' }}>
+    <path d="M12 36 Q12 12 40 8 Q68 12 68 36 L70 64 Q60 82 40 84 Q20 82 10 64 Z" fill={color} fillOpacity=".07" stroke={color} strokeWidth="1.2" strokeOpacity=".35"/>
+    <path d="M14 52 Q10 62 14 70" stroke={color} strokeWidth="1.4" fill="none" strokeOpacity=".4"/>
+    <path d="M66 52 Q70 62 66 70" stroke={color} strokeWidth="1.4" fill="none" strokeOpacity=".4"/>
+    <path d="M12 60 Q16 56 20 60 Q24 64 28 60" stroke={color} strokeWidth="1.2" fill="none" strokeOpacity=".4"/>
+    <path d="M68 60 Q64 56 60 60 Q56 64 52 60" stroke={color} strokeWidth="1.2" fill="none" strokeOpacity=".4"/>
+    <ellipse cx="40" cy="50" rx="19" ry="24" fill="#0c0a07" stroke={color} strokeWidth="1.2"/>
+    <ellipse cx="32" cy="44" rx="2.2" ry="2.6" fill={color} fillOpacity=".55"/>
+    <ellipse cx="48" cy="44" rx="2.2" ry="2.6" fill={color} fillOpacity=".55"/>
+    <path d="M34 61 Q40 65 46 61" stroke={color} strokeWidth="1.3" strokeLinecap="round" fill="none" strokeOpacity=".7"/>
+  </svg>
+);
+
+const VNeck   = ({ color }) => (
+  <svg viewBox="0 0 60 48" fill="none" style={{ width:'100%', height:'100%' }}>
+    <line x1="6" y1="8" x2="54" y2="8" stroke={color} strokeWidth="1.2" strokeOpacity=".25"/>
+    <path d="M8 8 L30 42 L52 8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const WrapNeck = ({ color }) => (
+  <svg viewBox="0 0 60 48" fill="none" style={{ width:'100%', height:'100%' }}>
+    <line x1="6" y1="8" x2="54" y2="8" stroke={color} strokeWidth="1.2" strokeOpacity=".25"/>
+    <path d="M8 8 L28 36 Q38 22 52 8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const OffShoulder = ({ color }) => (
+  <svg viewBox="0 0 70 48" fill="none" style={{ width:'100%', height:'100%' }}>
+    <path d="M2 22 Q14 8 24 20 Q32 28 35 22 Q38 16 46 20 Q56 8 68 22" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const ScoopNeck = ({ color }) => (
+  <svg viewBox="0 0 60 48" fill="none" style={{ width:'100%', height:'100%' }}>
+    <line x1="6" y1="10" x2="54" y2="10" stroke={color} strokeWidth="1.2" strokeOpacity=".25"/>
+    <path d="M8 10 Q30 40 52 10" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const SquareNeck = ({ color }) => (
+  <svg viewBox="0 0 60 48" fill="none" style={{ width:'100%', height:'100%' }}>
+    <line x1="6" y1="10" x2="54" y2="10" stroke={color} strokeWidth="1.2" strokeOpacity=".25"/>
+    <path d="M8 10 L8 32 L52 32 L52 10" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const CowlNeck = ({ color }) => (
+  <svg viewBox="0 0 60 48" fill="none" style={{ width:'100%', height:'100%' }}>
+    <line x1="6" y1="10" x2="54" y2="10" stroke={color} strokeWidth="1.2" strokeOpacity=".25"/>
+    <path d="M8 10 Q18 22 30 28 Q42 22 52 10" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M16 18 Q24 30 30 32 Q36 30 44 18" stroke={color} strokeWidth="1" strokeLinecap="round" strokeOpacity=".35"/>
+  </svg>
+);
+
+const EarringIcon = ({ color }) => (
+  <svg viewBox="0 0 28 52" fill="none" width="28" height="52">
+    <circle cx="14" cy="8" r="6" stroke={color} strokeWidth="1.6"/>
+    <line x1="14" y1="14" x2="14" y2="26" stroke={color} strokeWidth="1.6"/>
+    <ellipse cx="14" cy="38" rx="7" ry="10" stroke={color} strokeWidth="1.6"/>
+  </svg>
+);
+const NecklaceIcon = ({ color }) => (
+  <svg viewBox="0 0 50 44" fill="none" width="44" height="44">
+    <path d="M6 8 Q25 36 44 8" stroke={color} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+    <circle cx="25" cy="38" r="5" stroke={color} strokeWidth="1.6"/>
+  </svg>
+);
+const RingIcon = ({ color }) => (
+  <svg viewBox="0 0 36 40" fill="none" width="36" height="40">
+    <circle cx="18" cy="28" r="10" stroke={color} strokeWidth="1.6"/>
+    <circle cx="18" cy="13" r="9" stroke={color} strokeWidth="1.6"/>
+    <circle cx="18" cy="11" r="4" fill={color} fillOpacity=".3"/>
+  </svg>
+);
+const BraceletIcon = ({ color }) => (
+  <svg viewBox="0 0 44 34" fill="none" width="44" height="34">
+    <path d="M8 28 Q8 6 22 5 Q36 6 36 28" stroke={color} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+    <line x1="8" y1="28" x2="36" y2="28" stroke={color} strokeWidth="2.2" strokeLinecap="round"/>
+    <circle cx="15" cy="20" r="2.5" fill={color} fillOpacity=".5"/>
+    <circle cx="22" cy="17" r="2.5" fill={color} fillOpacity=".5"/>
+    <circle cx="29" cy="20" r="2.5" fill={color} fillOpacity=".5"/>
+  </svg>
+);
+
+// ── ATOMS ─────────────────────────────────────────────────────
+const Pill = ({ children, active, gold, style={} }) => (
+  <div style={{
+    borderRadius:9999, padding:'5px 13px',
+    fontSize:12, fontWeight:500, fontFamily:sans, whiteSpace:'nowrap',
+    background: active ? C.gold : gold ? C.goldDim : C.surface2,
+    color:      active ? '#0c0a07' : gold ? C.gold : C.textMuted,
+    border:`0.5px solid ${active ? C.gold : gold ? C.goldBorder : 'rgba(255,255,255,0.06)'}`,
+    ...style,
+  }}>{children}</div>
+);
+
+const Tag = ({ children, red, style={} }) => (
+  <span style={{
+    fontSize:10, fontWeight:600, fontFamily:sans,
+    color: red ? C.red : C.gold,
+    background: red ? C.redDim : C.goldDim,
+    border:`0.5px solid ${red ? C.redBorder : C.goldBorder}`,
+    borderRadius:9999, padding:'2px 8px', ...style,
+  }}>{children}</span>
+);
+
+const Lbl = ({ children, style={} }) => (
+  <div style={{ fontFamily:sans, fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:C.textMuted, ...style }}>{children}</div>
+);
+
+const ColorCircles = ({ colors, size=46 }) => (
+  <div style={{ display:'flex', alignItems:'center' }}>
+    {colors.map((col, i) => (
+      <div key={col+i} style={{
+        width:size, height:size, borderRadius:9999, background:col,
+        marginLeft: i>0 ? -Math.round(size*.26) : 0,
+        border:'2px solid #0c0a07',
+        boxShadow:'inset 0 0 0 .5px rgba(255,255,255,.18)',
+        zIndex: colors.length - i, flexShrink:0,
+      }} />
+    ))}
+  </div>
+);
+
+const FloatingNav = ({ active=0, accent }) => {
+  const icons = [
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 22V14h6v8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M2 8V5a2 2 0 012-2h3M2 16v3a2 2 0 002 2h3M22 8V5a2 2 0 00-2-2h-3M22 16v3a2 2 0 01-2 2h-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.8"/></svg>,
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  ];
+  return (
+    <div style={{
+      position:'absolute', bottom:44, left:'50%', transform:'translateX(-50%)',
+      background:'rgba(10,8,5,.92)', backdropFilter:'blur(28px)', WebkitBackdropFilter:'blur(28px)',
+      border:`0.5px solid ${C.goldBorder}`,
+      borderRadius:9999, padding:'7px 8px', display:'flex', gap:4, zIndex:100,
+      boxShadow:`0 8px 36px rgba(0,0,0,.5), 0 0 0 .5px rgba(201,168,124,.12) inset`,
+    }}>
+      {icons.map((icon, i) => (
+        <div key={i} style={{
+          width:48, height:36, borderRadius:9999,
+          background: i===active ? C.goldDim : 'transparent',
+          border:`0.5px solid ${i===active ? C.goldBorder : 'transparent'}`,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          color: i===active ? accent : C.textSubtle,
+          boxShadow: i===active ? `0 0 12px rgba(201,168,124,.15)` : 'none',
+        }}>{icon}</div>
+      ))}
+    </div>
+  );
+};
+
+const Screen = ({ children, bg=C.bg, pt=62, pb=34, style={} }) => (
+  <div style={{
+    height:874, background:bg, display:'flex', flexDirection:'column',
+    paddingTop:pt, paddingBottom:pb,
+    position:'relative', overflow:'hidden',
+    fontFamily:sans, WebkitFontSmoothing:'antialiased',
+    ...style,
+  }}>{children}</div>
+);
+
+// ─────────────────────────────────────────────────────────────
+// HOME A — Rich dashboard
+// ─────────────────────────────────────────────────────────────
+const HomeA = ({ accent }) => (
+  <Screen>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'0 20px' }}>
+      <div style={{ fontFamily:serif, fontSize:22, color:accent, letterSpacing:.5 }}>VibeFit</div>
+      <div style={{ width:34, height:34, borderRadius:9999, background:C.surface2, border:`0.5px solid rgba(255,255,255,.08)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke={C.textMuted} strokeWidth="1.7"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round"/></svg>
+      </div>
+    </div>
+
+    {/* Hero Analysis Card */}
+    <div style={{
+      margin:'16px 20px 0', borderRadius:22,
+      background: heroGrad,
+      border:`0.5px solid ${C.goldBorder}`,
+      boxShadow:`0 0 48px rgba(201,168,124,.08), 0 1px 0 rgba(255,255,255,.06) inset`,
+      padding:'18px 18px 16px', display:'flex', gap:16,
+    }}>
+      <div className="float" style={{ flexShrink:0, width:70 }}>
+        <Face color={accent} size={70} />
+      </div>
+      <div style={{ flex:1 }}>
+        <Lbl style={{ marginBottom:8 }}>Analysis Complete</Lbl>
+        <div style={{ fontFamily:serif, fontSize:32, color:C.text, lineHeight:1.05 }}>
+          Oval<br />
+          <span style={{ color:accent, fontSize:24 }}>Warm · Medium</span>
+        </div>
+        <div style={{ marginTop:10, display:'flex', alignItems:'center', gap:5, color:accent, fontSize:13, fontWeight:600, fontFamily:sans }}>
+          View full report
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+    {/* Color palette — overlapping circles */}
+    <div style={{ padding:'18px 20px 0' }}>
+      <Lbl style={{ marginBottom:11 }}>Your color palette</Lbl>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <ColorCircles colors={['#c8956c','#d4a853','#8b6f47','#e8d5c0','#4a3728','#b5a090']} size={46} />
+        <div style={{ fontFamily:sans, fontSize:11, color:C.textMuted }}>6 tones</div>
+      </div>
+    </div>
+
+    {/* Aesthetics */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:11 }}>Best aesthetics</Lbl>
+      <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+        {['Old Money','Clean Girl','Minimalist','Coastal'].map((a,i) => (
+          <Pill key={a} active={i===0} gold={i>0}
+            style={{ fontSize: i===0 ? 13 : 12, fontWeight: i===0 ? 700 : 500 }}>{a}</Pill>
+        ))}
+      </div>
+    </div>
+
+    {/* Stats row */}
+    <div style={{ padding:'16px 20px 0', display:'flex', gap:10 }}>
+      {[{ n:'3', label:'Hairstyles' },{ n:'12', label:'Outfit matches' },{ n:'4', label:'Aesthetics' }].map(s => (
+        <div key={s.label} style={{
+          flex:1, background:C.surface, border:`0.5px solid rgba(255,255,255,.06)`,
+          borderRadius:14, padding:'12px 14px',
+        }}>
+          <div style={{ fontFamily:serif, fontSize:28, color:accent, lineHeight:1 }}>{s.n}</div>
+          <div style={{ fontFamily:sans, fontSize:10, color:C.textMuted, marginTop:4, fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em' }}>{s.label}</div>
+        </div>
+      ))}
+    </div>
+
+    <FloatingNav active={0} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// HOME B — Editorial
+// ─────────────────────────────────────────────────────────────
+const HomeB = ({ accent }) => (
+  <Screen pt={0} pb={0}>
+    {/* Hero */}
+    <div style={{
+      height:450, position:'relative', overflow:'hidden', flexShrink:0,
+      background:`linear-gradient(155deg,#2e2210 0%,#1c1508 40%,#0c0a07 100%)`,
+    }}>
+      <div style={{ position:'absolute', inset:0, backgroundImage:`repeating-linear-gradient(0deg,transparent 0px,transparent 42px,rgba(201,168,124,.018) 42px,rgba(201,168,124,.018) 43px),repeating-linear-gradient(90deg,transparent 0px,transparent 42px,rgba(201,168,124,.018) 42px,rgba(201,168,124,.018) 43px)` }} />
+      {/* Logo */}
+      <div style={{ height:62 }} />
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontFamily:serif, fontSize:12, letterSpacing:'.25em', textTransform:'uppercase' }} className="gold-shimmer">VibeFit</div>
+      </div>
+      {/* Huge headline */}
+      <div style={{ padding:'24px 28px 0', textAlign:'right' }}>
+        <div style={{ fontFamily:serif, fontSize:56, lineHeight:1.02, color:C.text, fontStyle:'italic' }}>
+          Discover<br />
+          <span className="gold-shimmer">your</span><br />
+          style.
+        </div>
+      </div>
+      {/* Face illustration */}
+      <div className="float" style={{ position:'absolute', left:22, bottom:12 }}>
+        <Face color={accent} size={100} />
+      </div>
+      {/* Gold rule line */}
+      <div style={{ position:'absolute', left:20, bottom:60, width:88, height:1, background:`linear-gradient(90deg,${accent},transparent)` }} />
+      {/* CTA */}
+      <div style={{
+        position:'absolute', right:22, bottom:24,
+        background:accent, borderRadius:9999, padding:'11px 22px',
+        fontFamily:sans, fontSize:13, fontWeight:700, color:'#0c0a07',
+        display:'flex', alignItems:'center', gap:7,
+        boxShadow:`0 4px 24px rgba(201,168,124,.35)`,
+      }}>
+        Start Analysis
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#0c0a07" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </div>
+    </div>
+
+    {/* Feature rows */}
+    <div style={{ flex:1, padding:'20px 20px 0', overflow:'hidden' }}>
+      <Lbl style={{ marginBottom:14 }}>What we analyze</Lbl>
+      {[
+        { title:'Face Intelligence',  desc:'Shape, proportion & facial harmony',  clr:'#c9a87c' },
+        { title:'Color Analysis',     desc:'Undertone, contrast & palette',        clr:'#d4892a' },
+        { title:'Style Matching',     desc:'Aesthetics, outfits & accessories',    clr:'#7c9c8e' },
+      ].map((item, i, arr) => (
+        <div key={i} style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 0', borderBottom: i < arr.length-1 ? `0.5px solid rgba(255,255,255,.05)` : 'none' }}>
+          <div style={{ width:8, height:8, borderRadius:9999, background:item.clr, flexShrink:0, boxShadow:`0 0 10px ${item.clr}88` }} />
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:sans, fontSize:14, fontWeight:600, color:C.text }}>{item.title}</div>
+            <div style={{ fontFamily:sans, fontSize:12, color:C.textMuted, marginTop:2 }}>{item.desc}</div>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke={C.textSubtle} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      ))}
+    </div>
+
+    <FloatingNav active={0} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// SCAN A — Animated camera
+// ─────────────────────────────────────────────────────────────
+const ScanA = ({ accent }) => (
+  <Screen bg="#000" pt={0} pb={0}>
+    <div style={{ flex:1, position:'relative', overflow:'hidden', background:'#06050400' }}>
+      {/* dark textured bg */}
+      <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at 50% 40%,#1a1208 0%,#000 70%)` }} />
+      <div style={{ height:62 }} />
+      {/* Top bar */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 20px', position:'relative', zIndex:10 }}>
+        <div style={{ width:36, height:36, borderRadius:9999, background:'rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+        </div>
+        <div style={{ fontFamily:sans, fontSize:15, fontWeight:600, color:'#fff' }}>Face Scan</div>
+        <div style={{ width:36, height:36, borderRadius:9999, background:'rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      </div>
+
+      {/* Scan rings */}
+      <div style={{ display:'flex', justifyContent:'center', alignItems:'center', marginTop:28, position:'relative' }}>
+        <div style={{ position:'relative', width:220, height:280 }}>
+          {/* Pulse rings */}
+          {[1,2,3].map(n => (
+            <div key={n} className={`ring-${n}`} style={{
+              position:'absolute',
+              inset: n===1 ? -18 : n===2 ? -36 : -54,
+              borderRadius:'50%',
+              border:`1px solid ${accent}`,
+              opacity:.5,
+            }} />
+          ))}
+          {/* Face oval */}
+          <div style={{
+            width:'100%', height:'100%', borderRadius:'50%',
+            border:`1.5px solid ${accent}`,
+            position:'relative', overflow:'hidden',
+            boxShadow:`0 0 40px rgba(201,168,124,.15), 0 0 80px rgba(201,168,124,.06)`,
+          }}>
+            {/* Scan line */}
+            <div className="scan-line" style={{
+              position:'absolute', left:0, right:0, height:2,
+              background:`linear-gradient(90deg,transparent,${accent},transparent)`,
+              top:'50%', zIndex:5,
+            }} />
+            {/* Corner brackets */}
+            {[{t:-4,l:-4,bt:'none',br:'none'},{t:-4,r:-4,bt:'none',bl:'none'},{b:-4,l:-4,bb:'none',br:'none'},{b:-4,r:-4,bb:'none',bl:'none'}].map((p,i) => {
+              const { t,l,r,b,bt,br,bl,bb,..._ } = p;
+              return (
+                <div key={i} style={{
+                  position:'absolute', width:24, height:24,
+                  border:`2px solid ${accent}`, borderRadius:3,
+                  top:t, left:l, right:r, bottom:b,
+                  borderTop:bt, borderRight:br, borderBottom:bb, borderLeft:bl,
+                  zIndex:6,
+                }} />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Guide text */}
+      <div style={{ textAlign:'center', marginTop:20, position:'relative', zIndex:5 }}>
+        <div style={{ fontFamily:sans, fontSize:14, color:'rgba(255,255,255,.75)', fontWeight:400 }}>Position your face in the oval</div>
+        <div style={{ fontFamily:sans, fontSize:11, color:'rgba(255,255,255,.3)', marginTop:4 }}>Good lighting · Look straight ahead</div>
+      </div>
+    </div>
+
+    {/* Bottom controls */}
+    <div style={{
+      background:'rgba(0,0,0,.9)', backdropFilter:'blur(28px)', WebkitBackdropFilter:'blur(28px)',
+      borderTop:`0.5px solid rgba(201,168,124,.12)`,
+      padding:'20px 20px 52px', flexShrink:0,
+    }}>
+      <div style={{ display:'flex', justifyContent:'center', marginBottom:24 }}>
+        <div style={{ background:'rgba(255,255,255,.07)', borderRadius:9999, padding:3, display:'flex', gap:2 }}>
+          {['Camera','Upload'].map((t,i) => (
+            <div key={t} style={{ padding:'7px 22px', borderRadius:9999, fontFamily:sans, fontSize:13, fontWeight:600, background:i===0?accent:'transparent', color:i===0?'#0c0a07':'rgba(255,255,255,.45)', boxShadow:i===0?`0 2px 12px rgba(201,168,124,.3)`:'none' }}>{t}</div>
+          ))}
+        </div>
+      </div>
+      <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:54 }}>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{ opacity:.5 }}><path d="M3 7h2l2-3h10l2 3h2a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="13" r="3.5" stroke="white" strokeWidth="1.6"/></svg>
+        <div style={{ width:70, height:70, borderRadius:9999, border:`3px solid ${accent}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 24px rgba(201,168,124,.3)` }}>
+          <div style={{ width:56, height:56, borderRadius:9999, background:accent }} />
+        </div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{ opacity:.5 }}><rect x="3" y="3" width="7" height="7" rx="1" stroke="white" strokeWidth="1.6"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="white" strokeWidth="1.6"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="white" strokeWidth="1.6"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="white" strokeWidth="1.6"/></svg>
+      </div>
+    </div>
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// SCAN B — Method chooser
+// ─────────────────────────────────────────────────────────────
+const ScanB = ({ accent }) => (
+  <Screen>
+    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'0 20px' }}>
+      <div style={{ width:34,height:34,borderRadius:9999,background:C.surface2,border:`0.5px solid rgba(255,255,255,.07)`,display:'flex',alignItems:'center',justifyContent:'center' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round"/></svg>
+      </div>
+      <div style={{ fontFamily:sans,fontSize:14,fontWeight:600,color:C.text }}>New Analysis</div>
+    </div>
+
+    <div style={{ padding:'20px 20px 0' }}>
+      <div style={{ fontFamily:serif, fontSize:32, color:C.text, lineHeight:1.1 }}>
+        Analyze<br /><span style={{ color:accent }}>Your Style</span>
+      </div>
+      <div style={{ fontFamily:sans, fontSize:13, color:C.textMuted, marginTop:8 }}>Choose how you'd like to begin</div>
+    </div>
+
+    <div style={{ padding:'22px 20px 0', display:'flex', flexDirection:'column', gap:12 }}>
+      {[
+        { icon:<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke={accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="13" r="4" stroke={accent} strokeWidth="1.8"/></svg>, title:'Take a Photo', desc:'Best accuracy — scan live now', active:true },
+        { icon:<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke={C.textMuted} strokeWidth="1.8"/><path d="M3 15l5-5 4 4 3-3 6 6" stroke={C.textMuted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="8.5" cy="8.5" r="1.5" fill={C.textMuted}/></svg>, title:'Upload from Gallery', desc:'Use an existing photo', active:false },
+      ].map((opt,i) => (
+        <div key={i} style={{
+          background: opt.active ? heroGrad : C.surface,
+          border:`0.5px solid ${opt.active ? accent : 'rgba(255,255,255,.06)'}`,
+          borderRadius:20, padding:'18px 18px', display:'flex', gap:16, alignItems:'center',
+          boxShadow: opt.active ? `0 0 32px rgba(201,168,124,.1)` : 'none',
+        }}>
+          <div style={{ width:54,height:54,borderRadius:14,background:opt.active?'rgba(201,168,124,.12)':C.surface2,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{opt.icon}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:sans,fontSize:15,fontWeight:700,color:C.text }}>{opt.title}</div>
+            <div style={{ fontFamily:sans,fontSize:12,color:C.textMuted,marginTop:3 }}>{opt.desc}</div>
+          </div>
+          {opt.active && <div style={{ width:22,height:22,borderRadius:9999,background:accent,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 12px ${accent}66` }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-9" stroke="#0c0a07" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></div>}
+        </div>
+      ))}
+    </div>
+
+    <div style={{ padding:'22px 20px 0' }}>
+      <Lbl style={{ marginBottom:12 }}>What we'll analyze</Lbl>
+      {[
+        ['Face shape & proportions', accent],
+        ['Skin undertone & color palette', C.amber],
+        ['Hair texture & styling needs', '#7c9c8e'],
+      ].map(([item,clr],i,arr) => (
+        <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom: i<arr.length-1?`0.5px solid rgba(255,255,255,.05)`:'none' }}>
+          <div style={{ width:6,height:6,borderRadius:9999,background:clr,flexShrink:0,boxShadow:`0 0 8px ${clr}88` }} />
+          <div style={{ fontFamily:sans,fontSize:13,color:C.textMuted }}>{item}</div>
+        </div>
+      ))}
+    </div>
+
+    <div style={{ padding:'22px 20px 0', marginTop:'auto' }}>
+      <div style={{ background:accent, borderRadius:14, padding:'15px', textAlign:'center', fontFamily:sans, fontSize:15, fontWeight:700, color:'#0c0a07', display:'flex', alignItems:'center', justifyContent:'center', gap:8, boxShadow:`0 4px 24px rgba(201,168,124,.3)` }}>
+        Continue
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#0c0a07" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </div>
+    </div>
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// RESULTS A — Grid
+// ─────────────────────────────────────────────────────────────
+const ResultsA = ({ accent }) => (
+  <Screen>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'0 20px' }}>
+      <div>
+        <Lbl style={{ marginBottom:6 }}>Style Analysis</Lbl>
+        <div style={{ fontFamily:serif, fontSize:26, color:C.text }}>Your Profile</div>
+      </div>
+      <div className="float" style={{ width:44,height:44,borderRadius:9999,background:C.goldDim,border:`1.5px solid ${accent}`,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:serif,fontSize:18,color:accent }}>A</div>
+    </div>
+
+    <div style={{ padding:'9px 20px 0' }}>
+      <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(109,184,134,.08)', border:'0.5px solid rgba(109,184,134,.22)', borderRadius:9999, padding:'4px 10px 4px 8px' }}>
+        <div className="breathe" style={{ width:6,height:6,borderRadius:9999,background:C.green }} />
+        <span style={{ fontFamily:sans,fontSize:11,color:C.green,fontWeight:500 }}>Analysis complete</span>
+      </div>
+    </div>
+
+    {/* Grid — large numbers */}
+    <div style={{ padding:'12px 20px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+      {[
+        { label:'Face Shape', value:'Oval',   accent:'#c9a87c' },
+        { label:'Undertone',  value:'Warm',   accent:'#d4892a' },
+        { label:'Contrast',   value:'Med.',   accent:'#7c9c8e' },
+        { label:'Hair Type',  value:'Wavy',   accent:'#c9878a' },
+      ].map(card => (
+        <div key={card.label} style={{
+          background: cardGrad,
+          border:`0.5px solid rgba(255,255,255,.07)`,
+          borderLeft:`2px solid ${card.accent}`,
+          borderRadius:16, padding:'14px 14px',
+          boxShadow:`0 0 20px ${card.accent}10`,
+        }}>
+          <Lbl style={{ marginBottom:6 }}>{card.label}</Lbl>
+          <div style={{ fontFamily:serif, fontSize:34, color:C.text, lineHeight:1 }}>{card.value}</div>
+          <div style={{ width:24, height:2, background:card.accent, marginTop:8, borderRadius:9999 }} />
+        </div>
+      ))}
+    </div>
+
+    {/* Palette circles */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:11 }}>Color palette</Lbl>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <ColorCircles colors={['#c8956c','#d4a853','#8b6f47','#e8d5c0','#4a3728']} size={48} />
+        <div style={{ fontFamily:sans,fontSize:11,color:C.textMuted }}>5 warm tones</div>
+      </div>
+    </div>
+
+    {/* Aesthetics */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:10 }}>Recommended aesthetics</Lbl>
+      <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+        {['Old Money','Clean Girl','Minimalist','Coastal'].map((a,i) => (
+          <Pill key={a} active={i===0} gold={i>0}>{a}</Pill>
+        ))}
+      </div>
+    </div>
+
+    {/* Chat CTA */}
+    <div style={{ padding:'14px 20px 0' }}>
+      <div style={{
+        background: heroGrad, border:`0.5px solid ${C.goldBorder}`,
+        borderRadius:16, padding:'14px 18px',
+        display:'flex', justifyContent:'space-between', alignItems:'center',
+        boxShadow:`0 0 32px rgba(201,168,124,.08)`,
+      }}>
+        <div>
+          <div style={{ fontFamily:sans,fontSize:14,fontWeight:700,color:C.text }}>Chat with your stylist</div>
+          <div style={{ fontFamily:sans,fontSize:11,color:C.textMuted,marginTop:2 }}>Get personalized advice</div>
+        </div>
+        <div style={{ width:36,height:36,borderRadius:9999,background:accent,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 4px 16px ${accent}55` }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#0c0a07" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <FloatingNav active={2} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// RESULTS B — Story
+// ─────────────────────────────────────────────────────────────
+const ResultsB = ({ accent }) => (
+  <Screen>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'0 20px' }}>
+      <div style={{ fontFamily:serif, fontSize:28, color:C.text, lineHeight:1.15 }}>Your<br /><span className="gold-shimmer">Style Report</span></div>
+      <div style={{ background:C.surface2,border:`0.5px solid rgba(255,255,255,.08)`,borderRadius:9999,padding:'6px 13px',fontFamily:sans,fontSize:11,fontWeight:600,color:C.textMuted }}>Share</div>
+    </div>
+
+    {/* Color story — rich gradient */}
+    <div style={{
+      margin:'15px 20px 0',
+      background:`linear-gradient(135deg,#2c1e08 0%,#1e1508 50%,#140e06 100%)`,
+      border:`0.5px solid rgba(201,168,124,.2)`,
+      borderRadius:22, padding:'18px 18px',
+      boxShadow:`0 0 40px rgba(201,168,124,.08)`,
+    }}>
+      <Lbl style={{ marginBottom:10, color:'rgba(201,168,124,.5)' }}>Color Story</Lbl>
+      <div style={{ fontFamily:serif, fontSize:20, color:C.text, marginBottom:14 }}>Warm · Medium Contrast</div>
+      <ColorCircles colors={['#c8956c','#d4a853','#8b6f47','#e8d5c0','#4a3728']} size={44} />
+    </div>
+
+    {/* Face card */}
+    <div style={{
+      margin:'12px 20px 0', background:C.surface, border:`0.5px solid rgba(255,255,255,.06)`,
+      borderRadius:22, padding:'18px 18px', display:'flex', gap:18, alignItems:'center',
+    }}>
+      <div style={{ flex:1 }}>
+        <Lbl style={{ marginBottom:7 }}>Face Analysis</Lbl>
+        <div style={{ fontFamily:serif, fontSize:26, color:C.text, marginBottom:8 }}>Oval</div>
+        <div style={{ fontFamily:sans, fontSize:12, color:C.textMuted, lineHeight:1.6 }}>Balanced proportions.<br />Versatile for most styles.</div>
+      </div>
+      <div className="float" style={{ flexShrink:0 }}>
+        <Face color={accent} size={68} />
+      </div>
+    </div>
+
+    {/* Aesthetic card */}
+    <div style={{
+      margin:'12px 20px 0',
+      background: heroGrad,
+      border:`0.5px solid ${C.goldBorder}`,
+      borderRadius:22, padding:'18px 18px',
+    }}>
+      <Lbl style={{ marginBottom:7, color:'rgba(201,168,124,.5)' }}>Signature Aesthetic</Lbl>
+      <div style={{ fontFamily:serif, fontSize:30, color:accent, marginBottom:10 }}>Old Money</div>
+      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+        {['Clean Girl','Minimalist','Coastal'].map(a => <Pill key={a}>{a}</Pill>)}
+      </div>
+    </div>
+
+    <div style={{ padding:'14px 20px 0' }}>
+      <div style={{ background:accent,borderRadius:14,padding:'14px',textAlign:'center',fontFamily:sans,fontSize:14,fontWeight:700,color:'#0c0a07',display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:`0 4px 24px ${accent}44` }}>
+        Chat with Your Stylist
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#0c0a07" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </div>
+    </div>
+
+    <FloatingNav active={2} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// CHAT A — Standard
+// ─────────────────────────────────────────────────────────────
+const ChatA = ({ accent }) => (
+  <Screen>
+    <div style={{ display:'flex',alignItems:'center',gap:12,padding:'0 20px 13px',borderBottom:`0.5px solid rgba(255,255,255,.06)` }}>
+      <div style={{ position:'relative', flexShrink:0 }}>
+        <div className="breathe" style={{ position:'absolute',inset:-3,borderRadius:9999,border:`1.5px solid ${accent}`,boxShadow:`0 0 16px ${accent}55` }} />
+        <div style={{ width:40,height:40,borderRadius:9999,background:heroGrad,border:`1.5px solid ${accent}`,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:serif,fontSize:16,color:accent }}>M</div>
+      </div>
+      <div style={{ flex:1 }}>
+        <div style={{ fontFamily:sans,fontSize:15,fontWeight:700,color:C.text }}>Mia</div>
+        <div style={{ display:'flex',alignItems:'center',gap:5,marginTop:1 }}>
+          <div className="breathe" style={{ width:6,height:6,borderRadius:9999,background:C.green }} />
+          <span style={{ fontFamily:sans,fontSize:11,color:C.textMuted }}>Your AI Stylist · Online</span>
+        </div>
+      </div>
+    </div>
+
+    <div style={{ flex:1,padding:'14px 16px 0',display:'flex',flexDirection:'column',gap:12,overflow:'hidden' }}>
+      {/* AI */}
+      <div style={{ display:'flex',gap:8,alignItems:'flex-end',maxWidth:'84%' }}>
+        <div style={{ width:26,height:26,borderRadius:9999,background:C.goldDim,border:`1px solid ${C.goldBorder}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:accent,fontFamily:serif,flexShrink:0 }}>M</div>
+        <div style={{ background:cardGrad,border:`0.5px solid rgba(255,255,255,.07)`,borderRadius:'4px 16px 16px 16px',padding:'12px 14px' }}>
+          <div style={{ fontFamily:sans,fontSize:13,color:C.text,lineHeight:1.6 }}>Based on your warm undertone and oval face shape, I've curated these recommendations for you. ✦</div>
+        </div>
+      </div>
+      {/* User */}
+      <div style={{ display:'flex',justifyContent:'flex-end' }}>
+        <div style={{ background:C.goldDim,border:`0.5px solid ${C.goldBorder}`,borderRadius:'16px 4px 16px 16px',padding:'12px 14px',maxWidth:'78%',boxShadow:`0 0 20px rgba(201,168,124,.08)` }}>
+          <div style={{ fontFamily:sans,fontSize:13,color:C.text,lineHeight:1.6 }}>What should I wear to a business dinner?</div>
+        </div>
+      </div>
+      {/* AI reply */}
+      <div style={{ display:'flex',gap:8,alignItems:'flex-end',maxWidth:'88%' }}>
+        <div style={{ width:26,height:26,borderRadius:9999,background:C.goldDim,border:`1px solid ${C.goldBorder}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:accent,fontFamily:serif,flexShrink:0 }}>M</div>
+        <div style={{ background:cardGrad,border:`0.5px solid rgba(255,255,255,.07)`,borderRadius:'4px 16px 16px 16px',padding:'12px 14px' }}>
+          <div style={{ fontFamily:sans,fontSize:13,color:C.text,lineHeight:1.6 }}>For a business dinner, a tailored blazer in camel or caramel tones would be ideal. These warm neutrals complement your undertone perfectly.</div>
+        </div>
+      </div>
+      {/* Chips */}
+      <div style={{ display:'flex',gap:7,flexWrap:'wrap',marginTop:2,marginLeft:34 }}>
+        {['Hair styles','Color palette','Outfit ideas','Accessories'].map(c => <Pill key={c} gold style={{ fontSize:11 }}>{c}</Pill>)}
+      </div>
+    </div>
+
+    <div style={{ padding:'11px 16px 15px',display:'flex',gap:9,alignItems:'center',borderTop:`0.5px solid rgba(255,255,255,.06)` }}>
+      <div style={{ flex:1,background:C.surface2,border:`0.5px solid rgba(255,255,255,.07)`,borderRadius:24,padding:'11px 16px',fontFamily:sans,fontSize:13,color:C.textMuted }}>Ask your stylist…</div>
+      <div style={{ width:42,height:42,borderRadius:9999,background:accent,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:`0 4px 16px ${accent}55` }}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#0c0a07" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </div>
+    </div>
+
+    <FloatingNav active={3} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// CHAT B — Minimal
+// ─────────────────────────────────────────────────────────────
+const ChatB = ({ accent }) => (
+  <Screen>
+    <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px 15px',borderBottom:`0.5px solid rgba(255,255,255,.06)` }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 5l-7 7 7 7" stroke={C.textSubtle} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      <div style={{ fontFamily:sans,fontSize:15,fontWeight:700,color:C.text }}>Your Stylist</div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.5" fill={C.textSubtle}/><circle cx="12" cy="12" r="1.5" fill={C.textSubtle}/><circle cx="12" cy="19" r="1.5" fill={C.textSubtle}/></svg>
+    </div>
+    <div style={{ textAlign:'center', padding:'14px 0 6px' }}>
+      <span style={{ fontFamily:sans,fontSize:11,color:C.textSubtle }}>Today</span>
+    </div>
+    <div style={{ flex:1,padding:'0 20px',display:'flex',flexDirection:'column',gap:18,overflow:'hidden' }}>
+      <div style={{ maxWidth:'84%' }}>
+        <div style={{ background:C.surface2,borderRadius:'4px 18px 18px 18px',padding:'14px 16px' }}>
+          <div style={{ fontFamily:sans,fontSize:14,color:C.text,lineHeight:1.65 }}>Your style profile is ready. Warm undertone, oval face — a wonderful canvas to work with.</div>
+        </div>
+        <div style={{ fontFamily:sans,fontSize:10,color:C.textSubtle,marginTop:5,marginLeft:4 }}>Mia · 9:41 AM</div>
+      </div>
+      <div style={{ maxWidth:'80%',alignSelf:'flex-end',textAlign:'right' }}>
+        <div style={{ background:C.goldDim,border:`0.5px solid ${C.goldBorder}`,borderRadius:'18px 4px 18px 18px',padding:'14px 16px' }}>
+          <div style={{ fontFamily:sans,fontSize:14,color:C.text,lineHeight:1.65 }}>What colors work best for me at work?</div>
+        </div>
+        <div style={{ fontFamily:sans,fontSize:10,color:C.textSubtle,marginTop:5,marginRight:4 }}>9:42 AM</div>
+      </div>
+      <div style={{ maxWidth:'86%' }}>
+        <div style={{ background:C.surface2,borderRadius:'4px 18px 18px 18px',padding:'14px 16px' }}>
+          <div style={{ fontFamily:sans,fontSize:14,color:C.text,lineHeight:1.65 }}>Camel, ivory, and deep forest tones are your strongest professional choices — they project warmth and authority.</div>
+        </div>
+        <div style={{ display:'flex',alignItems:'center',gap:5,marginTop:5,marginLeft:4 }}>
+          <div style={{ width:14,height:14,borderRadius:9999,background:C.goldDim,border:`1px solid ${C.goldBorder}`,display:'flex',alignItems:'center',justifyContent:'center' }}><div style={{ width:5,height:5,borderRadius:9999,background:accent }} /></div>
+          <span style={{ fontFamily:sans,fontSize:10,color:C.textSubtle }}>Mia · 9:43 AM</span>
+        </div>
+      </div>
+      {/* Typing */}
+      <div style={{ display:'flex',gap:5,alignItems:'center',padding:'10px 16px',background:C.surface2,borderRadius:'4px 16px 16px 16px',width:'fit-content' }}>
+        {['dot-1','dot-2','dot-3'].map(c => <div key={c} className={c} style={{ width:7,height:7,borderRadius:9999,background:C.textSubtle }} />)}
+      </div>
+    </div>
+    <div style={{ padding:'12px 20px 16px' }}>
+      <div style={{ display:'flex',gap:10,alignItems:'center',marginBottom:10 }}>
+        <div style={{ flex:1,background:C.surface2,borderRadius:24,padding:'12px 18px',fontFamily:sans,fontSize:13,color:C.textSubtle,border:`0.5px solid rgba(255,255,255,.06)` }}>Message Mia…</div>
+        <div style={{ fontFamily:sans,fontSize:13,fontWeight:700,color:accent }}>Send</div>
+      </div>
+      <div style={{ display:'flex',gap:7,overflow:'hidden' }}>
+        {['Best hair lengths','Date night outfit','Work wardrobe'].map(q => <Pill key={q} style={{ fontSize:11,flexShrink:0 }}>{q}</Pill>)}
+      </div>
+    </div>
+    <FloatingNav active={3} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// HAIR — Illustrated recommendations
+// ─────────────────────────────────────────────────────────────
+const HairA = ({ accent }) => (
+  <Screen>
+    <div style={{ padding:'0 20px' }}>
+      <Lbl style={{ marginBottom:6 }}>Based on Oval · Wavy Hair</Lbl>
+      <div style={{ fontFamily:serif, fontSize:26, color:C.text, lineHeight:1.1 }}>Hair<br /><span style={{ color:accent }}>Recommendations</span></div>
+    </div>
+
+    {/* Illustrated cuts */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:13 }}>Best cuts for you</Lbl>
+      <div style={{ display:'flex', gap:10 }}>
+        {[
+          { label:'Layered Lob', Comp:HairLob, best:true },
+          { label:'Curtain Fringe', Comp:HairCurtain, best:false },
+          { label:'Face-Frame Waves', Comp:HairWaves, best:false },
+        ].map(({ label, Comp, best }) => (
+          <div key={label} style={{ flex:1, display:'flex', flexDirection:'column', gap:8, alignItems:'center' }}>
+            <div style={{
+              width:'100%', height:96, borderRadius:14,
+              background: cardGrad,
+              border:`0.5px solid ${best ? accent : 'rgba(255,255,255,.06)'}`,
+              boxShadow: best ? `0 0 20px ${accent}22` : 'none',
+              overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
+            }}>
+              <Comp color={best ? accent : C.textMuted} />
+            </div>
+            <div style={{ fontFamily:sans,fontSize:10,fontWeight:600,color:best?accent:C.textMuted,textAlign:'center',lineHeight:1.3 }}>{label}</div>
+            {best && <Tag>Best Match</Tag>}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Bangs */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:11 }}>Bangs recommendation</Lbl>
+      <div style={{ display:'flex', gap:10 }}>
+        {[
+          { label:'Curtain Bangs', desc:'Softens the forehead, frames eyes', rec:true },
+          { label:'No Bangs', desc:'Shows full face shape cleanly', rec:false },
+        ].map((opt,i) => (
+          <div key={i} style={{ flex:1, background:opt.rec?heroGrad:C.surface, border:`0.5px solid ${opt.rec?accent:'rgba(255,255,255,.06)'}`, borderRadius:14, padding:'13px', boxShadow:opt.rec?`0 0 24px rgba(201,168,124,.1)`:'none' }}>
+            <div style={{ fontFamily:sans,fontSize:13,fontWeight:700,color:C.text,marginBottom:4 }}>{opt.label}</div>
+            <div style={{ fontFamily:sans,fontSize:11,color:C.textMuted,lineHeight:1.5 }}>{opt.desc}</div>
+            {opt.rec && <div style={{ marginTop:9 }}><Tag>Recommended</Tag></div>}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Length bar */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:10 }}>Best length</Lbl>
+      <div style={{ position:'relative', height:28, background:C.surface2, borderRadius:9999, overflow:'hidden' }}>
+        <div style={{ position:'absolute', left:'28%', width:'44%', height:'100%', background:C.goldDim, borderLeft:`1.5px solid ${accent}`, borderRight:`1.5px solid ${accent}` }} />
+        <div style={{ position:'absolute', inset:0, display:'flex' }}>
+          {['Short','Medium','Long','X-Long'].map((l,i) => (
+            <div key={l} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:sans, fontSize:9, fontWeight:700, color:i===1||i===2?accent:C.textSubtle }}>{l}</div>
+          ))}
+        </div>
+      </div>
+      <div style={{ fontFamily:sans,fontSize:11,color:C.textMuted,marginTop:7 }}>Medium to long lengths elongate and balance an oval face</div>
+    </div>
+
+    {/* Hair colors — large circles */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:12 }}>Best hair colors</Lbl>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+        <ColorCircles colors={['#6b3a1f','#8b5a2b','#c8956c','#3b1e0a','#2d1a0e']} size={50} />
+        <div style={{ marginLeft:12, display:'flex', flexDirection:'column', gap:3 }}>
+          {['Chocolate','Caramel','Honey Blonde','Auburn','Deep Brown'].map((n,i) => (
+            <div key={n} style={{ fontFamily:sans,fontSize:10,color:i===0?C.text:C.textMuted }}>{n}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <FloatingNav active={2} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// BODY — Illustrated necklines
+// ─────────────────────────────────────────────────────────────
+const BodyA = ({ accent }) => (
+  <Screen>
+    <div style={{ padding:'0 20px' }}>
+      <Lbl style={{ marginBottom:6 }}>Body Intelligence</Lbl>
+      <div style={{ fontFamily:serif, fontSize:26, color:C.text, lineHeight:1.1 }}>Body &<br /><span style={{ color:accent }}>Style Guide</span></div>
+    </div>
+
+    {/* Body type */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:11 }}>Your body type</Lbl>
+      <div style={{ display:'flex', gap:7 }}>
+        {[['Hourglass',true],['Pear',false],['Apple',false],['Rectangle',false]].map(([bt,active]) => (
+          <div key={bt} style={{ flex:1, padding:'9px 0', borderRadius:11, textAlign:'center', background:active?heroGrad:C.surface, border:`0.5px solid ${active?accent:'rgba(255,255,255,.06)'}`, fontFamily:sans, fontSize:10, fontWeight:700, color:active?accent:C.textMuted, boxShadow:active?`0 0 20px rgba(201,168,124,.12)`:'none' }}>{bt}</div>
+        ))}
+      </div>
+      <div style={{ marginTop:10, fontFamily:sans, fontSize:12, color:C.textMuted, lineHeight:1.65 }}>Balanced shoulders & hips with a defined waist. Most silhouettes work beautifully for you.</div>
+    </div>
+
+    {/* Illustrated necklines */}
+    <div style={{ padding:'16px 20px 0' }}>
+      <Lbl style={{ marginBottom:12 }}>Best necklines</Lbl>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:9 }}>
+        {[
+          { name:'V-Neck',      Comp:VNeck,       best:true  },
+          { name:'Wrap',        Comp:WrapNeck,    best:true  },
+          { name:'Off-Shoulder',Comp:OffShoulder, best:true  },
+          { name:'Scoop',       Comp:ScoopNeck,   best:false },
+          { name:'Square',      Comp:SquareNeck,  best:false },
+          { name:'Cowl',        Comp:CowlNeck,    best:false },
+        ].map(({ name, Comp, best }) => (
+          <div key={name} style={{ background:best?heroGrad:C.surface, border:`0.5px solid ${best?C.goldBorder:'rgba(255,255,255,.05)'}`, borderRadius:13, padding:'10px 8px 8px', textAlign:'center', boxShadow:best?`0 0 16px rgba(201,168,124,.08)`:'none' }}>
+            <div style={{ height:42, marginBottom:6, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Comp color={best?accent:C.textSubtle} />
+            </div>
+            <div style={{ fontFamily:sans,fontSize:10,fontWeight:600,color:best?accent:C.textMuted,lineHeight:1.3 }}>{name}</div>
+            {best && <div style={{ fontFamily:sans,fontSize:8,color:accent,marginTop:2,opacity:.7 }}>✦ Best</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Fabrics */}
+    <div style={{ padding:'14px 20px 0' }}>
+      <Lbl style={{ marginBottom:10 }}>Best fabrics & fits</Lbl>
+      <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+        {['Flowy silk','Wrap dresses','Fitted knits','Belted waist','Tailored blazers'].map(f => (
+          <Pill key={f} gold style={{ fontSize:11 }}>{f}</Pill>
+        ))}
+      </div>
+    </div>
+
+    {/* Avoid */}
+    <div style={{ padding:'14px 20px 0' }}>
+      <Lbl style={{ marginBottom:9 }}>Avoid</Lbl>
+      <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+        {['Boxy shapes','Drop-waist','Oversized cuts'].map(a => <Tag key={a} red>{a}</Tag>)}
+      </div>
+    </div>
+
+    <FloatingNav active={2} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// WARDROBE COLORS
+// ─────────────────────────────────────────────────────────────
+const WardrobeA = ({ accent }) => (
+  <Screen>
+    <div style={{ padding:'0 20px' }}>
+      <Lbl style={{ marginBottom:6 }}>Based on Warm Undertone</Lbl>
+      <div style={{ fontFamily:serif, fontSize:26, color:C.text, lineHeight:1.1 }}>Your Wardrobe<br /><span style={{ color:accent }}>Color Guide</span></div>
+    </div>
+
+    {/* Gradient strip */}
+    <div style={{ margin:'14px 20px 0', height:6, borderRadius:9999, background:'linear-gradient(90deg,#4a3728,#8b6f47,#c8956c,#d4a853,#e8d5c0)' }} />
+
+    {[
+      { title:'Core neutrals',  colors:[['#d4b896','Camel'],['#f0e8d8','Ivory'],['#e8d5c0','Cream'],['#5c3d2e','Chocolate'],['#2d2218','Espresso']], h:56 },
+      { title:'Accent colors',  colors:[['#c8956c','Terracotta'],['#c8941e','Mustard'],['#6b7a3e','Olive'],['#8b3a3a','Rust'],['#3d6040','Forest']], h:56 },
+    ].map(section => (
+      <div key={section.title} style={{ padding:'14px 20px 0' }}>
+        <Lbl style={{ marginBottom:10 }}>{section.title}</Lbl>
+        <div style={{ display:'flex', gap:6 }}>
+          {section.colors.map(([col,name]) => (
+            <div key={col} style={{ flex:1, display:'flex', flexDirection:'column', gap:5, alignItems:'center' }}>
+              <div style={{ width:'100%', height:section.h, borderRadius:10, background:col, boxShadow:'inset 0 0 0 .5px rgba(255,255,255,.12)' }} />
+              <div style={{ fontFamily:sans,fontSize:9,color:C.textMuted,textAlign:'center' }}>{name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ))}
+
+    {/* Avoid */}
+    <div style={{ padding:'14px 20px 0' }}>
+      <Lbl style={{ marginBottom:10 }}>Avoid</Lbl>
+      <div style={{ display:'flex', gap:6 }}>
+        {[['#b8c8d4','Icy Blue'],['#c8c8d0','Cool Gray'],['#9898b8','Lavender'],['#d8d8e8','Stark Wht']].map(([col,name]) => (
+          <div key={col} style={{ flex:1, display:'flex', flexDirection:'column', gap:5, alignItems:'center' }}>
+            <div style={{ width:'100%',height:36,borderRadius:9,background:col,border:'1.5px dashed rgba(192,112,112,.4)',position:'relative',opacity:.65 }}>
+              <div style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:sans,fontSize:14,color:'rgba(192,112,112,.7)',fontWeight:700 }}>×</div>
+            </div>
+            <div style={{ fontFamily:sans,fontSize:9,color:'rgba(192,112,112,.6)',textAlign:'center' }}>{name}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Metals */}
+    <div style={{ padding:'14px 20px 0' }}>
+      <Lbl style={{ marginBottom:11 }}>Best metals</Lbl>
+      <div style={{ display:'flex', gap:8 }}>
+        {[['#d4a853','Gold','Best',false],['#b87333','Bronze','Great',false],['#c9a87c','Rose Gold','Good',false],['#c0c0c0','Silver','Avoid',true]].map(([col,name,note,avoid]) => (
+          <div key={name} style={{ flex:1, textAlign:'center' }}>
+            <div style={{ width:'100%',height:30,borderRadius:9999,background:col,marginBottom:5,opacity:avoid?.3:1,border:avoid?'1.5px dashed rgba(192,112,112,.4)':'none',boxShadow:avoid?'none':`0 0 16px ${col}66` }} />
+            <div style={{ fontFamily:sans,fontSize:10,fontWeight:700,color:avoid?'rgba(192,112,112,.55)':C.text }}>{name}</div>
+            <div style={{ fontFamily:sans,fontSize:9,color:avoid?'rgba(192,112,112,.45)':C.textMuted }}>{note}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <FloatingNav active={2} accent={accent} />
+  </Screen>
+);
+
+// ─────────────────────────────────────────────────────────────
+// ACCESSORIES & MAKEUP — Illustrated
+// ─────────────────────────────────────────────────────────────
+const AccessoriesA = ({ accent }) => (
+  <Screen>
+    <div style={{ padding:'0 20px' }}>
+      <Lbl style={{ marginBottom:6 }}>Oval Face · Warm Undertone</Lbl>
+      <div style={{ fontFamily:serif, fontSize:26, color:C.text, lineHeight:1.1 }}>Accessories &<br /><span style={{ color:accent }}>Makeup Guide</span></div>
+    </div>
+
+    {/* Metal chips */}
+    <div style={{ padding:'10px 20px 0', display:'flex', alignItems:'center', gap:8 }}>
+      <ColorCircles colors={['#d4a853','#b87333','#c9a87c']} size={26} />
+      <div style={{ fontFamily:sans,fontSize:12,color:C.textMuted }}>Gold · Bronze · Rose Gold metals</div>
+    </div>
+
+    {/* Jewelry — illustrated */}
+    <div style={{ padding:'14px 20px 0' }}>
+      <Lbl style={{ marginBottom:12 }}>Jewelry for oval face</Lbl>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        {[
+          { cat:'Earrings',  Icon:EarringIcon,  lines:['Long drop earrings','Large hoops','Chandeliers'],   note:'All styles flatter oval' },
+          { cat:'Necklaces', Icon:NecklaceIcon, lines:['Pendant chains','Layered necklaces','Collar necklace'], note:'All lengths suit you' },
+          { cat:'Bracelets', Icon:BraceletIcon, lines:['Cuffs & bangles','Stacked delicate','Statement'],   note:'Bold styles encouraged' },
+          { cat:'Rings',     Icon:RingIcon,     lines:['Cocktail rings','Stacked bands','Signet rings'],    note:'Go bold — face balances it' },
+        ].map(item => (
+          <div key={item.cat} style={{ background:cardGrad, border:`0.5px solid rgba(255,255,255,.07)`, borderRadius:16, padding:'12px 12px', display:'flex', gap:10, alignItems:'flex-start' }}>
+            <div style={{ flexShrink:0, opacity:.8 }}>
+              <item.Icon color={accent} />
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontFamily:sans,fontSize:11,fontWeight:700,color:accent,marginBottom:5,letterSpacing:'.04em' }}>{item.cat}</div>
+              {item.lines.map(l => (
+                <div key={l} style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
+                  <div style={{ width:3,height:3,borderRadius:9999,background:C.goldBorder,flexShrink:0 }} />
+                  <span style={{ fontFamily:sans,fontSize:10,color:C.text }}>{l}</span>
+                </div>
+              ))}
+              <div style={{ fontFamily:sans,fontSize:9,color:C.textSubtle,marginTop:5,lineHeight:1.4 }}>{item.note}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Makeup palette */}
+    <div style={{ padding:'14px 20px 0' }}>
+      <Lbl style={{ marginBottom:12 }}>Makeup palette</Lbl>
+      {[
+        { cat:'Foundation', tones:['#f0c8a0','#e0aa80','#c89060','#b07040'], hint:'Warm / golden base' },
+        { cat:'Blush',      tones:['#e89080','#d47858','#e8a070','#c87050'], hint:'Peach · Coral · Terracotta' },
+        { cat:'Eyes',       tones:['#8b5a30','#c9a87c','#3a2010','#c89820'], hint:'Warm browns · Gold · Bronze' },
+        { cat:'Lips',       tones:['#c87858','#c03838','#e09068','#904830'], hint:'Nude peach · Coral · Warm red' },
+      ].map(mk => (
+        <div key={mk.cat} style={{ display:'flex', alignItems:'center', gap:11, marginBottom:8 }}>
+          <div style={{ width:66, flexShrink:0 }}>
+            <div style={{ fontFamily:sans,fontSize:10,fontWeight:700,color:C.textMuted }}>{mk.cat}</div>
+            <div style={{ fontFamily:sans,fontSize:8,color:C.textSubtle,marginTop:1,lineHeight:1.3 }}>{mk.hint}</div>
+          </div>
+          <div style={{ display:'flex', gap:5, flex:1 }}>
+            {mk.tones.map((tone,i) => (
+              <div key={i} style={{ flex:1, height:30, borderRadius:8, background:tone, boxShadow:'inset 0 0 0 .5px rgba(255,255,255,.12)' }} />
+            ))}
+          </div>
+        </div>
+      ))}
+      <div style={{ fontFamily:sans,fontSize:11,color:C.textSubtle,lineHeight:1.6,fontStyle:'italic',marginTop:4 }}>Avoid cool-toned formulas — they clash with your warm undertone.</div>
+    </div>
+
+    <FloatingNav active={2} accent={accent} />
+  </Screen>
+);
+
+// ── TWEAKS ────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#c9a87c"
+}/*EDITMODE-END*/;
+
+// ── APP ───────────────────────────────────────────────────────
+const App = () => {
+  const { t={}, setTweak } = useTweaks(TWEAK_DEFAULTS);
+  const accent = (t && t.accent) || C.gold;
+
+  const frame = (Scr) => <IOSDevice dark width={402} height={874}><Scr accent={accent} /></IOSDevice>;
+  const ab = (id, label, Scr) => (
+    <DCArtboard id={id} label={label} width={440} height={920}>
+      <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'#060503' }}>
+        {frame(Scr)}
+      </div>
+    </DCArtboard>
+  );
+
+  return (
+    <div style={{ width:'100vw',height:'100vh',position:'relative' }}>
+      <DesignCanvas>
+        <DCSection id="home"         title="Home"                subtitle="Entry point — returning user">
+          {ab('home-a',         'A · Dashboard',              HomeA)}
+          {ab('home-b',         'B · Editorial',              HomeB)}
+        </DCSection>
+        <DCSection id="scan"         title="Scan Flow"           subtitle="Starting a new style analysis">
+          {ab('scan-a',         'A · Camera View',            ScanA)}
+          {ab('scan-b',         'B · Method Chooser',         ScanB)}
+        </DCSection>
+        <DCSection id="results"      title="Style Results"       subtitle="Post-analysis profile screen">
+          {ab('results-a',      'A · Grid Cards',             ResultsA)}
+          {ab('results-b',      'B · Story Layout',           ResultsB)}
+        </DCSection>
+        <DCSection id="chat"         title="AI Stylist Chat"     subtitle="Conversational styling assistant">
+          {ab('chat-a',         'A · Standard',               ChatA)}
+          {ab('chat-b',         'B · Minimal',                ChatB)}
+        </DCSection>
+        <DCSection id="hair"         title="Hair Recommendations" subtitle="Cuts, bangs, length & color by face shape">
+          {ab('hair-a',         'Cuts · Length · Color',      HairA)}
+        </DCSection>
+        <DCSection id="body"         title="Body & Necklines"    subtitle="Silhouette classification & neckline guide">
+          {ab('body-a',         'Body Type · Necklines',      BodyA)}
+        </DCSection>
+        <DCSection id="wardrobe"     title="Wardrobe Colors"     subtitle="Clothing palette based on undertone">
+          {ab('wardrobe-a',     'Neutrals · Accents · Metals',WardrobeA)}
+        </DCSection>
+        <DCSection id="accessories"  title="Accessories & Makeup" subtitle="Jewelry for face shape · Makeup by undertone">
+          {ab('accessories-a',  'Jewelry · Makeup Palette',   AccessoriesA)}
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel>
+        <TweakSection title="Accent Color">
+          <TweakColor id="accent" label="Palette" options={['#c9a87c','#c9878a','#7c9c8e']} />
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

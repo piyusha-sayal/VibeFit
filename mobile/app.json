@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "VibeFit",
+    "slug": "vibefit",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0c0a07",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c0a07"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.vibefit.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "VibeFit needs access to your photos for style analysis.",
+        "NSCameraUsageDescription": "VibeFit uses your camera for real-time style analysis.",
+        "NSFaceIDUsageDescription": "Used for secure authentication."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0c0a07"
+      },
+      "package": "com.vibefit.app",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "VibeFit needs access to your photos for style analysis.",
+          "cameraPermission": "VibeFit uses your camera for real-time style analysis."
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "scheme": "vibefit",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
