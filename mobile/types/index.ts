@@ -21,11 +21,17 @@ export type Undertone = 'warm' | 'cool' | 'neutral';
 export type ContrastLevel = 'low' | 'medium' | 'high';
 export type HairTexture = 'straight' | 'wavy' | 'curly' | 'coily';
 
+export type AnalysisStatus = 'processing' | 'complete' | 'failed';
+
 export interface AnalysisResult {
   id: string;
   userId: string;
   imageUrl: string;
   createdAt: string;
+  // Upload returns a `processing` row; analysis blocks are absent until the
+  // backend job finishes, so poll until this is `complete` or `failed`.
+  status: AnalysisStatus;
+  errorMessage?: string | null;
   faceAnalysis?: FaceAnalysis;
   colorAnalysis?: ColorAnalysis;
   hairAnalysis?: HairAnalysis;

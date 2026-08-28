@@ -33,20 +33,22 @@ async def test_uat_full_flow(client: AsyncClient):
     token = await _token(client, "uat@test.com")
     auth = {"Authorization": f"Bearer {token}"}
 
-    # 1) Upload + analyze -> persisted blocks present.
+    # 1) Upload returns immediately with a pending row; ML runs in the background.
     up = await client.post("/api/v1/analysis/upload", headers=auth,
                            files={"file": ("face.jpg", _jpeg(), "image/jpeg")})
     assert up.status_code == 201, up.text
     body = up.json()
     aid = body["id"]
-    assert body["status"] == "complete"
-    assert body["quality"] is not None
-    assert body["face_analysis"] is not None
-    assert isinstance(body["recommendations"], list) and body["recommendations"]
+    assert body["status"] == "processing"
 
-    # 2) Fetch by id.
+    # 2) Fetch by id -> background job has finished, blocks are persisted.
     got = await client.get(f"/api/v1/analysis/{aid}", headers=auth)
     assert got.status_code == 200
+    done = got.json()
+    assert done["status"] == "complete", done.get("error_message")
+    assert done["quality"] is not None
+    assert done["face_analysis"] is not None
+    assert isinstance(done["recommendations"], list) and done["recommendations"]
 
     # 3) PDF report.
     rep = await client.get(f"/api/v1/analysis/{aid}/report", headers=auth)
@@ -87,9 +89,14 @@ async def test_uat_multi_upload(client: AsyncClient):
     res = await client.post("/api/v1/analysis/upload-multi", headers=auth, files=files)
     assert res.status_code == 201, res.text
     body = res.json()
-    assert body["status"] == "complete"
-    assert body["face_analysis"] is not None
-    assert body["quality"] is not None
+    assert body["status"] == "processing"
+
+    got = await client.get(f"/api/v1/analysis/{body['id']}", headers=auth)
+    assert got.status_code == 200
+    done = got.json()
+    assert done["status"] == "complete", done.get("error_message")
+    assert done["face_analysis"] is not None
+    assert done["quality"] is not None
 
 
 @pytest.mark.asyncio

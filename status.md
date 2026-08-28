@@ -55,12 +55,62 @@ report, shareable summary card, pose-quality gate, posture read, body
 proportion guidance, multi-photo aggregate, per-metric quality flags,
 image-hash caching, progress tracking.
 
-## Verified State (2026-08-27)
-- Backend: **129/129 pytest passing** (was 126; +3 firebase_auth unit tests)
-- Mobile: **tsc 0 errors**
+## Verified State (2026-08-28)
+- Backend: **139/139 pytest passing** (was 129; +10 async-analysis & cache tests)
+- Mobile: **tsc 0 errors**, `expo export --platform ios` exit 0
 - Auth: Firebase ID token (email/password + Google) + internal JWT fallback
 - Storage: AWS S3 (boto3 singleton client)
 - AI cost: Gemini/Groq only — no OpenAI dependency
+
+## Deployment readiness (2026-08-28)
+
+Decision: **keep the Python backend, don't port ML on-device.** Sized the port
+first — `feature_analysis` (197 LOC), `overlay` (65), `body_analysis` (150) and
+the whole `rules/` layer (~490) port trivially, but `skin_analysis` (236),
+`hair_analysis` (118), `quality` and `color_analysis` need `cv2.Laplacian`
+convolutions, `cv2.kmeans` and LAB/HSV conversions (~574 LOC), thresholds are
+tuned to MediaPipe's 468-landmark indices, mobile has zero ML packages (would
+force EAS dev builds, leaving Expo Go), and LLM keys can't ship in a bundle.
+Revisit only if on-device privacy becomes a product differentiator.
+
+Instead: host the backend, and stop its availability gating the UX.
+
+- **Git repo initialized.** Root `.gitignore` excludes both `.env` files —
+  verified with `git check-ignore` before the first `git add`. No remote yet.
+- **Security fix**: `backend/.env.example` held a populated `SECRET_KEY`
+  byte-identical to the live `backend/.env`, and that value was a weak
+  placeholder containing dictionary words. It signs internal JWTs and was
+  committed. Key rotated to a 64-char random token; example blanked. Caught
+  before any push — nothing left the machine.
+- **`CacheService` degrades instead of failing** (`services/cache_service.py`).
+  It sat on the hot path of `_run_ml` with no error handling, so an unreachable
+  Redis turned every scan into a 500. Reads now return `None`, writes no-op.
+  Redis is now genuinely optional to deploy.
+- **Analysis is asynchronous.** `create_and_analyze` split into `create_pending`
+  + `run_pending`/`run_pending_multi`; `POST /analysis/upload` returns a
+  `processing` row immediately and schedules the ML pipeline via
+  `BackgroundTasks`. Reuses the existing `_run_ml`/`_finalize` helpers unchanged.
+  Rows stuck `processing` past 10 min are reported `failed` (`_is_stale_processing`).
+- **Session factory is injectable** (`core/database.py: get_session_factory`).
+  The background job can't reuse the request session (`get_db` commits and
+  closes on response); hardcoding `AsyncSessionLocal` made background work
+  bypass the test DB override entirely. Now a dependency, overridden in conftest.
+- **Mobile polls + caches.** `analysisStore.upload` polls `getAnalysis(id)` every
+  2s (3 min ceiling) holding the existing `isAnalyzing` state, so the scan
+  animation covers the wait. `services/localCache.ts` persists the last complete
+  analysis and hydrates the store synchronously at startup, so home / Vibe
+  Profile paint instantly even with the backend asleep.
+  MMKV is loaded **lazily behind try/catch** — it is a JSI module absent from
+  Expo Go, so eager construction would crash the current test workflow; it falls
+  back to an in-memory store there.
+- `backend/README.md` carries HF Space frontmatter (`sdk: docker`,
+  `app_port: 8000`) and the `git subtree push --prefix=backend` recipe, since a
+  Space needs the Dockerfile at its root.
+- `docs/ENVIRONMENT.md` documents every backend + mobile env key.
+
+**Not done — needs your accounts:** creating the HF Space and Neon database,
+setting Space secrets, running `alembic upgrade head` against Neon, and pointing
+`EXPO_PUBLIC_API_URL` at the Space.
 
 ## Login fix (2026-08-27)
 Mobile login/register/Google-sign-in UI was already fully built and mobile's

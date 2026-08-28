@@ -18,3 +18,12 @@ async def get_db():
         except Exception:
             await session.rollback()
             raise
+
+
+def get_session_factory():
+    """Session factory for work that outlives the request (background tasks).
+
+    Exposed as a dependency rather than importing AsyncSessionLocal directly so
+    tests can point background work at the same database as the request.
+    """
+    return AsyncSessionLocal

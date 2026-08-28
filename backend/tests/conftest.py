@@ -14,11 +14,33 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from PIL import Image
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from core.database import Base, get_db
+from core.database import Base, get_db, get_session_factory
 from api.deps import get_cache
 from main import app
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+
+
+class _SharedSession:
+    """Async-context wrapper that hands out the test's session without closing it.
+
+    Background tasks open their own session via the get_session_factory
+    dependency. In tests that must resolve to the same in-memory SQLite session
+    the request used — a fresh connection would get a *different* empty
+    in-memory database.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    def __call__(self) -> "_SharedSession":
+        return self
+
+    async def __aenter__(self) -> AsyncSession:
+        return self._session
+
+    async def __aexit__(self, *exc_info) -> bool:
+        return False
 
 
 class _FakeCache:
@@ -67,6 +89,7 @@ async def db_session():
 async def client(db_session: AsyncSession):
     app.dependency_overrides[get_db] = lambda: db_session
     app.dependency_overrides[get_cache] = lambda: _FakeCache()
+    app.dependency_overrides[get_session_factory] = lambda: _SharedSession(db_session)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()

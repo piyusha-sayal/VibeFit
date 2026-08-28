@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import { AnalysisResult } from '../types';
 import * as analysisService from '../services/analysisService';
+import { readCachedAnalysis, writeCachedAnalysis } from '../services/localCache';
+
+// The backend runs the ML pipeline as a background job, so upload returns a
+// `processing` row and we poll until it resolves. A cold-starting free-tier
+// host can make the first scan slow, hence the generous ceiling.
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 3 * 60 * 1000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface AnalysisState {
   currentAnalysis: AnalysisResult | null;
@@ -17,7 +26,8 @@ interface AnalysisState {
 }
 
 export const useAnalysisStore = create<AnalysisState>((set) => ({
-  currentAnalysis: null,
+  // Paint instantly from the device cache; loadLatest() refreshes from network.
+  currentAnalysis: readCachedAnalysis(),
   analyses: [],
   isUploading: false,
   uploadProgress: 0,
@@ -32,11 +42,20 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
         else set({ uploadProgress: pct });
       });
       if (!response.success || !response.data) throw new Error(response.error ?? 'Analysis failed');
+
+      set({ isUploading: false, isAnalyzing: true });
+      const finished = await pollUntilResolved(response.data);
+
+      if (finished.status === 'failed') {
+        throw new Error(finished.errorMessage ?? 'Analysis failed. Please try another photo.');
+      }
+
+      writeCachedAnalysis(finished);
       set((s) => ({
-        currentAnalysis: response.data!,
-        analyses: [response.data!, ...s.analyses],
+        currentAnalysis: finished,
+        analyses: [finished, ...s.analyses.filter((a) => a.id !== finished.id)],
       }));
-      return response.data;
+      return finished;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Analysis failed';
       set({ error: msg });
@@ -49,9 +68,12 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   loadLatest: async () => {
     try {
       const response = await analysisService.getLatestAnalysis();
-      if (response.success && response.data) set({ currentAnalysis: response.data });
+      if (response.success && response.data) {
+        writeCachedAnalysis(response.data);
+        set({ currentAnalysis: response.data });
+      }
     } catch {
-      // silently ignore — user may not have any analyses yet
+      // Offline or backend asleep — keep whatever the cache already painted.
     }
   },
 
@@ -67,3 +89,31 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   setCurrentAnalysis: (analysis) => set({ currentAnalysis: analysis }),
   clearError: () => set({ error: null }),
 }));
+
+/**
+ * Poll a pending analysis until the backend marks it complete or failed.
+ * Transient fetch errors are tolerated — a cold-starting host may refuse a few
+ * requests before it is ready — but a timeout surfaces as a failure so the user
+ * is never left on an endless spinner.
+ */
+async function pollUntilResolved(initial: AnalysisResult): Promise<AnalysisResult> {
+  if (initial.status !== 'processing') return initial;
+
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  let latest = initial;
+
+  while (Date.now() < deadline) {
+    await sleep(POLL_INTERVAL_MS);
+    const res = await analysisService.getAnalysis(initial.id);
+    if (res.success && res.data) {
+      latest = res.data;
+      if (latest.status !== 'processing') return latest;
+    }
+  }
+
+  return {
+    ...latest,
+    status: 'failed',
+    errorMessage: 'Analysis is taking longer than expected. Please try again.',
+  };
+}

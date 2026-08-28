@@ -1,11 +1,12 @@
 import uuid
 import asyncio
+import logging
 import boto3
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 import io
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.database import get_db
+from core.database import get_db, get_session_factory
 from core.config import settings
 from models.user import User
 from schemas.analysis import AnalysisOut, AnalysisListItem
@@ -18,6 +19,8 @@ from ml.overlay import annotate_face
 from api.deps import get_current_user, get_cache, get_ai_service
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -47,14 +50,47 @@ async def _upload_to_s3(data: bytes, content_type: str) -> str:
     return f"https://{settings.aws_s3_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
 
 
+async def _run_analysis_job(
+    session_factory,
+    cache: CacheService,
+    ai: AIService,
+    analysis_id: str,
+    user_id: str,
+    images: list[bytes],
+    multi: bool,
+) -> None:
+    """Background worker for a pending analysis row.
+
+    Runs after the response is sent, so it cannot reuse the request's session —
+    get_db commits and closes that on response — hence its own session from the
+    injected factory. The cache and AI service are process-wide singletons and
+    are safe to carry over. Exceptions are logged, never surfaced to the client;
+    run_pending marks the row "failed" so the app can offer a retry.
+    """
+    try:
+        async with session_factory() as db:
+            svc = AnalysisService(db, cache, ai)
+            if multi:
+                await svc.run_pending_multi(analysis_id, user_id, images)
+            else:
+                await svc.run_pending(analysis_id, user_id, images[0])
+            await db.commit()
+    except Exception:
+        logger.exception("analysis job failed for %s", analysis_id)
+
+
 @router.post("/upload", response_model=AnalysisOut, status_code=201)
 async def upload_and_analyze(
+    background: BackgroundTasks,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     cache: CacheService = Depends(get_cache),
     ai: AIService = Depends(get_ai_service),
     current_user: User = Depends(get_current_user),
+    session_factory=Depends(get_session_factory),
 ):
+    """Returns immediately with a "processing" row; the client polls
+    GET /analysis/{id} until status is "complete" or "failed"."""
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=422, detail="File must be JPEG, PNG, or WebP")
 
@@ -64,19 +100,24 @@ async def upload_and_analyze(
 
     image_url = await _upload_to_s3(data, file.content_type or "image/jpeg")
     svc = AnalysisService(db, cache, ai)
-    analysis = await svc.create_and_analyze(current_user.id, data, image_url)
+    analysis = await svc.create_pending(current_user.id, image_url)
+    background.add_task(_run_analysis_job, session_factory, cache, ai,
+                        analysis.id, current_user.id, [data], False)
     return analysis
 
 
 @router.post("/upload-multi", response_model=AnalysisOut, status_code=201)
 async def upload_multi_and_analyze(
+    background: BackgroundTasks,
     files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
     cache: CacheService = Depends(get_cache),
     ai: AIService = Depends(get_ai_service),
     current_user: User = Depends(get_current_user),
+    session_factory=Depends(get_session_factory),
 ):
-    """Analyze several photos of the same person and aggregate (F10)."""
+    """Analyze several photos of the same person and aggregate (F10).
+    Returns a "processing" row; the client polls GET /analysis/{id}."""
     if not files:
         raise HTTPException(status_code=422, detail="At least one image required")
     if len(files) > 5:
@@ -95,7 +136,10 @@ async def upload_multi_and_analyze(
             first_url = await _upload_to_s3(data, f.content_type or "image/jpeg")
 
     svc = AnalysisService(db, cache, ai)
-    return await svc.create_and_analyze_multi(current_user.id, images, first_url)
+    analysis = await svc.create_pending(current_user.id, first_url)
+    background.add_task(_run_analysis_job, session_factory, cache, ai,
+                        analysis.id, current_user.id, images, True)
+    return analysis
 
 
 @router.post("/overlay")

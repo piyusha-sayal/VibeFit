@@ -1,6 +1,7 @@
 import uuid
 import asyncio
 import hashlib
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -18,6 +19,21 @@ from rules.engine import build_rule_recommendations, merge_recommendations
 from rules.body_guidance import body_balance_tips
 from .progress import build_progress
 from .aggregate import aggregate_analysis
+
+
+# Analysis runs as an in-process background task, so a server restart mid-run
+# would strand a row in "processing" forever. Anything older than this is
+# reported as failed so the app can offer a retry instead of polling on nothing.
+STALE_PROCESSING_AFTER = timedelta(minutes=10)
+
+
+def _is_stale_processing(analysis: Analysis) -> bool:
+    if analysis.status != "processing" or analysis.created_at is None:
+        return False
+    created = analysis.created_at
+    if created.tzinfo is None:  # SQLite hands back naive datetimes
+        created = created.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - created > STALE_PROCESSING_AFTER
 
 
 def _merge_features(face: dict, features: dict) -> dict:
@@ -89,34 +105,51 @@ class AnalysisService:
         await self._cache.invalidate_prefix(f"analysis:{user_id}:")
         return analysis
 
-    async def create_and_analyze(self, user_id: str, image_bytes: bytes, image_url: str) -> Analysis:
+    async def create_pending(self, user_id: str, image_url: str) -> Analysis:
+        """Insert the row and return immediately so the request doesn't block on
+        ML. The caller schedules run_pending/run_pending_multi as a background
+        task. Recommendations are refreshed here (empty at this point) so
+        response serialization never triggers lazy IO outside the greenlet."""
         analysis = Analysis(id=str(uuid.uuid4()), user_id=user_id,
                             image_url=image_url, status="processing")
         self._db.add(analysis)
         await self._db.flush()
+        await self._db.refresh(analysis, attribute_names=["recommendations"])
+        return analysis
+
+    async def _load_row(self, analysis_id: str, user_id: str) -> Optional[Analysis]:
+        result = await self._db.execute(
+            select(Analysis).where(Analysis.id == analysis_id, Analysis.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def _fail(self, analysis: Analysis, exc: Exception) -> Analysis:
+        analysis.status = "failed"
+        analysis.error_message = str(exc)
+        await self._db.flush()
+        return analysis
+
+    async def run_pending(self, analysis_id: str, user_id: str, image_bytes: bytes) -> Optional[Analysis]:
+        """Run the ML pipeline for an already-created pending row."""
+        analysis = await self._load_row(analysis_id, user_id)
+        if analysis is None:
+            return None
         try:
             ml = await self._run_ml(image_bytes)
         except Exception as exc:
-            analysis.status = "failed"
-            analysis.error_message = str(exc)
-            await self._db.flush()
-            return analysis
+            return await self._fail(analysis, exc)
         return await self._finalize(analysis, ml, user_id)
 
-    async def create_and_analyze_multi(self, user_id: str, images: list[bytes], image_url: str) -> Analysis:
+    async def run_pending_multi(self, analysis_id: str, user_id: str, images: list[bytes]) -> Optional[Analysis]:
         """F10: run ML per frame, aggregate to stabler scores, persist one row."""
-        analysis = Analysis(id=str(uuid.uuid4()), user_id=user_id,
-                            image_url=image_url, status="processing")
-        self._db.add(analysis)
-        await self._db.flush()
+        analysis = await self._load_row(analysis_id, user_id)
+        if analysis is None:
+            return None
         try:
             per_image = [await self._run_ml(b) for b in images]
             ml = aggregate_analysis(per_image)
         except Exception as exc:
-            analysis.status = "failed"
-            analysis.error_message = str(exc)
-            await self._db.flush()
-            return analysis
+            return await self._fail(analysis, exc)
         return await self._finalize(analysis, ml, user_id)
 
     async def get_by_id(self, analysis_id: str, user_id: str) -> Optional[Analysis]:
@@ -125,10 +158,9 @@ class AnalysisService:
         if cached:
             return cached
 
-        result = await self._db.execute(
-            select(Analysis).where(Analysis.id == analysis_id, Analysis.user_id == user_id)
-        )
-        analysis = result.scalar_one_or_none()
+        analysis = await self._load_row(analysis_id, user_id)
+        if analysis is not None and _is_stale_processing(analysis):
+            return await self._fail(analysis, RuntimeError("Analysis timed out. Please try again."))
         return analysis
 
     async def get_latest(self, user_id: str) -> Optional[Analysis]:

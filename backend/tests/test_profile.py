@@ -87,7 +87,10 @@ async def test_correction_overrides_display_value_without_erasing_scan(client: A
     auth = await _register(client, "vibe-corrected@test.com")
     up = await client.post("/api/v1/analysis/upload", headers=auth,
                            files={"file": ("face.jpg", _jpeg(), "image/jpeg")})
-    scanned_shape = up.json()["face_analysis"]["shape"]
+    # Upload returns a pending row; the analysis blocks land once the background
+    # job has run, so read them back rather than off the upload response.
+    got = await client.get(f"/api/v1/analysis/{up.json()['id']}", headers=auth)
+    scanned_shape = got.json()["face_analysis"]["shape"]
 
     cor = await client.post("/api/v1/profile/corrections", headers=auth,
                             json={"attribute_key": "face_shape", "corrected_value": "heart",
