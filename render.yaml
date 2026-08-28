@@ -1,0 +1,55 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Create the service via Render dashboard → New → Blueprint, pointed at this repo.
+#
+# Secrets are NOT defined here (sync: false). Set each in the Render dashboard
+# under the service's Environment tab so they never enter the repo.
+services:
+  - type: web
+    name: vibefit-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      # --- required, set in dashboard ---
+      # Neon Postgres, must use the postgresql+asyncpg:// scheme and no ?sslmode
+      - key: DATABASE_URL
+        sync: false
+      # 64-char random; signs internal JWTs
+      - key: SECRET_KEY
+        sync: false
+      # Public value; must match the mobile app's EXPO_PUBLIC_FIREBASE_PROJECT_ID
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      # Comma-separated allowed origins for the mobile/web client
+      - key: CORS_ORIGINS
+        sync: false
+
+      # --- optional, set in dashboard if used ---
+      # App is fully functional without these: the deterministic rules engine is
+      # the baseline and the LLM only rephrases grounded output.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+      # --- fixed ---
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+
+# Notes
+# -----
+# REDIS_URL is intentionally omitted: CacheService degrades to a cache-miss when
+# Redis is unreachable, so the service runs without it. Add it later (Upstash
+# free tier) purely as an optimisation.
+#
+# The free plan sleeps after 15 minutes idle (~30-60s cold start). Measured peak
+# memory for the full ML pipeline is ~212 MB against the 512 MB limit, so RAM is
+# comfortable — but keep it to ONE uvicorn worker; each additional worker adds
+# roughly 200 MB of imports.
+#
+# Migrations do not run automatically. After the first deploy, once:
+#   DATABASE_URL=<neon-url> alembic upgrade head
