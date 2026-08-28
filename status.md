@@ -56,7 +56,9 @@ proportion guidance, multi-photo aggregate, per-metric quality flags,
 image-hash caching, progress tracking.
 
 ## Verified State (2026-08-28)
-- Backend: **139/139 pytest passing** (was 129; +10 async-analysis & cache tests)
+- Backend: **142/142 pytest passing** (was 129; +13 async-analysis, cache & migration tests)
+- Database: **Neon Postgres 18.6 live**, `alembic upgrade head` applied, all 9
+  tables + `alembic_version` at `0002_profile_plan`
 - Mobile: **tsc 0 errors**, `expo export --platform ios` exit 0
 - Auth: Firebase ID token (email/password + Google) + internal JWT fallback
 - Storage: AWS S3 (boto3 singleton client)
@@ -108,9 +110,31 @@ Instead: host the backend, and stop its availability gating the UX.
   Space needs the Dockerfile at its root.
 - `docs/ENVIRONMENT.md` documents every backend + mobile env key.
 
-**Not done — needs your accounts:** creating the HF Space and Neon database,
-setting Space secrets, running `alembic upgrade head` against Neon, and pointing
-`EXPO_PUBLIC_API_URL` at the Space.
+### Migration chain was broken (fixed 2026-08-28)
+
+Found while running the first real `alembic upgrade head` against Neon:
+`0001_baseline` called `Base.metadata.create_all()` with **no table filter**, so
+it created whatever the models defined *at that moment* — including the four
+tables `0002_profile_plan` owns. `0002` therefore always died with
+`DuplicateTableError`. The chain had been broken since `0002` was written and
+was never exercised: `conftest.py` builds schema with `create_all()` directly
+and never invokes alembic, so it first failed at deploy time. Prior status.md
+wrongly reported migrations as healthy.
+
+Fix: `0001` now creates an explicit frozen `BASELINE_TABLES` tuple (users,
+analyses, recommendations, chat_sessions, chat_messages). A migration is a
+snapshot of history, not a live mirror of the models — the old form meant every
+future model would break the chain the same way.
+
+`tests/test_migrations.py` now runs `upgrade head` + `downgrade base` against a
+scratch SQLite DB, and asserts `0001` never lists a later revision's tables.
+Verified red/green: reverting `0001` reproduces `table onboarding_responses
+already exists`. Its fixture restores the session event loop, since alembic's
+`env.py` calls `asyncio.run()` and would otherwise leave no current loop and
+break every async test after it.
+
+**Not done — needs your accounts:** creating the HF Space, setting Space secrets,
+and pointing `EXPO_PUBLIC_API_URL` at the Space. Neon is live and migrated.
 
 ## Login fix (2026-08-27)
 Mobile login/register/Google-sign-in UI was already fully built and mobile's
