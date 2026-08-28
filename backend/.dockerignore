@@ -1,0 +1,12 @@
+# Build context trimming — keep the image to runtime code only.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+tests/
+uploads/
+.env
+.env.*
+requirements-dev.txt
+.claude/
+.claudeignore
+README.md

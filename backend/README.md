@@ -6,10 +6,14 @@ photo, plus the deterministic styling-rules engine, Vibe Profile and Action Plan
 ## Local
 
 ```bash
+pip install -r requirements-dev.txt  # runtime deps + the test-only ones
 docker compose up                    # API :8000 + Postgres
 .venv/Scripts/alembic upgrade head   # once; migrations are not auto-run
 .venv/Scripts/python -m pytest -q
 ```
+
+`requirements.txt` is runtime-only — it is what the image installs.
+`requirements-dev.txt` includes it and adds pytest, factory-boy and aiosqlite.
 
 See `../docs/ENVIRONMENT.md` for the full env-var reference.
 
