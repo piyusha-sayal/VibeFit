@@ -264,3 +264,53 @@ Status: **done, backend + mobile wired end to end**.
 Product/routine compatibility checker → outcome tracking → shopping/item
 checks (per prior product direction). Do not start until this slice has a
 real device/simulator smoke test.
+
+## Deployed (2026-08-30)
+
+Live at **https://vibefit-api-awx9.onrender.com** (Render free tier, Docker,
+one uvicorn worker, bound on port 10000). Render appends a random suffix to
+the service name from `render.yaml`, so the host is `vibefit-api-awx9`, not
+`vibefit-api`.
+
+Verified against the running service, not just the build log:
+- `/health` → 200
+- `/openapi.json` → all 24 paths registered
+- `POST /api/v1/auth/register` → 201, `POST /auth/login` → JWT,
+  `GET /auth/me` → 200 reading the row back. Neon, auth and JWT signing all
+  confirmed working in production, which `/health` alone does not prove.
+
+First request after idle takes ~50s: the free plan sleeps after 15 minutes
+and the ML imports are heavy. The mobile app's local cache covers this for
+home/Vibe Profile; a first scan of the day will feel slow.
+
+### Three dependency drifts the first deploys exposed
+`requirements.txt` had diverged from the dev venv, so 145 green tests were
+passing against an environment the image never reproduces.
+
+- **`email-validator` missing** — `schemas/auth.py` uses pydantic `EmailStr`,
+  which resolves email-validator at *import* time. The venv happened to have
+  it; a clean image did not. This is what killed the first deploy.
+- **`numpy` undeclared** — `ml/` imports it directly but only ever received
+  it transitively via opencv/mediapipe. Same bug, not yet triggered.
+- **`httpx` pinned wrong** — file said 0.28.1, venv had 0.27.0. httpx 0.28
+  dropped `AsyncClient(app=...)`; 21 tests fail against the declared pin.
+  Pinned down to 0.27.0 — httpx is test-only here, present at runtime only as
+  a transitive dep of groq (`httpx<1,>=0.23.0`).
+
+**Guard against the class:** build a venv from `requirements.txt` alone and
+import `main` / run the suite. The dev venv is a superset of the image, so it
+structurally cannot catch a missing declaration. Clean venv now: 145 passed.
+
+### Deployment caveats
+- **Repo is PUBLIC**, temporarily. Render's GitHub App repo picker would not
+  list the repo (a known Render bug), so the service was created from a public
+  Git URL instead. Flipping back to private will likely break auto-deploy,
+  since nothing but the public URL links Render to the repo.
+- `.env` files are gitignored and were never in history; the weak SECRET_KEY
+  noted above was rotated before `git init`, so it never entered any commit.
+- One smoke-test user (`claude-smoketest-*@example.com`) exists in the
+  production database from the verification above.
+- Optional env vars are all unset: no Gemini/Groq key (rules engine serves
+  everything), no R2 (photos analyzed in memory, `local://` placeholder).
+- Local Docker never verified the image — Docker Desktop's WSL distro is
+  broken (`WSL_E_USER_NOT_FOUND`). Render's build is the only one that has run.
