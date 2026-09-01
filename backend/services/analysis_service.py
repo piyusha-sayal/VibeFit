@@ -62,15 +62,20 @@ class AnalysisService:
         cached = await self._cache.get(img_key)  # F12: skip recompute
         if cached:
             return cached
-        face, colors, hair, body, skin, quality, features = await asyncio.gather(
-            asyncio.to_thread(analyze_face, image_bytes),
-            asyncio.to_thread(analyze_colors, image_bytes),
-            asyncio.to_thread(analyze_hair, image_bytes),
-            asyncio.to_thread(analyze_body, image_bytes),
-            asyncio.to_thread(analyze_skin, image_bytes),
-            asyncio.to_thread(assess_quality, image_bytes),
-            asyncio.to_thread(analyze_features, image_bytes),
-        )
+        # Sequential, not gathered. Each analyzer builds its own MediaPipe graph
+        # (5 of the 7 build a FaceMesh, 2 a Pose) and each loads its own copy of
+        # the TFLite weights. Running them concurrently held all seven in memory
+        # at once, which OOM-killed the 512 MB container on the second scan --
+        # reproducibly: scan 1 succeeded, scan 2 took the process down, scan 3
+        # got a 502. Sequencing them caps peak memory at one analyzer.
+        # Still off the event loop, so the request stays responsive.
+        face = await asyncio.to_thread(analyze_face, image_bytes)
+        colors = await asyncio.to_thread(analyze_colors, image_bytes)
+        hair = await asyncio.to_thread(analyze_hair, image_bytes)
+        body = await asyncio.to_thread(analyze_body, image_bytes)
+        skin = await asyncio.to_thread(analyze_skin, image_bytes)
+        quality = await asyncio.to_thread(assess_quality, image_bytes)
+        features = await asyncio.to_thread(analyze_features, image_bytes)
         face = _merge_features(face, features)
         if body.get("shape"):
             body = {**body, "guidance": body_balance_tips(body)}
