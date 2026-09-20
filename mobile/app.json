@@ -31,7 +31,8 @@
       },
       "package": "com.vibefit.app",
       "permissions": [
-        "CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -53,6 +54,13 @@
     "scheme": "vibefit",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8f7c7f5d-b5bf-48f0-974e-60d31b4ffeee"
+      }
+    },
+    "owner": "piyusha_sayal"
   }
 }
