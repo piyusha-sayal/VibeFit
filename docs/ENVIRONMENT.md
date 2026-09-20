@@ -66,8 +66,9 @@ S3_PUBLIC_BASE_URL=
 # --- runtime ---
 ENVIRONMENT=development
 LOG_LEVEL=INFO
-# Comma-separated. Expo dev server default is http://localhost:8081
-CORS_ORIGINS=http://localhost:8081
+# Comma-separated; only the web build needs it. Expo web serves on port 8081,
+# and localhost vs 127.0.0.1 are different origins.
+CORS_ORIGINS=http://localhost:8081,http://127.0.0.1:8081
 ```
 
 Only `DATABASE_URL` and `SECRET_KEY` are mandatory — everything else has a
@@ -84,7 +85,7 @@ Firebase web client keys are public by design. Never put a server secret here.
 # --- backend ---
 # Physical device via Expo Go: your machine's LAN IP, e.g. http://192.168.1.175:8000
 # Android emulator: http://10.0.2.2:8000
-# iOS simulator:    http://localhost:8000
+# iOS simulator / web: http://127.0.0.1:8000
 # Deployed:         your Hugging Face Space URL
 EXPO_PUBLIC_API_URL=http://localhost:8000
 EXPO_PUBLIC_API_VERSION=v1
@@ -113,6 +114,9 @@ silently no-oping.
 ---
 
 ## Local run
+
+Windows step-by-step (database override, API URL per target, firewall,
+Expo Go): see [`LOCAL_DEV_WINDOWS.md`](LOCAL_DEV_WINDOWS.md).
 
 ```bash
 docker compose up                              # API :8000 + Postgres

@@ -13,7 +13,7 @@ affiliate fashion links, subscription AI stylist.
 
 ```
 VibeFit/
-├── backend/     FastAPI + Postgres + Redis (dockerized)
+├── backend/     FastAPI + Postgres (dockerized; in-process cache)
 ├── mobile/      Expo / React Native app
 ├── docs/        roadmap + improvements logs
 ├── UI/          design refs
@@ -54,6 +54,81 @@ Skin analysis, feature scoring, annotated overlay, eyebrow mapping, PDF
 report, shareable summary card, pose-quality gate, posture read, body
 proportion guidance, multi-photo aggregate, per-metric quality flags,
 image-hash caching, progress tracking.
+
+## Local dev verification (2026-09-12)
+
+Windows 11, Node 24.15.0 / npm 9.8.0, backend venv Python 3.12.10.
+Expo SDK 54.0.37, expo-router 6.0.24, RN 0.81.5, React 19.1.0,
+Reanimated 4.1.7, Worklets 0.5.1, NativeWind 4.2.3. Setup guide:
+`docs/LOCAL_DEV_WINDOWS.md`.
+
+**Workflow: Expo Go.** No native module needs a development build.
+
+Checks (all run after `npm ci` from the updated lockfile):
+- `expo install --check`: up to date. `expo-doctor`: 18/18 passed.
+- `tsc --noEmit`: 0 errors. `npm run lint`: 0 problems. `jest --ci`: 9/9.
+- Backend `pytest -q`: 157 passed.
+- `alembic heads`/`current`: `0002_profile_plan`; `alembic check` against a
+  fresh SQLite DB: no drift between migrations and models.
+- `GET /health` → 200 on `127.0.0.1` and on the Wi-Fi LAN IP.
+
+Runtime, against a local API (SQLite, no Gemini/Groq key, no S3):
+- API journey script, 24/24: register/login, 401 on bad token, onboarding
+  save/load, non-image upload 422, upload → `processing` → `complete` in ~4.5s
+  with a face detected, PDF, card PNG, overlay PNG, faceless image → retake
+  flags, history, progress, Vibe Profile, plan, chat without AI keys.
+- Web (headless Chrome): Firebase registration → onboarding → save (201) →
+  Action Plan; reload keeps the session; scan upload → polling stops → results
+  with no `undefined`/`NaN`; retake banner for a faceless photo; chat hint
+  reply; with the API stopped, home paints from cache and scan shows
+  "Network Error".
+- Android 15 emulator, Expo Go 54.0.8: app opens, Firebase login, home loads
+  from `10.0.2.2:8000`, PDF and summary card open the share sheet, camera
+  permission prompt, take photo → crop → upload → results with retake banner.
+
+Root causes fixed this pass:
+- **ML analyzers passed BGR to MediaPipe**, which expects RGB. FaceMesh missed
+  a clear frontal portrait, so real scans fell back to the hardcoded
+  `oval`/0.82 defaults. All 8 analyzers now pass RGB
+  (`tests/test_mediapipe_input.py`).
+- **`POST /chat/message` returned 500** on every call: the new session's
+  `messages` relationship was lazy-loaded during serialization
+  (`MissingGreenlet`). Loaded explicitly (`tests/test_chat_routes.py`).
+- **Web bundle never ran**: `react-native-web` was missing, and zustand's ESM
+  build uses `import.meta` (`unstable_transformImportMeta` in babel config).
+- **Returning users were signed out on launch**: `restoreSession` read
+  `auth.currentUser` before Firebase restored it; `app/index.tsx` redirected
+  before restore finished.
+- **Web uploads 422'd**: the RN `{uri,type,name}` FormData descriptor is not
+  a file in browsers (`buildUploadForm`).
+- **`react-native-mmkv` removed.** v2 installs only through the legacy bridge,
+  so under Expo Go and SDK 54's New Architecture it always fell back to memory.
+  The analysis cache now uses AsyncStorage and survives restarts.
+- ESLint had no config, so `npm run lint` could not run; deprecated
+  `READ/WRITE_EXTERNAL_STORAGE` permissions and `MediaTypeOptions` removed.
+
+Remaining blockers / risks:
+- Docker not verified: Docker Desktop's `docker-desktop` WSL distro is broken
+  (`getpwuid(0) failed`). A native PostgreSQL 18 service also holds port 5432,
+  which compose's `db` would need.
+- `backend/.env` still points at the hosted Neon DB; use the documented local
+  SQLite override during development to avoid modifying production data.
+- `backend/.env` now includes the matching Firebase project ID, and
+  `.env.example` documents it without the obsolete Redis setting.
+- Wi-Fi profile is Public and the Node.js inbound rule blocks Public, so a
+  physical phone cannot reach Metro until that changes. Not tested on a phone.
+- iOS not tested (Windows host). Photo-library picking not tested on Android:
+  the emulator image has no system photo picker.
+- No-face scans now return explicit unavailable values, generate no
+  face-derived recommendations, and request a retake. Consumer-facing overall,
+  harmony, and per-feature beauty-like scores were removed from results,
+  summary cards, and PDF reports. Measurements remain internal inputs for
+  neutral styling guidance. The analysis cache was versioned so an old
+  fabricated fallback cannot be reused.
+- Home's **View full report** now opens the complete Results tab rather than
+  the Hair screen.
+- Test data: one Firebase user `claude-local-smoke-*@example.com` in project
+  `vibefit-a897e`.
 
 ## Verified State (2026-08-28)
 - Backend: **145/145 pytest passing** (was 129). Suite runtime 142s → 38s once

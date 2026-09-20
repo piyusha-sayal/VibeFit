@@ -32,3 +32,6 @@ backend/uploads/
 .DS_Store
 Thumbs.db
 *.swp
+
+# stray zero-byte artifact from a shell redirect typo
+dict

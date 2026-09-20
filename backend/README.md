@@ -15,7 +15,9 @@ docker compose up                    # API :8000 + Postgres
 `requirements.txt` is runtime-only — it is what the image installs.
 `requirements-dev.txt` includes it and adds pytest, factory-boy and aiosqlite.
 
-See `../docs/ENVIRONMENT.md` for the full env-var reference.
+See `../docs/ENVIRONMENT.md` for the full env-var reference, and
+`../docs/LOCAL_DEV_WINDOWS.md` for the tested Windows setup (local database
+override, Expo Go, emulator/phone networking).
 
 ## Deploying (Render free tier)
 
