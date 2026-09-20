@@ -13,8 +13,12 @@ RULE_CONFIDENCE = 0.9
 
 def build_rule_recommendations(face: dict, colors: dict, body: dict) -> list[dict]:
     """Build shape-grounded recommendation rows from analysis data."""
-    shape = (face or {}).get("shape") or "balanced"
-    g = guide_for((face or {}).get("shape"))
+    shape = (face or {}).get("shape")
+    if not shape:
+        # Do not turn a failed face scan into oval-based advice. The caller can
+        # still offer a retake, while future color/body rules remain independent.
+        return []
+    g = guide_for(shape)
 
     recs: list[dict] = [
         {

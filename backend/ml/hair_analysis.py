@@ -47,7 +47,7 @@ def _locate_hair_region(img: np.ndarray) -> np.ndarray | None:
     h, w = img.shape[:2]
     with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1,
                                min_detection_confidence=0.5) as mesh:
-        results = mesh.process(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        results = mesh.process(img)
 
     if not results.multi_face_landmarks:
         # No face: assume hair occupies the top strip.

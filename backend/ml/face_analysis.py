@@ -1,4 +1,3 @@
-import cv2
 import mediapipe as mp
 import numpy as np
 from typing import Optional
@@ -19,10 +18,12 @@ def analyze_face(image_bytes: bytes) -> dict:
     h, w = img.shape[:2]
 
     with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5) as mesh:
-        results = mesh.process(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        results = mesh.process(img)
 
     if not results.multi_face_landmarks:
-        return {"shape": "oval", "harmony": 0.82, "landmarks": [], "proportions": {}}
+        # Absence is not an average face. Returning a plausible-looking shape
+        # and score here made failed scans indistinguishable from real results.
+        return {"shape": None, "harmony": None, "landmarks": [], "proportions": {}}
 
     lm = results.multi_face_landmarks[0].landmark
     pts = [(int(p.x * w), int(p.y * h)) for p in lm]

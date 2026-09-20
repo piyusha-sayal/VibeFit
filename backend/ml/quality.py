@@ -79,7 +79,7 @@ def _face_state(img: np.ndarray, w: int, h: int) -> tuple[bool, str | None]:
     """Detect a face and estimate yaw via nose offset between cheek edges."""
     with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1,
                                min_detection_confidence=0.5) as mesh:
-        results = mesh.process(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        results = mesh.process(img)
     if not results.multi_face_landmarks:
         return False, None
 
@@ -101,7 +101,7 @@ def _face_state(img: np.ndarray, w: int, h: int) -> tuple[bool, str | None]:
 def _pose_complete(img: np.ndarray) -> bool:
     """True if both shoulders and both hips are confidently visible."""
     with mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.5) as pose:
-        results = pose.process(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        results = pose.process(img)
     if not results.pose_landmarks:
         return False
     lm = results.pose_landmarks.landmark

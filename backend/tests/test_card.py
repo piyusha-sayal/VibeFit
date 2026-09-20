@@ -17,7 +17,6 @@ def test_card_fields_populated():
     f = card_fields(_analysis(), "Aria")
     assert f["name"] == "Aria"
     assert f["shape"] == "Oval"
-    assert f["overall"] == "7.8/10"
     assert f["season"] == "Warm Autumn"
     assert f["undertone"] == "Warm"
     assert f["swatches"] == ["#aa3322", "#114455"]
@@ -26,7 +25,6 @@ def test_card_fields_populated():
 def test_card_fields_empty_defaults():
     f = card_fields(SimpleNamespace(face_analysis=None, color_analysis=None))
     assert f["shape"] == "—"
-    assert f["overall"] == "—"
     assert f["swatches"] == []
 
 

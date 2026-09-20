@@ -48,7 +48,9 @@ async def test_uat_full_flow(client: AsyncClient):
     assert done["status"] == "complete", done.get("error_message")
     assert done["quality"] is not None
     assert done["face_analysis"] is not None
-    assert isinstance(done["recommendations"], list) and done["recommendations"]
+    assert done["quality"]["faceFound"] is False
+    assert done["face_analysis"]["shape"] is None
+    assert done["recommendations"] == []
 
     # 3) PDF report.
     rep = await client.get(f"/api/v1/analysis/{aid}/report", headers=auth)

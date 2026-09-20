@@ -28,7 +28,7 @@ def analyze_colors(image_bytes: bytes) -> dict:
     lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
 
     with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5) as mesh:
-        results = mesh.process(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        results = mesh.process(img)
 
     skin_rgb = _sample_skin(img, results, w, h)
     undertone = _classify_undertone(skin_rgb)

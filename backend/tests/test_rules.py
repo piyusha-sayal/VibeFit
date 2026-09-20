@@ -22,6 +22,10 @@ def test_unknown_shape_falls_back_to_default():
     assert guide_for(None) is DEFAULT_GUIDE
 
 
+def test_engine_does_not_invent_shape_guidance_without_a_face():
+    assert build_rule_recommendations({"shape": None}, {}, {}) == []
+
+
 def test_engine_emits_db_shaped_rows():
     recs = build_rule_recommendations({"shape": "round"}, {}, {})
     assert recs
@@ -33,8 +37,7 @@ def test_engine_emits_db_shaped_rows():
 
 def test_engine_handles_missing_face_data():
     recs = build_rule_recommendations({}, {}, {})
-    assert recs  # falls back to oval, no crash
-    assert "balanced" in recs[0]["title"]
+    assert recs == []
 
 
 def test_merge_keeps_rules_and_adds_new_llm_recs():

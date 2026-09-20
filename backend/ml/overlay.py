@@ -46,7 +46,7 @@ def annotate_face(image_bytes: bytes) -> bytes:
 
     with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1,
                                min_detection_confidence=0.5) as mesh:
-        results = mesh.process(bgr)
+        results = mesh.process(img)
 
     if results.multi_face_landmarks:
         lm = results.multi_face_landmarks[0].landmark

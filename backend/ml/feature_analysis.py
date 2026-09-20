@@ -12,7 +12,6 @@ from __future__ import annotations
 import io
 import math
 
-import cv2
 import mediapipe as mp
 import numpy as np
 from PIL import Image
@@ -172,7 +171,7 @@ def analyze_features(image_bytes: bytes) -> dict:
     with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1,
                                refine_landmarks=True,
                                min_detection_confidence=0.5) as mesh:
-        results = mesh.process(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        results = mesh.process(img)
     if not results.multi_face_landmarks:
         return {"featureScores": {}, "canon": {}, "eyebrow": {}}
 

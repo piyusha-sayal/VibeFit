@@ -66,7 +66,7 @@ async def test_vibe_profile_empty_state_has_no_scan_no_onboarding(client: AsyncC
 
 
 @pytest.mark.asyncio
-async def test_vibe_profile_reflects_scan_with_measured_confidence(client: AsyncClient, _jpeg):
+async def test_vibe_profile_preserves_failed_scan_without_inventing_attribute(client: AsyncClient, _jpeg):
     auth = await _register(client, "vibe-scanned@test.com")
     up = await client.post("/api/v1/analysis/upload", headers=auth,
                            files={"file": ("face.jpg", _jpeg(), "image/jpeg")})
@@ -77,8 +77,9 @@ async def test_vibe_profile_reflects_scan_with_measured_confidence(client: Async
     body = res.json()
     assert body["has_scan"] is True
     face_shape = body["attributes"]["face_shape"]
-    assert face_shape["source"] == "scan"
-    assert face_shape["confidence"] in {"high", "usable_with_caution", "retake_recommended"}
+    assert face_shape["value"] is None
+    assert face_shape["source"] == "none"
+    assert face_shape["confidence"] == "unknown"
     assert face_shape["original_value"] is None
 
 

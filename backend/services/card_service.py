@@ -26,7 +26,6 @@ def card_fields(analysis: Any, user_name: str = "VibeFit User") -> dict:
     face = getattr(analysis, "face_analysis", None) or {}
     color = getattr(analysis, "color_analysis", None) or {}
     shape = face.get("shape")
-    overall = face.get("overallScore")
     seasonal = (color.get("seasonal") or {}).get("label") if color else None
     undertone = color.get("skinUndertone")
     best = color.get("bestColors") or []
@@ -34,7 +33,6 @@ def card_fields(analysis: Any, user_name: str = "VibeFit User") -> dict:
     return {
         "name": user_name,
         "shape": _title_case(shape) if shape else "—",
-        "overall": f"{overall:.1f}/10" if isinstance(overall, (int, float)) else "—",
         "season": seasonal or "—",
         "undertone": _title_case(undertone) if undertone else "—",
         "swatches": swatches,
@@ -59,7 +57,6 @@ def generate_summary_card(analysis: Any, user_name: str = "VibeFit User") -> byt
 
     rows = [
         ("Face Shape", f["shape"]),
-        ("Overall", f["overall"]),
         ("Season", f["season"]),
         ("Undertone", f["undertone"]),
     ]

@@ -51,6 +51,9 @@ class ChatService:
         ai_msg = ChatMessage(id=str(uuid.uuid4()), session_id=session.id, role="assistant", content=reply_text)
         self._db.add(ai_msg)
         await self._db.flush()
+        # Load the collection here, asynchronously: a new session never loaded it,
+        # and an existing one holds the list from before these two messages.
+        await self._db.refresh(session, attribute_names=["messages"])
 
         return session, user_msg, ai_msg
 

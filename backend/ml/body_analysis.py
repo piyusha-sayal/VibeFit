@@ -15,7 +15,7 @@ def analyze_body(image_bytes: bytes) -> dict:
 
     with mp_pose.Pose(static_image_mode=True, enable_segmentation=True,
                       min_detection_confidence=0.5) as pose:
-        results = pose.process(cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        results = pose.process(img)
 
     if not results.pose_landmarks:
         return {"shape": None, "proportions": {}}

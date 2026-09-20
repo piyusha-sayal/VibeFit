@@ -114,9 +114,9 @@ def generate_face_report(analysis: Any, user_name: str = "VibeFit User") -> byte
 
     # Face structure
     _heading(cur, "Facial Structure")
-    _row(cur, "Face shape", _title_case(face.get("shape", "—")))
-    if "harmony" in face:
-        _row(cur, "Harmony score", f"{round(float(face['harmony']) * 100)}/100")
+    _row(cur, "Face shape", _title_case(face.get("shape") or "—"))
+    if face.get("shape"):
+        _row(cur, "How this is used", "Personalized styling guidance — not a rating")
     props = face.get("proportions") or {}
     for k, v in list(props.items())[:6]:
         _row(cur, _title_case(k), _fmt(v))

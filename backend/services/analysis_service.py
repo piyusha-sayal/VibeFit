@@ -58,7 +58,9 @@ class AnalysisService:
 
     async def _run_ml(self, image_bytes: bytes) -> dict:
         """Run all analyzers on one image -> dict of result blocks (hash-cached)."""
-        img_key = f"imghash:{hashlib.sha256(image_bytes).hexdigest()}"
+        # Bump when analyzer semantics change so old cached fallback profiles
+        # cannot survive a deployment that fixes them.
+        img_key = f"imghash:v2:{hashlib.sha256(image_bytes).hexdigest()}"
         cached = await self._cache.get(img_key)  # F12: skip recompute
         if cached:
             return cached
@@ -95,11 +97,13 @@ class AnalysisService:
         analysis.status = "complete"
 
         rule_recs = build_rule_recommendations(ml.get("face"), ml.get("colors"), ml.get("body"))
-        try:
-            llm_recs = await self._ai.generate_recommendations(
-                ml.get("face"), ml.get("colors"), ml.get("hair"))
-        except Exception:
-            llm_recs = []
+        llm_recs = []
+        if (ml.get("face") or {}).get("shape"):
+            try:
+                llm_recs = await self._ai.generate_recommendations(
+                    ml.get("face"), ml.get("colors"), ml.get("hair"))
+            except Exception:
+                llm_recs = []
         for r in merge_recommendations(rule_recs, llm_recs):
             self._db.add(Recommendation(analysis_id=analysis.id, **r))
 

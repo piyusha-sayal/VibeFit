@@ -31,7 +31,9 @@ def image_bytes() -> bytes:
 def test_face_contract(image_bytes):
     out = analyze_face(image_bytes)
     assert {"shape", "harmony", "landmarks", "proportions"} <= set(out)
-    assert isinstance(out["harmony"], (int, float))
+    assert out["shape"] is None
+    assert out["harmony"] is None
+    assert out["landmarks"] == []
 
 
 def test_colors_contract(image_bytes):
