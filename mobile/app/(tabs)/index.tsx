@@ -109,7 +109,7 @@ export default function HomeScreen() {
             </Text>
             <TouchableOpacity
               style={styles.heroLink}
-              onPress={() => router.push('/analysis/hair')}
+              onPress={() => router.push('/(tabs)/results')}
               activeOpacity={0.7}
             >
               <Text style={styles.heroLinkText}>View full report</Text>

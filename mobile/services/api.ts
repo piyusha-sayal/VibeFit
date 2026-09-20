@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import { ApiResponse } from '../types';
 import { getFreshIdToken } from './authService';
 
@@ -73,7 +74,8 @@ async function request<T>(fn: () => Promise<{ data: unknown }>): Promise<ApiResp
     const { data } = await fn();
     return { success: true, data: camelize<T>(data) };
   } catch (error) {
-    return { success: false, data: null, error: errorMessage(error) };
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    return { success: false, data: null, error: errorMessage(error), status };
   }
 }
 
@@ -93,15 +95,31 @@ export async function del<T>(path: string): Promise<ApiResponse<T>> {
   return request<T>(() => api.delete(path));
 }
 
+/**
+ * React Native's FormData accepts a `{ uri, type, name }` descriptor and streams
+ * the file itself. Browsers do not: they would send "[object Object]". On web
+ * the picker returns a data:/blob: URI, so read it into a Blob first.
+ */
+export async function buildUploadForm(fileUri: string, mimeType: string): Promise<FormData> {
+  const formData = new FormData();
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(fileUri)).blob();
+    const typed = blob.type ? blob : new Blob([blob], { type: mimeType });
+    formData.append('file', typed, `upload.${typed.type.split('/')[1] ?? 'jpg'}`);
+  } else {
+    formData.append('file', { uri: fileUri, type: mimeType, name: 'upload' } as unknown as Blob);
+  }
+  return formData;
+}
+
 export async function uploadFile<T>(
   path: string,
   fileUri: string,
   mimeType: string,
   onProgress?: (pct: number) => void,
 ): Promise<ApiResponse<T>> {
-  return request<T>(() => {
-    const formData = new FormData();
-    formData.append('file', { uri: fileUri, type: mimeType, name: 'upload' } as unknown as Blob);
+  return request<T>(async () => {
+    const formData = await buildUploadForm(fileUri, mimeType);
     return api.post(path, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (e) => {

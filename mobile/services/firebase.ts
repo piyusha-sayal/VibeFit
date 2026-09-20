@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
   initializeAuth,
   getAuth,
-  // @ts-ignore — exported at runtime, types missing in some firebase versions
+  // @ts-expect-error — exported by the react-native build; tsc resolves the browser typings
   getReactNativePersistence,
   Auth,
 } from 'firebase/auth';
@@ -71,6 +71,6 @@ export const auth: Auth = new Proxy({} as Auth, {
   get(_t, prop) {
     const real = getFirebaseAuth() as unknown as Record<string | symbol, unknown>;
     const value = real[prop];
-    return typeof value === 'function' ? (value as Function).bind(real) : value;
+    return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(real) : value;
   },
 });

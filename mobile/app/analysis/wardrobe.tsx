@@ -5,7 +5,6 @@ import { useAnalysisStore } from '../../store/analysisStore';
 import { FloatingNav } from '../../components/ui/FloatingNav';
 import { Lbl } from '../../components/ui/Lbl';
 import { Tag } from '../../components/ui/Tag';
-import { Pill } from '../../components/ui/Pill';
 import { VNeck, WrapNeck, OffShoulder, ScoopNeck, SquareNeck, CowlNeck } from '../../components/illustrations/Necklines';
 import { C } from '../../constants/colors';
 import { FONTS } from '../../constants/fonts';

@@ -73,12 +73,10 @@ export default function ResultsScreen() {
     );
   }
 
-  const { faceAnalysis, colorAnalysis, hairAnalysis, recommendations, skinAnalysis, quality } = currentAnalysis;
-  const featureScores = faceAnalysis?.featureScores;
+  const { faceAnalysis, colorAnalysis, recommendations, skinAnalysis, quality } = currentAnalysis;
   const palette = colorAnalysis?.palette?.primary ?? [];
   const aesthetics = recommendations?.filter((r) => r.category === 'aesthetic').slice(0, 4).map((r) => r.title) ?? [];
   const seasonal = colorAnalysis?.seasonal;
-  const overallScore = faceAnalysis?.overallScore ?? (faceAnalysis?.harmony ? Math.round(faceAnalysis.harmony * 100) / 10 : null);
   const bestColors = colorAnalysis?.bestColors ?? [];
   const avoidColors = colorAnalysis?.avoidColors ?? [];
 
@@ -91,28 +89,22 @@ export default function ResultsScreen() {
             <View>
               <Lbl>Your Profile</Lbl>
               <Text style={styles.heroTitle}>
-                {faceAnalysis?.shape ? String(faceAnalysis.shape).charAt(0).toUpperCase() + String(faceAnalysis.shape).slice(1) : 'Oval'}{'\n'}
+                {faceAnalysis?.shape ? String(faceAnalysis.shape).charAt(0).toUpperCase() + String(faceAnalysis.shape).slice(1) : 'Face scan unavailable'}{'\n'}
                 <Text style={{ color: C.gold, fontSize: 22 }}>
                   {colorAnalysis?.skinUndertone
                     ? String(colorAnalysis.skinUndertone).charAt(0).toUpperCase() + String(colorAnalysis.skinUndertone).slice(1)
-                    : 'Warm'}
-                  {' '}·{' '}
+                    : 'Color unavailable'}
+                  {colorAnalysis?.contrastLevel ? ' · ' : ''}
                   {colorAnalysis?.contrastLevel
                     ? String(colorAnalysis.contrastLevel).charAt(0).toUpperCase() + String(colorAnalysis.contrastLevel).slice(1)
-                    : 'Medium'}
+                    : ''}
                 </Text>
               </Text>
               <View style={styles.tagRow}>
-                {seasonal ? <Tag>{seasonal.label}</Tag> : <Tag>Perfect Harmony</Tag>}
+                {seasonal ? <Tag>{seasonal.label}</Tag> : <Tag>Guidance, not a rating</Tag>}
               </View>
             </View>
             <View style={styles.heroRight}>
-              {overallScore !== null && (
-                <View style={styles.scoreBadge}>
-                  <Text style={styles.scoreBadgeNum}>{overallScore.toFixed(1)}</Text>
-                  <Text style={styles.scoreBadgeOut}>/10</Text>
-                </View>
-              )}
               <Face color={C.gold} size={56} />
             </View>
           </View>
@@ -132,22 +124,16 @@ export default function ResultsScreen() {
           </View>
         )}
 
-        {/* Face harmony */}
-        <View style={styles.card}>
-          <Lbl style={{ marginBottom: 14 }}>Facial Harmony</Lbl>
-          {featureScores ? (
-            <>
-              {typeof featureScores.symmetry === 'number' && <ScoreBar label="Symmetry" value={featureScores.symmetry} />}
-              {typeof featureScores.eyes === 'number' && <ScoreBar label="Eyes" value={featureScores.eyes} />}
-              {typeof featureScores.eyebrows === 'number' && <ScoreBar label="Eyebrows" value={featureScores.eyebrows} />}
-              {typeof featureScores.nose === 'number' && <ScoreBar label="Nose" value={featureScores.nose} />}
-              {typeof featureScores.lips === 'number' && <ScoreBar label="Lips" value={featureScores.lips} />}
-              {typeof featureScores.jawline === 'number' && <ScoreBar label="Jawline" value={featureScores.jawline} />}
-            </>
-          ) : (
-            <ScoreBar label="Symmetry" value={faceAnalysis?.harmony ? Math.round(faceAnalysis.harmony * 100) : 82} />
-          )}
-        </View>
+        {/* Measurements inform guidance internally; they are not beauty grades. */}
+        {faceAnalysis?.shape && (
+          <View style={styles.card}>
+            <Lbl style={{ marginBottom: 8 }}>Face Structure</Lbl>
+            <Text style={styles.hint}>
+              Your face-shape and proportion observations are used to personalize hair,
+              makeup, glasses, and neckline guidance. They are not attractiveness scores.
+            </Text>
+          </View>
+        )}
 
         {/* Skin analysis */}
         {skinAnalysis && skinAnalysis.quality?.faceFound && (
@@ -281,9 +267,6 @@ const styles = StyleSheet.create({
   heroCard: { marginHorizontal: 20, borderRadius: 22, borderWidth: 0.5, borderColor: C.goldBorder, padding: 20, marginBottom: 16 },
   heroInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   heroRight: { alignItems: 'flex-end', gap: 10 },
-  scoreBadge: { flexDirection: 'row', alignItems: 'baseline', gap: 2, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 0.5, borderColor: C.goldBorder },
-  scoreBadgeNum: { fontFamily: FONTS.serif, fontSize: 22, color: C.gold, lineHeight: 24 },
-  scoreBadgeOut: { fontFamily: FONTS.sans, fontSize: 10, color: C.textMuted },
   heroTitle: { fontFamily: FONTS.serif, fontSize: 30, color: C.text, lineHeight: 34, marginTop: 8, marginBottom: 12 },
   tagRow: { flexDirection: 'row', gap: 6 },
   card: { marginHorizontal: 20, marginBottom: 12, backgroundColor: C.surface, borderRadius: 18, borderWidth: 0.5, borderColor: C.white06, padding: 18 },

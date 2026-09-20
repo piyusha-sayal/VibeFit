@@ -1,12 +1,16 @@
 import { create } from 'zustand';
 import { User, AuthTokens } from '../types';
 import * as authService from '../services/authService';
+import { clearCachedAnalysis } from '../services/localCache';
+import { useAnalysisStore } from './analysisStore';
 
 interface AuthState {
   user: User | null;
   tokens: AuthTokens | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True until the first restoreSession() settles; routing waits on it. */
+  isRestoring: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
@@ -21,6 +25,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   tokens: null,
   isAuthenticated: false,
   isLoading: false,
+  isRestoring: true,
   error: null,
 
   login: async (email, password) => {
@@ -59,6 +64,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       await authService.logout();
     } finally {
       set({ user: null, tokens: null, isAuthenticated: false, isLoading: false });
+      // The device cache is not per-account; never show it to the next sign-in.
+      await clearCachedAnalysis();
+      useAnalysisStore.setState({ currentAnalysis: null, analyses: [] });
     }
   },
 
@@ -70,8 +78,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (user && tokens) {
         set({ user, tokens, isAuthenticated: true });
       }
+    } catch {
+      // Treat an unreadable session as signed out; the login screen handles it.
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, isRestoring: false });
     }
   },
 

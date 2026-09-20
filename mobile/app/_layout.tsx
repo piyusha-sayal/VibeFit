@@ -56,6 +56,9 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <StatusBar style="light" backgroundColor={C.bg} />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
+          {/* First screen = initial route on native cold start (no deep-link path).
+              Without it the Stack opened (auth)/login and skipped the session check. */}
+          <Stack.Screen name="index" options={{ animation: 'none' }} />
           <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
           <Stack.Screen name="analysis" options={{ animation: 'slide_from_right' }} />

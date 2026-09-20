@@ -60,10 +60,10 @@ export interface SkinAnalysis {
 }
 
 export interface FaceAnalysis {
-  shape: FaceShape;
+  shape: FaceShape | null;
   landmarks: Landmark[];
   proportions: FaceProportions;
-  harmony: number;
+  harmony: number | null;
   overallScore?: number;
   featureScores?: FacialFeatureScores;
   canon?: FacialCanon;
@@ -255,6 +255,8 @@ export interface ApiResponse<T> {
   data: T | null;
   error?: string;
   message?: string;
+  /** HTTP status of a failed request; absent when no response arrived. */
+  status?: number;
 }
 
 export interface PaginatedResponse<T> {

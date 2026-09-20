@@ -1,13 +1,12 @@
 import React, { useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
+  View, Text, StyleSheet, Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming,
   withDelay, Easing, interpolate,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import Svg, { Path, Circle } from 'react-native-svg';
 import { useAnalysis } from '../../hooks/useAnalysis';
 import { FloatingNav } from '../../components/ui/FloatingNav';
 import { GoldButton } from '../../components/ui/GoldButton';
@@ -119,6 +118,11 @@ export default function ScanScreen() {
         ))}
       </View>
 
+      {/* Alert.alert is a no-op on web, so the last failure is also shown inline. */}
+      {error && !isUploading && !isAnalyzing ? (
+        <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
+      ) : null}
+
       {/* Actions */}
       <View style={styles.actions}>
         <GoldButton
@@ -158,6 +162,7 @@ const styles = StyleSheet.create({
   tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   tipDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: C.goldBorder },
   tipText: { fontFamily: FONTS.sans, fontSize: 13, color: C.textMuted },
+  errorText: { fontFamily: FONTS.sans, fontSize: 13, color: C.red, paddingHorizontal: 28, marginBottom: 16 },
   actions: { paddingHorizontal: 24, gap: 12 },
   actionBtn: { width: '100%' },
 });

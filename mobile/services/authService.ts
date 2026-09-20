@@ -8,7 +8,7 @@ import {
   signInWithCredential,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { auth } from './firebase';
+import { auth, isFirebaseConfigured } from './firebase';
 import { ApiResponse, AuthTokens, User } from '../types';
 
 interface LoginPayload { email: string; password: string }
@@ -95,19 +95,27 @@ export async function logout(): Promise<void> {
   await signOut(auth);
 }
 
+// Firebase restores a persisted sign-in asynchronously; `currentUser` is null
+// until then, so reading it directly at launch would sign the user out.
+async function restoredFirebaseUser(): Promise<FirebaseUser | null> {
+  if (!isFirebaseConfigured) return null;
+  await auth.authStateReady();
+  return auth.currentUser;
+}
+
 export async function getStoredTokens(): Promise<AuthTokens | null> {
-  const fbUser = auth.currentUser;
+  const fbUser = await restoredFirebaseUser();
   if (!fbUser) return null;
   return buildTokens(fbUser);
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const fbUser = auth.currentUser;
+  const fbUser = await restoredFirebaseUser();
   return fbUser ? mapUser(fbUser) : null;
 }
 
 export async function getFreshIdToken(): Promise<string | null> {
-  const fbUser = auth.currentUser;
+  const fbUser = await restoredFirebaseUser();
   if (!fbUser) return null;
   return fbUser.getIdToken(false);
 }

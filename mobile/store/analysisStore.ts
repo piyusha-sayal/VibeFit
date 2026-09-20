@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { AnalysisResult } from '../types';
 import * as analysisService from '../services/analysisService';
-import { readCachedAnalysis, writeCachedAnalysis } from '../services/localCache';
+import { readCachedAnalysis, writeCachedAnalysis, clearCachedAnalysis } from '../services/localCache';
 
 // The backend runs the ML pipeline as a background job, so upload returns a
 // `processing` row and we poll until it resolves. A cold-starting free-tier
@@ -10,6 +10,10 @@ const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 3 * 60 * 1000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Bumped when a scan finishes, so a slow "no analysis" reply issued earlier
+// cannot wipe the result that just arrived.
+let completedScans = 0;
 
 interface AnalysisState {
   currentAnalysis: AnalysisResult | null;
@@ -26,8 +30,8 @@ interface AnalysisState {
 }
 
 export const useAnalysisStore = create<AnalysisState>((set) => ({
-  // Paint instantly from the device cache; loadLatest() refreshes from network.
-  currentAnalysis: readCachedAnalysis(),
+  // Hydrated from the device cache below; loadLatest() refreshes from network.
+  currentAnalysis: null,
   analyses: [],
   isUploading: false,
   uploadProgress: 0,
@@ -50,6 +54,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
         throw new Error(finished.errorMessage ?? 'Analysis failed. Please try another photo.');
       }
 
+      completedScans += 1;
       writeCachedAnalysis(finished);
       set((s) => ({
         currentAnalysis: finished,
@@ -66,11 +71,18 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   },
 
   loadLatest: async () => {
+    const scansBefore = completedScans;
     try {
       const response = await analysisService.getLatestAnalysis();
       if (response.success && response.data) {
         writeCachedAnalysis(response.data);
         set({ currentAnalysis: response.data });
+      } else if (response.status === 404 && completedScans === scansBefore) {
+        // The server is authoritative: this account has no analysis, so a
+        // cached one belongs to someone else or predates a data reset. Skip if a
+        // scan finished while this request was in flight.
+        await clearCachedAnalysis();
+        set({ currentAnalysis: null });
       }
     } catch {
       // Offline or backend asleep — keep whatever the cache already painted.
@@ -89,6 +101,14 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   setCurrentAnalysis: (analysis) => set({ currentAnalysis: analysis }),
   clearError: () => set({ error: null }),
 }));
+
+// Paint from the device cache as soon as it is read, unless a network result
+// or a fresh scan already landed first.
+readCachedAnalysis().then((cached) => {
+  if (cached && !useAnalysisStore.getState().currentAnalysis) {
+    useAnalysisStore.setState({ currentAnalysis: cached });
+  }
+});
 
 /**
  * Poll a pending analysis until the backend marks it complete or failed.

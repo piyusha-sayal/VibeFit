@@ -1,4 +1,4 @@
-import { get, post, del, uploadFile } from './api';
+import { get, del, uploadFile } from './api';
 import { AnalysisResult, ApiResponse } from '../types';
 
 export async function uploadAndAnalyze(

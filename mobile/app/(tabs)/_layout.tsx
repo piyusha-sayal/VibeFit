@@ -1,5 +1,4 @@
 import { Tabs } from 'expo-router';
-import { C } from '../../constants/colors';
 
 export default function TabsLayout() {
   return (
