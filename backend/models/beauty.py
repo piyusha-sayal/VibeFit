@@ -74,8 +74,66 @@ class SavedLook(Base):
     source_analysis_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("analyses.id", ondelete="SET NULL"), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Caller-supplied idempotency key. A save or duplicate replayed after a
+    # slow network returns the original row instead of creating a second one.
+    client_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "client_token", name="uq_look_client_token_per_user"),
+    )
+
+
+class LookDraft(Base):
+    """A look in progress.
+
+    Separate from `saved_looks` on purpose: a draft is not something the user
+    has kept, and counting unfinished work in "saved looks" would misreport the
+    Passport. Deleted on save.
+    """
+
+    __tablename__ = "look_drafts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    occasion: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # The full composition, exactly as the builder holds it.
+    composition: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # What the user asked for, so a draft can be regenerated rather than only replayed.
+    brief: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class LookFeedback(Base):
+    """One verdict on one catalogue item.
+
+    Lightweight and deterministic: a rejected item is demoted in future
+    recommendations, never removed from the library. No training, no model, no
+    cost. One row per (user, component, item) — repeated feedback updates it.
+    """
+
+    __tablename__ = "look_feedback"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    # "outfit" | "hair" | "makeup" | "jewellery" | "accessories" | "colours"
+    component: Mapped[str] = mapped_column(String(20), nullable=False)
+    item_key: Mapped[str] = mapped_column(String(60), nullable=False)
+    # "love" | "not_my_style" | "want_to_try" | "tried"
+    verdict: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "component", "item_key", name="uq_feedback_per_item"),
+    )
 
 
 class LookCollection(Base):

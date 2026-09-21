@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_user
 from core.database import get_db
-from models.beauty import BeautyGoal, BeautyProfile, SavedLook, UserSettings
+from models.beauty import (
+    BeautyGoal, BeautyProfile, CollectionItem, LookCollection, SavedLook, UserSettings,
+)
 from models.user import User
 from services.passport_service import build_passport, record_activity
 
@@ -48,6 +50,19 @@ class SavedLookPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     status: str | None = None
     notes: str | None = None
+    occasion: str | None = Field(default=None, max_length=40)
+    # Editing a complete look rewrites its composition in place.
+    payload: dict | None = None
+
+
+class CollectionIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
+class CollectionItemIn(BaseModel):
+    look_id: str = Field(alias="lookId")
+
+    model_config = {"populate_by_name": True}
 
 
 class GoalIn(BaseModel):
@@ -202,6 +217,124 @@ async def delete_look(
     )
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Look not found")
+    await db.commit()
+
+
+@router.get("/collections")
+async def list_collections(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Collections with the looks in them. One query per collection is fine at
+    this size, and keeps the payload the UI actually needs in one round trip."""
+    collections = (await db.execute(
+        select(LookCollection)
+        .where(LookCollection.user_id == current_user.id)
+        .order_by(LookCollection.name)
+    )).scalars().all()
+
+    rows = []
+    for collection in collections:
+        look_ids = (await db.execute(
+            select(CollectionItem.look_id).where(CollectionItem.collection_id == collection.id)
+        )).scalars().all()
+        rows.append({
+            "id": collection.id, "name": collection.name, "slug": collection.slug,
+            "lookIds": list(look_ids), "count": len(look_ids),
+            "createdAt": collection.created_at,
+        })
+    return {"collections": rows}
+
+
+@router.post("/collections", status_code=201)
+async def create_collection(
+    body: CollectionIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = (await db.execute(
+        select(LookCollection).where(LookCollection.user_id == current_user.id,
+                                     LookCollection.name == body.name)
+    )).scalars().first()
+    if existing is not None:
+        # Creating a collection twice is almost always a retry, not an error.
+        return {"id": existing.id, "name": existing.name, "created": False}
+
+    collection = LookCollection(user_id=current_user.id, name=body.name)
+    db.add(collection)
+    await db.commit()
+    await db.refresh(collection)
+    return {"id": collection.id, "name": collection.name, "created": True}
+
+
+@router.delete("/collections/{collection_id}", status_code=204)
+async def delete_collection(
+    collection_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Removes the collection. The looks inside it are not deleted."""
+    result = await db.execute(
+        delete(LookCollection).where(LookCollection.id == collection_id,
+                                     LookCollection.user_id == current_user.id)
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    await db.commit()
+
+
+async def _own_collection(db: AsyncSession, user_id: str, collection_id: str) -> LookCollection:
+    collection = (await db.execute(
+        select(LookCollection).where(LookCollection.id == collection_id,
+                                     LookCollection.user_id == user_id)
+    )).scalars().first()
+    if collection is None:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return collection
+
+
+@router.post("/collections/{collection_id}/looks", status_code=201)
+async def add_to_collection(
+    collection_id: str,
+    body: CollectionItemIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Both the collection and the look must belong to the caller."""
+    await _own_collection(db, current_user.id, collection_id)
+    look = (await db.execute(
+        select(SavedLook).where(SavedLook.id == body.look_id,
+                                SavedLook.user_id == current_user.id)
+    )).scalars().first()
+    if look is None:
+        raise HTTPException(status_code=404, detail="Look not found")
+
+    existing = (await db.execute(
+        select(CollectionItem).where(CollectionItem.collection_id == collection_id,
+                                     CollectionItem.look_id == body.look_id)
+    )).scalars().first()
+    if existing is not None:
+        return {"collectionId": collection_id, "lookId": body.look_id, "added": False}
+
+    db.add(CollectionItem(collection_id=collection_id, look_id=body.look_id))
+    await db.commit()
+    return {"collectionId": collection_id, "lookId": body.look_id, "added": True}
+
+
+@router.delete("/collections/{collection_id}/looks/{look_id}", status_code=204)
+async def remove_from_collection(
+    collection_id: str,
+    look_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await _own_collection(db, current_user.id, collection_id)
+    result = await db.execute(
+        delete(CollectionItem).where(CollectionItem.collection_id == collection_id,
+                                     CollectionItem.look_id == look_id)
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="That look is not in this collection")
     await db.commit()
 
 

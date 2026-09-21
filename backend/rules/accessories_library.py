@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-CATEGORIES = ("glasses", "earrings", "necklines", "metals", "hair_accessories")
+CATEGORIES = ("glasses", "earrings", "necklaces", "necklines", "metals", "hair_accessories")
 
 
 @dataclass(frozen=True)
@@ -115,6 +115,50 @@ NECKLINES = [
        origin="indian"),
 ]
 
+NECKLACES = [
+    _a("pendant", "Fine pendant", "necklaces", "A single drop on a thin chain.", [],
+       "Disappears under a high neckline; give it an open one."),
+    _a("choker", "Choker", "necklaces", "Sits close at the base of the neck.", [],
+       "Wants an open or wide neckline to sit against."),
+    _a("layered_chains", "Layered chains", "necklaces",
+       "Two or three lengths worn together.", [],
+       "Vary the lengths or they read as one tangled chain."),
+    _a("pearl_strand", "Pearl strand", "necklaces", "A single uniform row.", [],
+       "Reads formal; a knotted strand reads less so."),
+    _a("statement_collar", "Statement collar", "necklaces",
+       "Wide and structured across the collarbones.", [],
+       "It is the outfit's focal point, so keep the earrings quiet."),
+    _a("kundan_choker", "Kundan choker", "necklaces",
+       "Uncut stones set in gold foil, worn at the throat.", [],
+       "Traditionally paired with a longer second piece at weddings.",
+       origin="indian"),
+    _a("rani_haar", "Rani haar", "necklaces",
+       "A long ceremonial chain that falls past the choker line.", [],
+       "Worn over a choker rather than instead of one.", origin="indian"),
+    _a("temple_necklace", "Temple jewellery", "necklaces",
+       "Cast motifs in high-purity gold, from South Indian temple traditions.", [],
+       "Classically worn with silk sarees.", origin="indian"),
+    _a("oxidised_statement", "Oxidised statement piece", "necklaces",
+       "Darkened silver, often tribal or contemporary in form.", [],
+       "Sits as well with linen and cotton as with a kurta.", origin="indian"),
+    _a("no_necklace", "No necklace", "necklaces",
+       "Earrings alone, and nothing at the throat.", [],
+       "The right answer whenever the neckline is already doing the work."),
+]
+
+# Which necklaces have room to sit against which neckline. Coordination only —
+# nothing here is forbidden, and `no_necklace` is always available.
+NECKLACE_BY_NECKLINE: dict[str, list[str]] = {
+    "v_neck": ["pendant", "layered_chains", "rani_haar"],
+    "scoop": ["choker", "statement_collar", "kundan_choker", "pearl_strand"],
+    "crew": ["no_necklace", "pendant"],
+    "boat": ["choker", "kundan_choker", "no_necklace"],
+    "sweetheart": ["choker", "pendant", "kundan_choker"],
+    "collar": ["no_necklace", "pendant"],
+    "halter": ["no_necklace", "statement_collar"],
+    "mandarin": ["no_necklace", "rani_haar"],
+}
+
 METALS = [
     {"key": "gold", "name": "Yellow gold", "hex": "#d4af37", "warmth": "warm",
      "note": "Sits with warm and golden undertones."},
@@ -152,5 +196,5 @@ HAIR_ACCESSORIES = [
        "Standard care for curly, coily and protective styles."),
 ]
 
-ALL_ACCESSORIES = GLASSES + EARRINGS + NECKLINES + HAIR_ACCESSORIES
+ALL_ACCESSORIES = GLASSES + EARRINGS + NECKLACES + NECKLINES + HAIR_ACCESSORIES
 ACCESSORY_BY_KEY = {a.key: a for a in ALL_ACCESSORIES}

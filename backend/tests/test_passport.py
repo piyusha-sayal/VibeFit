@@ -45,7 +45,10 @@ async def test_empty_passport_reports_missing_attributes_not_placeholders(client
     # Every gap has to offer the action that closes it.
     assert all(a["action"] for a in body["attributes"])
     assert body["nextAction"]["route"]
-    assert body["journey"] == {"analyses": 0, "savedLooks": 0, "triedLooks": 0, "activeGoals": 0}
+    assert body["journey"] == {
+        "analyses": 0, "savedLooks": 0, "triedLooks": 0, "wantToTry": 0,
+        "completeLooks": 0, "looksInProgress": 0, "collections": 0, "activeGoals": 0,
+    }
     assert body["timeline"] == []
 
 

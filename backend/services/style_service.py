@@ -161,6 +161,9 @@ async def build_style_profile(db: AsyncSession, user_id: str) -> dict:
         "market": onboarding.market if onboarding else None,
         "sections": sections,
         "completion": round(answered_total / field_total, 2) if field_total else 0.0,
+        # Named, because the Beauty Passport reports a different completion over
+        # a different set of attributes. Two numbers, two labels, never mixed.
+        "completionOf": "Style questionnaire",
         "answered": answered_total,
         "total": field_total,
         "bodyTypes": list(BODY_TYPES),

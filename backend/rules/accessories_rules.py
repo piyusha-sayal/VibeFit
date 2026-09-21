@@ -8,12 +8,13 @@ from __future__ import annotations
 
 from rules.accessories_library import (
     ACCESSORY_BY_KEY, CATEGORIES, EARRINGS, GLASSES, HAIR_ACCESSORIES, METALS,
-    NECKLINES,
+    NECKLACE_BY_NECKLINE, NECKLACES, NECKLINES,
 )
 
 _CATEGORY_ITEMS = {
     "glasses": GLASSES,
     "earrings": EARRINGS,
+    "necklaces": NECKLACES,
     "necklines": NECKLINES,
     "hair_accessories": HAIR_ACCESSORIES,
 }
@@ -78,10 +79,39 @@ def all_categories(face_shape: str | None = None, *, undertone: str | None = Non
         "categories": list(CATEGORIES),
         "glasses": recommend("glasses", face_shape),
         "earrings": recommend("earrings", face_shape),
+        "necklaces": recommend("necklaces", face_shape),
         "necklines": recommend("necklines", face_shape),
         "hairAccessories": recommend("hair_accessories", face_shape),
         "metals": recommend_metals(undertone, season_family),
     }
+
+
+def recommend_necklaces(neckline: str | None = None, *, origin: str | None = None) -> list[dict]:
+    """Necklaces ordered by the room a neckline leaves them.
+
+    Coordination, not permission: every necklace stays in the list, and
+    "no necklace" is always an option rather than an omission.
+    """
+    roomy = set(NECKLACE_BY_NECKLINE.get(neckline or "", ()))
+    results = []
+    for entry in NECKLACES:
+        if origin and entry.origin != origin:
+            continue
+        coordinates = entry.key in roomy
+        results.append({
+            "key": entry.key,
+            "name": entry.name,
+            "category": entry.category,
+            "description": entry.description,
+            "note": entry.note,
+            "origin": entry.origin,
+            "suited": coordinates,
+            "universal": entry.key == "no_necklace",
+            "coordinatesWith": neckline if coordinates else None,
+            "score": (2.0 if coordinates else 0.0),
+        })
+    results.sort(key=lambda r: (-r["score"], r["name"]))
+    return results
 
 
 def item(key: str):
