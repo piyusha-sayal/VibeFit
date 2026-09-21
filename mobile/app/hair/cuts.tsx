@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Card, Chip, EmptyState, ErrorState, LoadingState, Txt } from '../../components/ds';
+import { FaceFigure, INSPIRATION_NOTE } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useHairstyles } from '../../hooks/useFace';
 import type { HairFilters } from '../../services/faceService';
@@ -103,11 +104,26 @@ export default function HaircutFinderScreen() {
               onPress={() => router.push(`/hair/salon/${style.key}` as never)}
               accessibilityLabel={`${style.name}, ${style.maintenance} maintenance`}
             >
-              <View style={styles.rowBetween}>
-                <Txt variant="heading">{style.name}</Txt>
-                <Txt variant="caption" tone="muted">{style.length}</Txt>
+              <View style={styles.row}>
+                <FaceFigure
+                  hairLength={style.length as 'short' | 'medium' | 'long'}
+                  hairTexture={
+                    (filters.texture ?? style.textures[0]) as 'straight' | 'wavy' | 'curly' | 'coily'
+                  }
+                  seed={style.key}
+                  size={76}
+                  label={`${style.name}, illustration`}
+                />
+                <View style={{ flex: 1, marginLeft: SPACE.md }}>
+                  <View style={styles.rowBetween}>
+                    <Txt variant="heading">{style.name}</Txt>
+                    <Txt variant="caption" tone="muted">{style.length}</Txt>
+                  </View>
+                  <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
+                    {style.description}
+                  </Txt>
+                </View>
               </View>
-              <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{style.description}</Txt>
 
               <View style={[styles.chips, { marginTop: SPACE.md }]}>
                 <Chip label={`${style.maintenance} upkeep`} accent="sage" />
@@ -127,7 +143,7 @@ export default function HaircutFinderScreen() {
       )}
 
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.lg }}>
-        {query.data?.disclaimer}
+        {INSPIRATION_NOTE} {query.data?.disclaimer}
       </Txt>
     </ScrollView>
   );
@@ -137,4 +153,5 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
+  row: { flexDirection: 'row', alignItems: 'flex-start' },
 });

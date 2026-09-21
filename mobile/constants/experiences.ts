@@ -43,7 +43,7 @@ export const EXPERIENCES: Experience[] = [
     key: 'style',
     eyebrow: 'Wardrobe',
     title: 'Discover My Style',
-    body: 'Silhouettes, fits and a global wardrobe — built from your answers, never from a body photo.',
+    body: 'Silhouettes, outfits, Indian and global fashion — built from your answers, never from a body photo.',
     route: '/style',
     accent: 'sage',
     swatches: ['#7f9480', '#b0894e'],
@@ -89,6 +89,10 @@ export const SMALL_TOOLS: SmallTool[] = [
   { label: 'Makeup looks', route: '/makeup', accent: 'blush', available: true },
   { label: 'Glasses', route: '/accessories/glasses', accent: 'blush', available: true },
   { label: 'Earrings', route: '/accessories/earrings', accent: 'gold', available: true },
+  { label: 'Outfits', route: '/style/outfits', accent: 'peach', available: true },
+  { label: 'Silhouettes', route: '/style/silhouettes', accent: 'sage', available: true },
+  { label: 'Indian fashion', route: '/style/library', accent: 'gold', available: true },
+  { label: 'My aesthetic', route: '/style/aesthetics', accent: 'lavender', available: true },
 ];
 
 export const OCCASIONS = [
@@ -113,6 +117,8 @@ const TIPS = [
   'Undertone does not change with a tan. Depth does, which is why summer photos can shift a reading.',
   'Eye shape decides more of your makeup than eye colour does. Check yours in a mirror, not a photo.',
   'A fringe is the hardest cut to undo. Face-framing pieces test the idea for a fraction of the commitment.',
+  'Body type is a starting point for balance, not a rule about what you may wear. Every garment stays on the table.',
+  'The piece closest to your face carries the most colour weight — a dupatta, a blouse, a collar or a scarf.',
 ];
 
 /** Deterministic per calendar day, so the tip does not change on every render. */

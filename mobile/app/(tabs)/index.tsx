@@ -11,6 +11,7 @@ import { EXPERIENCES, OCCASIONS, SMALL_TOOLS, tipOfTheDay } from '../../constant
 import { ACADEMY_GUIDES } from '../../constants/academy';
 import { INSPIRATION } from '../../constants/inspiration';
 import { Logo } from '../../components/ds/Logo';
+import { WakingBanner } from '../../components/ds/WakingBanner';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -92,6 +93,8 @@ export default function HomeScreen() {
       {/* The mark appears once, here. Repeating it on every screen would
           clutter navigation without telling anyone anything new. */}
       <Logo variant="horizontal" width={150} style={{ marginBottom: SPACE.lg }} />
+
+      <WakingBanner />
 
       <View style={[styles.hero, { backgroundColor: colors.goldSoft }]}>
         {isNew ? (

@@ -312,3 +312,56 @@ async def test_the_journey_without_a_body_type_or_colour_analysis(client: AsyncC
     assert "colour analysis" in outfits["couldImproveWith"]
     # No outfit claims a colour it does not have.
     assert all(o["colours"]["main"] == [] for o in outfits["outfits"])
+
+
+@pytest.mark.asyncio
+async def test_style_preferences_appear_in_the_beauty_passport(client: AsyncClient):
+    """Part 12: the style profile is part of the shared Passport, not a silo."""
+    auth = await _register(client, "style-passport@test.com")
+
+    before = (await client.get("/api/v1/passport", headers=auth)).json()
+    style_keys = {"body_type", "aesthetics", "fit_preference", "silhouettes",
+                  "cultural_preferences"}
+    present = {a["key"] for a in before["attributes"]}
+    assert style_keys <= present, "every style field is a Passport attribute"
+    assert all(a["status"] == "missing" for a in before["attributes"]
+               if a["key"] in style_keys)
+    # Each gap names where to fill it.
+    for attribute in before["attributes"]:
+        if attribute["key"] in style_keys:
+            assert attribute["action"]["route"].startswith("/style/")
+
+    await client.put("/api/v1/style/profile", json={
+        "bodyType": "hourglass",
+        "aesthetics": ["classic"],
+        "fitPreference": "semi-fitted",
+        "silhouettePreferences": ["wrap"],
+        "culturalPreferences": ["indian", "global"],
+    }, headers=auth)
+
+    after = (await client.get("/api/v1/passport", headers=auth)).json()
+    filled = {a["key"]: a for a in after["attributes"]}
+    for key in style_keys:
+        assert filled[key]["status"] == "present", key
+    assert after["completion"] > before["completion"]
+    assert "photograph" in (filled["body_type"]["detail"] or "")
+
+
+@pytest.mark.asyncio
+async def test_there_is_only_one_saved_items_system(client: AsyncClient):
+    """Saving from Style writes the same SavedLook the Passport reads."""
+    auth = await _register(client, "style-one-store@test.com")
+    outfit = (await client.get("/api/v1/style/outfits", headers=auth)).json()["outfits"][0]
+
+    await client.post("/api/v1/passport/looks", json={
+        "name": outfit["name"], "kind": "outfit", "status": "want_to_try",
+        "payload": {"outfit": outfit["key"]},
+    }, headers=auth)
+
+    looks = (await client.get("/api/v1/passport/looks?kind=outfit", headers=auth)).json()
+    assert len(looks) == 1
+    assert looks[0]["payload"]["outfit"] == outfit["key"]
+
+    # And the journey counts it once, not twice.
+    passport = (await client.get("/api/v1/passport", headers=auth)).json()
+    assert passport["journey"]["savedLooks"] == 1

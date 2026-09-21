@@ -1,197 +1,146 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, Chip, ErrorState, LoadingState, SectionHeader, Txt } from '../../components/ds';
-import {
-  AESTHETICS, CULTURAL_PREFERENCES, FIT_PREFERENCES, HAIR_LENGTHS,
-  MAKEUP_EXPERIENCE, NECKLINES, SILHOUETTES, SLEEVES,
-} from '../../constants/wardrobe';
-import { RADIUS, SPACE } from '../../constants/theme';
-import { NotFoundError, useBeautyProfile, useSaveBeautyProfile } from '../../hooks/useBeauty';
+import { Card, Chip, LoadingState, ProgressBar, SectionHeader, Txt } from '../../components/ds';
+import { GarmentFigure } from '../../components/visual';
+import { SPACE } from '../../constants/theme';
+import { useOutfits, useStyleProfile } from '../../hooks/useStyle';
 import { useTheme } from '../../theme/ThemeProvider';
 
-/**
- * The styling questionnaire.
- *
- * Every question is optional and multi-select where that makes sense. Nothing
- * on this screen asks for a photograph, and no answer is required to get a
- * useful result — which is the point of the questionnaire replacing the old
- * photo-derived body analysis.
- */
-export default function StyleQuestionnaireScreen() {
+const TOOLS = [
+  { label: 'Body styling preferences', body: 'Self-selected, skippable, and never from a photo.', route: '/style/questionnaire', accent: 'sage' as const },
+  { label: 'Clothing silhouettes', body: 'Every shape in the library, with what each one does.', route: '/style/silhouettes', accent: 'gold' as const },
+  { label: 'Find your fashion aesthetic', body: 'Sixteen aesthetics, and a quiz if you want one.', route: '/style/aesthetics', accent: 'lavender' as const },
+  { label: 'Outfit recommendations', body: 'Complete outfits built from what you have told us.', route: '/style/outfits', accent: 'peach' as const },
+  { label: 'Outfit colour explorer', body: 'Saree and blouse, shirt and trousers — from your palette.', route: '/style/colours', accent: 'blush' as const },
+  { label: 'Indian fashion', body: 'Sarees, lehengas, kurtas, sharara and gharara sets.', route: '/style/library?region=indian', accent: 'gold' as const },
+  { label: 'Global fashion', body: 'Casual, business, streetwear, modest, Korean-inspired.', route: '/style/library?region=global', accent: 'sage' as const },
+  { label: 'Occasion styling', body: 'Work, weddings, festivals, interviews and everyday.', route: '/style/outfits', accent: 'peach' as const },
+  { label: 'Saved outfit inspiration', body: 'Everything you kept, in your Passport.', route: '/(tabs)/passport', accent: 'gold' as const },
+  { label: 'Style Academy', body: 'Short guides on fit, colour and building a wardrobe.', route: '/academy?category=style', accent: 'lavender' as const },
+];
+
+export default function DiscoverMyStyleScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const profile = useBeautyProfile();
-  const save = useSaveBeautyProfile();
+  const profile = useStyleProfile();
+  const outfits = useOutfits();
 
-  const [fit, setFit] = useState<string | null>(null);
-  const [necklines, setNecklines] = useState<string[]>([]);
-  const [sleeves, setSleeves] = useState<string[]>([]);
-  const [silhouettes, setSilhouettes] = useState<string[]>([]);
-  const [aesthetics, setAesthetics] = useState<string[]>([]);
-  const [cultural, setCultural] = useState<string[]>([]);
-  const [hairLength, setHairLength] = useState<string | null>(null);
-  const [makeup, setMakeup] = useState<string | null>(null);
-  const [height, setHeight] = useState('');
-  const [savedAt, setSavedAt] = useState<number | null>(null);
-
-  // Seed from whatever is already stored, so the screen is an editor rather
-  // than a form that silently discards earlier answers.
-  useEffect(() => {
-    const p = profile.data;
-    if (!p) return;
-    setFit(p.fitPreference ?? null);
-    setNecklines(p.necklinePreferences ?? []);
-    setSleeves(p.sleevePreferences ?? []);
-    setSilhouettes(p.silhouettePreferences ?? []);
-    setAesthetics(p.aesthetics ?? []);
-    setCultural(p.culturalPreferences ?? []);
-    setHairLength(p.hairLength ?? null);
-    setMakeup(p.makeupExperience ?? null);
-    setHeight(p.heightCm ? String(p.heightCm) : '');
-  }, [profile.data]);
-
-  const toggle = (list: string[], set: (v: string[]) => void, value: string) =>
-    set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
-
-  const isLoading = profile.isLoading;
-  const loadFailed = profile.isError && !(profile.error instanceof NotFoundError);
-
-  if (isLoading) return <LoadingState label="Loading your styling profile…" />;
-
-  const handleSave = async () => {
-    const parsedHeight = height.trim() ? Number(height.trim()) : null;
-    await save.mutateAsync({
-      fitPreference: fit,
-      necklinePreferences: necklines,
-      sleevePreferences: sleeves,
-      silhouettePreferences: silhouettes,
-      aesthetics,
-      culturalPreferences: cultural,
-      hairLength,
-      makeupExperience: makeup,
-      heightCm: parsedHeight && !Number.isNaN(parsedHeight) ? parsedHeight : null,
-    });
-    setSavedAt(Date.now());
-  };
+  const data = profile.data;
+  const preview = outfits.data?.outfits.slice(0, 3) ?? [];
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
       <Txt variant="display" serif>Discover My Style</Txt>
-      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs }}>
-        Answer what you like and skip the rest. MyLookFit never asks for a body photograph, and never
-        infers your shape from one.
+      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
+        Clothes, silhouettes and outfits built from what you tell us — never
+        from a photograph of your body.
       </Txt>
 
-      {loadFailed ? (
-        <ErrorState message="Could not load your saved answers." onRetry={() => profile.refetch()} />
+      {/* ------------------------------------------------- 1. style profile */}
+      {profile.isLoading ? (
+        <LoadingState label="Reading your profile…" />
+      ) : (
+        <Card
+          variant="tinted"
+          accent="gold"
+          onPress={() => router.push('/style/questionnaire' as never)}
+        >
+          <Txt variant="overline" tone="muted">Your style profile</Txt>
+          <Txt variant="title" serif style={{ marginTop: 2 }}>
+            {data?.bodyTypeDeclined
+              ? 'Built from your preferences'
+              : data?.bodyType
+                ? `${data.bodyType.replace('_', ' ')} · ${data.aesthetics.length || 'no'} aesthetics`
+                : 'Not started yet'}
+          </Txt>
+          <ProgressBar
+            value={data?.completion ?? 0}
+            label={`${data?.answered ?? 0} of ${data?.total ?? 0} answered`}
+          />
+          <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>
+            {data && data.completion < 1
+              ? 'Answer a section at a time. Everything is optional →'
+              : 'Tap to review or change anything →'}
+          </Txt>
+
+          {data?.aestheticDetails?.length ? (
+            <View style={styles.chips}>
+              {data.aestheticDetails.map((a) => (
+                <Chip key={a.key} label={a.name} accent="gold" />
+              ))}
+            </View>
+          ) : null}
+        </Card>
+      )}
+
+      {/* ------------------------------------------- 2. outfits, if we have any */}
+      {preview.length > 0 ? (
+        <View style={{ marginTop: SPACE.xxl }}>
+          <SectionHeader
+            title="Outfits for you"
+            action="See all"
+            onAction={() => router.push('/style/outfits' as never)}
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {preview.map((outfit) => (
+              <Card
+                key={outfit.key}
+                style={{ width: 200, marginRight: SPACE.md }}
+                onPress={() => router.push(`/style/outfits?focus=${outfit.key}` as never)}
+              >
+                <View style={{ alignItems: 'center' }}>
+                  <GarmentFigure
+                    silhouette={outfit.pieces[0]?.silhouette ?? 'straight'}
+                    seed={outfit.key}
+                    colour={outfit.colours.main[0]?.hex}
+                    width={84}
+                  />
+                </View>
+                <Txt variant="body" weight="semibold" style={{ marginTop: SPACE.sm }}>
+                  {outfit.name}
+                </Txt>
+                <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
+                  {outfit.pieces.map((p) => p.name).join(' · ')}
+                </Txt>
+              </Card>
+            ))}
+          </ScrollView>
+
+          {outfits.data?.couldImproveWith.length ? (
+            <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.sm }}>
+              These get sharper once we know your{' '}
+              {outfits.data.couldImproveWith.join(', ')}.
+            </Txt>
+          ) : null}
+        </View>
       ) : null}
 
-      <Card variant="tinted" accent="sage" style={{ marginTop: SPACE.xl }} onPress={() => router.push('/style/body' as never)}>
-        <Txt variant="heading" serif>Body type and silhouettes</Txt>
-        <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-          Choose one yourself, or skip the category entirely. →
-        </Txt>
-      </Card>
-
-      <Group title="Preferred fit">
-        {FIT_PREFERENCES.map((f) => (
-          <Chip key={f} label={f} accent="sage" selected={fit === f} onPress={() => setFit(fit === f ? null : f)} />
+      {/* ---------------------------------------------------- 3. every tool */}
+      <View style={{ marginTop: SPACE.xxl }}>
+        <SectionHeader title="Explore" />
+        {TOOLS.map((tool) => (
+          <Card
+            key={tool.label}
+            style={{ marginBottom: SPACE.sm }}
+            onPress={() => router.push(tool.route as never)}
+            accessibilityLabel={tool.label}
+          >
+            <Txt variant="heading">{tool.label}</Txt>
+            <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{tool.body}</Txt>
+          </Card>
         ))}
-      </Group>
-
-      <Group title="Necklines you reach for">
-        {NECKLINES.map((n) => (
-          <Chip key={n} label={n} accent="blush" selected={necklines.includes(n)} onPress={() => toggle(necklines, setNecklines, n)} />
-        ))}
-      </Group>
-
-      <Group title="Sleeves">
-        {SLEEVES.map((s) => (
-          <Chip key={s} label={s} accent="peach" selected={sleeves.includes(s)} onPress={() => toggle(sleeves, setSleeves, s)} />
-        ))}
-      </Group>
-
-      <Group title="Silhouettes">
-        {SILHOUETTES.map((s) => (
-          <Chip key={s} label={s} accent="lavender" selected={silhouettes.includes(s)} onPress={() => toggle(silhouettes, setSilhouettes, s)} />
-        ))}
-      </Group>
-
-      <Group title="Aesthetics">
-        {AESTHETICS.map((a) => (
-          <Chip key={a} label={a} accent="gold" selected={aesthetics.includes(a)} onPress={() => toggle(aesthetics, setAesthetics, a)} />
-        ))}
-      </Group>
-
-      <Group title="Cultural wardrobe">
-        {CULTURAL_PREFERENCES.map((c) => (
-          <Chip key={c} label={c} accent="peach" selected={cultural.includes(c)} onPress={() => toggle(cultural, setCultural, c)} />
-        ))}
-      </Group>
-
-      <Group title="Hair length">
-        {HAIR_LENGTHS.map((h) => (
-          <Chip key={h} label={h} accent="lavender" selected={hairLength === h} onPress={() => setHairLength(hairLength === h ? null : h)} />
-        ))}
-      </Group>
-
-      <Group title="Makeup experience">
-        {MAKEUP_EXPERIENCE.map((m) => (
-          <Chip key={m} label={m} accent="blush" selected={makeup === m} onPress={() => setMakeup(makeup === m ? null : m)} />
-        ))}
-      </Group>
-
-      <View style={styles.section}>
-        <SectionHeader title="Height, if you want to share it" />
-        <TextInput
-          value={height}
-          onChangeText={setHeight}
-          keyboardType="number-pad"
-          placeholder="cm — entirely optional"
-          placeholderTextColor={colors.textSubtle}
-          accessibilityLabel="Height in centimetres"
-          style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surface }]}
-        />
       </View>
 
-      <Button
-        label="Save my answers"
-        loading={save.isPending}
-        style={{ marginTop: SPACE.xl }}
-        onPress={handleSave}
-      />
-      {savedAt ? (
-        <Card variant="tinted" accent="sage" style={{ marginTop: SPACE.md }}>
-          <Txt variant="bodySm" tone="success" weight="semibold">Saved</Txt>
-          <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
-            Your passport and recommendations now use these answers.
-          </Txt>
-        </Card>
-      ) : null}
-      {save.isError ? <ErrorState message="Could not save your answers." onRetry={handleSave} /> : null}
+      <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xl }}>
+        {data?.bodyTypeNote}
+      </Txt>
     </ScrollView>
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <SectionHeader title={title} />
-      <View style={styles.wrap}>{children}</View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
-  section: { marginTop: SPACE.xxl },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
-  input: {
-    minHeight: 48,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACE.lg,
-  },
+  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
 });

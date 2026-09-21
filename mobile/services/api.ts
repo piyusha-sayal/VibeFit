@@ -2,13 +2,16 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
 import { ApiResponse } from '../types';
 import { getFreshIdToken } from './authService';
+import {
+  REQUEST_TIMEOUT_MS, retryDelayMs, shouldRetry, trackSlowRequest,
+} from './coldStart';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 const API_VERSION = process.env.EXPO_PUBLIC_API_VERSION ?? 'v1';
 
 const api: AxiosInstance = axios.create({
   baseURL: `${BASE_URL}/api/${API_VERSION}`,
-  timeout: 30000,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -69,34 +72,60 @@ function errorMessage(error: unknown): string {
 // All helpers normalize the raw backend payload into the app's ApiResponse
 // envelope and camelCase shape, so callers never see snake_case or raw errors.
 
-async function request<T>(fn: () => Promise<{ data: unknown }>): Promise<ApiResponse<T>> {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Runs a request, retrying only when it is safe to.
+ *
+ * `method` decides whether a retry is allowed at all: a failed POST or PATCH
+ * is surfaced to the caller rather than repeated, so a save can never be
+ * duplicated by a retry.
+ */
+async function request<T>(
+  fn: () => Promise<{ data: unknown }>,
+  method: string = 'get',
+): Promise<ApiResponse<T>> {
+  const endSlowTracking = trackSlowRequest();
   try {
-    const { data } = await fn();
-    return { success: true, data: camelize<T>(data) };
-  } catch (error) {
-    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-    return { success: false, data: null, error: errorMessage(error), status };
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        const { data } = await fn();
+        return { success: true, data: camelize<T>(data) };
+      } catch (error) {
+        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+        const isNetworkError = axios.isAxiosError(error) && !error.response;
+
+        if (shouldRetry({ method, status, isNetworkError, attempt })) {
+          await sleep(retryDelayMs(attempt));
+          continue;
+        }
+        return { success: false, data: null, error: errorMessage(error), status };
+      }
+    }
+  } finally {
+    endSlowTracking();
   }
 }
 
 export async function get<T>(path: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
-  return request<T>(() => api.get(path, params ? { params: snakeize(params) as object } : undefined));
+  return request<T>(() => api.get(path, params ? { params: snakeize(params) as object } : undefined), 'get');
 }
 
 export async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
-  return request<T>(() => api.post(path, body ?? {}));
+  // Never retried: a repeated POST creates a duplicate.
+  return request<T>(() => api.post(path, body ?? {}), 'post');
 }
 
 export async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-  return request<T>(() => api.put(path, body));
+  return request<T>(() => api.put(path, body), 'put');
 }
 
 export async function patch<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-  return request<T>(() => api.patch(path, body));
+  return request<T>(() => api.patch(path, body), 'patch');
 }
 
 export async function del<T>(path: string): Promise<ApiResponse<T>> {
-  return request<T>(() => api.delete(path));
+  return request<T>(() => api.delete(path), 'delete');
 }
 
 /**

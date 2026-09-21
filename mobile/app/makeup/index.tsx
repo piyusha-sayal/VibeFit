@@ -3,9 +3,28 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Card, Chip, ErrorState, LoadingState, SectionHeader, Txt } from '../../components/ds';
+import { FaceFigure, INSPIRATION_NOTE } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useAesthetics, useFaceProfile } from '../../hooks/useFace';
 import { useTheme } from '../../theme/ThemeProvider';
+
+/** Which zones an aesthetic actually emphasises, for the illustration. */
+const EMPHASIS: Record<string, ('eyes' | 'lips' | 'cheeks' | 'brows')[]> = {
+  natural: ['cheeks'],
+  no_makeup: ['brows'],
+  clean_girl: ['cheeks', 'brows'],
+  glass_skin: ['cheeks'],
+  korean_gradient: ['lips', 'cheeks'],
+  soft_glam: ['eyes', 'lips'],
+  full_glam: ['eyes', 'lips', 'cheeks'],
+  indian_bridal: ['eyes', 'lips', 'brows'],
+  festive_indian: ['eyes', 'lips'],
+  smokey: ['eyes'],
+  monochrome: ['lips', 'cheeks'],
+  editorial: ['eyes', 'brows'],
+  vintage: ['eyes', 'lips'],
+  office: ['brows', 'lips'],
+};
 
 const OCCASIONS = ['everyday', 'work', 'evening', 'wedding', 'festival', 'photography'] as const;
 const TIMES = [5, 10, 20, 40] as const;
@@ -84,16 +103,31 @@ export default function MakeupStudioScreen() {
                 `/makeup/looks/${aesthetic.key}${occasion ? `?occasion=${occasion}` : ''}` as never,
               )}
             >
-              <View style={styles.rowBetween}>
-                <Txt variant="heading">{aesthetic.name}</Txt>
-                <Txt variant="caption" tone="muted">{aesthetic.minutes} min</Txt>
+              <View style={styles.row}>
+                <FaceFigure
+                  seed={aesthetic.key}
+                  size={76}
+                  emphasis={EMPHASIS[aesthetic.key] ?? ['lips']}
+                  label={`${aesthetic.name}, illustration`}
+                />
+                <View style={{ flex: 1, marginLeft: SPACE.md }}>
+                  <View style={styles.rowBetween}>
+                    <Txt variant="heading">{aesthetic.name}</Txt>
+                    <Txt variant="caption" tone="muted">{aesthetic.minutes} min</Txt>
+                  </View>
+                  <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
+                    {aesthetic.summary}
+                  </Txt>
+                </View>
               </View>
-              <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{aesthetic.summary}</Txt>
               {aesthetic.reasons.slice(0, 1).map((reason) => (
                 <Txt key={reason} variant="bodySm" style={{ marginTop: SPACE.sm }}>• {reason}</Txt>
               ))}
             </Card>
           ))}
+          <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.md }}>
+            {INSPIRATION_NOTE}
+          </Txt>
         </View>
       )}
     </ScrollView>
@@ -104,4 +138,5 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
+  row: { flexDirection: 'row', alignItems: 'flex-start' },
 });
