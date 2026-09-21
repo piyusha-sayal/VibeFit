@@ -35,11 +35,16 @@ def analyze_colors(image_bytes: bytes) -> dict:
     contrast = _classify_contrast(img, results, w, h)
     palette = _generate_palette(undertone, skin_rgb)
     hex_color = _rgb_to_hex(skin_rgb)
+    depth, chroma = _classify_depth_and_chroma(skin_rgb)
 
     return {
         "skinUndertone": undertone,
         "contrastLevel": contrast,
         "skinColor": hex_color,
+        # Depth and clarity are what separate the three seasons inside a family;
+        # without them the season engine can only estimate from the skin hex.
+        "depth": depth,
+        "chroma": chroma,
         "palette": {"primary": palette},
     }
 
@@ -82,6 +87,30 @@ def _classify_contrast(img: np.ndarray, results, w: int, h: int) -> str:
     if std > 35:
         return "medium"
     return "low"
+
+
+def _classify_depth_and_chroma(rgb: tuple[int, int, int]) -> tuple[str, str]:
+    """Read depth from CIELAB lightness and clarity from its chroma.
+
+    LAB is used rather than RGB because L* tracks perceived lightness across
+    every skin tone, where a raw RGB average reads darker skin as simply "less".
+    """
+    patch = np.uint8([[list(rgb)]])
+    lab = cv2.cvtColor(patch, cv2.COLOR_RGB2LAB)[0][0]
+    lightness = float(lab[0]) * 100.0 / 255.0
+    a, b = float(lab[1]) - 128.0, float(lab[2]) - 128.0
+    chroma_value = (a * a + b * b) ** 0.5
+
+    if lightness >= 68:
+        depth = "light"
+    elif lightness <= 45:
+        depth = "deep"
+    else:
+        depth = "medium"
+
+    # Saturated cheek colour reads as a clear (bright) palette; a greyed one as muted.
+    chroma = "bright" if chroma_value >= 22 else "muted"
+    return depth, chroma
 
 
 def _generate_palette(undertone: str, skin: tuple[int, int, int]) -> list[str]:

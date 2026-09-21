@@ -7,6 +7,7 @@ from api.routes.chat import router as chat_router
 from api.routes.user import router as user_router
 from api.routes.profile import router as profile_router
 from api.routes.plan import router as plan_router
+from api.routes.color import router as color_router
 
 
 app = FastAPI(
@@ -30,6 +31,7 @@ app.include_router(chat_router, prefix=API_PREFIX)
 app.include_router(user_router, prefix=API_PREFIX)
 app.include_router(profile_router, prefix=API_PREFIX)
 app.include_router(plan_router, prefix=API_PREFIX)
+app.include_router(color_router, prefix=API_PREFIX)
 
 
 @app.get("/health")
