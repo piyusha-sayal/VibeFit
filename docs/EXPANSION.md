@@ -532,3 +532,75 @@ mean any future failure between those two lines presents identically to this
 one: a port that never opens and an edge that hangs. The log line after
 `Starting API on port ...` is the only thing that distinguishes them, which is
 why item 3 above is the deciding question rather than a formality.
+
+### Resolution (2026-09-21, same day)
+
+Render's own log supplied the missing line:
+
+```
+Port scan timeout reached, no open ports detected.
+Bind your service to at least one port.
+```
+
+**Cause.** Render discovers a web service by scanning for an open port,
+starting at `$PORT`. `render.yaml` declared no `PORT` and no `dockerCommand`,
+so the Dockerfile `CMD` ran `start.sh` with its own fallback — `8000`. Port
+detection therefore rested on Render's fallback list rather than on anything in
+this repository, and on this deploy it did not find the socket. Everything the
+evidence above ruled out stays ruled out: the container was alive, the
+migration had completed, and uvicorn was listening. It was listening somewhere
+Render was not looking.
+
+This also explains the shape of the outage exactly. Render never marked the
+service healthy, so the router had no origin to forward to and held every
+connection open — which is why `ttfb` stayed at `0` rather than returning a
+502. A service that *had* crashed would have produced an error page in
+milliseconds.
+
+**Correction** (`58c70a7`), deployment configuration only, no application
+change:
+
+- `render.yaml` pins `PORT: 10000`, the port Render scans by default
+- `start.sh` resolves `PORT="${PORT:-10000}"` and binds exactly that, so the
+  service comes up on the same port whether or not the blueprint value is
+  applied
+- `Dockerfile` `EXPOSE` matches
+- `start.sh` narrates its three phases and uvicorn runs at `--log-level info`,
+  which prints `Application startup complete.` and the bound address
+- `tests/test_startup_command.py` pins the three files to one port and asserts
+  the bind address, the `exec`, and that `render.yaml` declares no
+  `dockerCommand` — an override there would silently bypass `start.sh` and the
+  migration with it
+
+The bind address was already `0.0.0.0` and is unchanged. Nothing about the
+schema was touched; production still reports `0006_create_my_look (head)`.
+
+**Verification.** Externally, against the real host:
+
+| check | result |
+|---|---|
+| `/health` first request after deploy | 200, ttfb 10.26s (waking) |
+| `/health` warm | 200, ttfb 0.296s |
+| `/health/db` | 200, `"database": "reachable"`, 1532 ms |
+| response header | `x-render-origin-server: uvicorn` |
+| production migration | `0006_create_my_look (head)`, unchanged |
+| Phase 5 journey, production base URL | **21 of 21** |
+| backend tests | 407 passed |
+
+The `x-render-origin-server: uvicorn` header is the direct confirmation that
+Render found the listener: it names the origin it routed to.
+
+**What this changes about the earlier diagnosis.** The measurements above were
+sound and none of them are retracted — but they were all measurements of things
+that turned out to be healthy. The one fact that would have located this in
+minutes was the port Render scans, and it was only obtainable from the service
+log. Item 3 of the list above ("what follows `Starting API on port ...`") was
+the right question; the answer was a line printed by Render rather than by the
+container.
+
+**One transient observed during verification.** The first production run of the
+journey script failed at step 4, `POST /looks/generate`, on an instance that
+had just woken. A direct call to the same endpoint immediately afterwards
+returned a full composition, and the re-run passed 21 of 21. This is not
+claimed as fixed and is not claimed to share a cause with the outage. It is
+recorded because it resembles the `GET /passport` transient, which remains open.
