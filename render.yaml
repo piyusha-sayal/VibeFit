@@ -64,5 +64,5 @@ services:
 # comfortable — but keep it to ONE uvicorn worker; each additional worker adds
 # roughly 200 MB of imports.
 #
-# Migrations do not run automatically. After the first deploy, once:
-#   DATABASE_URL=<neon-url> alembic upgrade head
+# Migrations run on container start (backend/start.sh: alembic upgrade head),
+# which is a no-op when the schema is already current.
