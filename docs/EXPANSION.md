@@ -158,12 +158,76 @@ colour (#f2ece3 reports s = 0.37 at l = 0.92), so neutrality now uses chroma;
 20° of hue separation was classified monochrome rather than analogous; and
 together those made a colour-on-neutral pair read as analogous.
 
-### Known gaps after this phase
-- Guide progress is device-local. `guide_progress` exists in the schema but has
-  no endpoint yet.
-- Create My Look assembles from the passport and saves a real look, but the
-  interactive Look Builder (swap hairstyle, swap outfit, compare alternatives)
-  is Phase 5.
-- The older analysis screens (hair, makeup, accessories, facial-canon) still use
-  the legacy dark palette and have not been rebuilt for Phase 3.
+### Known gaps after Phase 2
+- Guide progress was device-local. Phase 3 moved it to the account.
+- The older analysis screens still use the legacy dark palette.
 - Account deletion and data export are specified but not built.
+
+## Phase 3 — Discover My Face, Hair, Makeup, Accessories
+
+### What is measured, what is derived, and what is asked
+The honest split drives the whole phase:
+
+| Attribute | Source | Why |
+| --- | --- | --- |
+| Face shape | measured | Nine categories from four landmark ratios. |
+| Brow shape | measured | The brow landmarks already produce an arch position. |
+| Facial contrast | derived | Read from the colour analysis that already ran. |
+| Eye shape | self-select | No reliable landmark rule separates hooded from deep-set at selfie resolution. |
+| Lip shape | self-select | Lip width is measured; the balance between the two lips, which technique depends on, is not. |
+| Cheek contour | self-select | Photographic lighting moves apparent cheek contour more than the cheek does. |
+
+Guided self-selection was chosen over a paid vision provider, per the standing
+constraint that no new paid dependency ships without approval — and because a
+fabricated classification is worse than an honest question.
+
+### The nine-shape classifier
+`classify_face_shape` returns shape, the closest alternative, a confidence and
+the four ratios behind the call. Bad landmarks return **no shape** rather than
+the old silent fallback to "oval". Confidence is rendered in words, never as a
+decimal.
+
+### One face profile, three studios
+`services/face_service.studio_context()` is the single source Hair, Makeup and
+Accessories personalise from, so they cannot drift apart. A user's own
+selection always wins for recommendations, and the scan reading is kept beside
+it rather than overwritten — overrides reuse the existing append-only
+`profile_corrections` table with a `face.` key prefix.
+
+### Libraries
+- 29 haircuts, 8 fringes, 14 hair colours, 4 partings, plus a salon script per
+  cut. Braids, twists, locs and coily-specific cuts are first-class entries;
+  Korean-inspired cuts are 2 of 29. Filters exclude; face shape only reorders.
+- 14 makeup aesthetics with technique keyed to confirmed attributes, and colour
+  drawn from the season engine rather than a second palette.
+- Accessories include jhumkas, chandbalis and ear chains alongside Western
+  forms. Nothing is filtered away by face shape — an accessory is the cheapest
+  thing in styling to simply try.
+
+Foundation guidance names undertone and depth families and explicitly refuses
+to match an exact shade: that needs real skin in real light.
+
+### Guide progress on the account
+`guide_progress` gained resume state in migration 0004 (additive, two nullable
+columns). Endpoints are owner-scoped on every read and write. Sync is additive
+only: a device never tells the server to forget something.
+
+### Diagnostics
+Every response now carries `X-Request-ID`. The request log records method, the
+route *template*, status and duration — never a filled path, user id, email,
+token, header or body. `/health/db` proves the database is reachable separately
+from the app being up.
+
+### Known gaps after this phase
+- The `GET /passport` transient is **not** root-caused. 48/48 clean on a warm
+  production instance (25 sequential, 15 concurrent, 8 interleaved). The new
+  diagnostics exist to catch the next occurrence; `pool_recycle` is a
+  mitigation for the most plausible class of cause, not a proven fix.
+- A cold start from sleep measures 62s. A client timeout shorter than that will
+  fail on the first request after idle. Not asserted to be the cause above.
+- Hairstyle and makeup libraries are text and swatches. There is no photo
+  library and no hairstyle visualisation; the disclaimer says so wherever a
+  cut is shown.
+- The legacy analysis screens (hair, makeup, accessories, facial-canon) still
+  work and are still reachable. They are deliberately not deleted.
+- No physical-device testing has been performed by the assistant.
