@@ -16,12 +16,13 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-EXPOSE 8000
+EXPOSE 10000
 
 RUN chmod +x /app/start.sh
 
 # start.sh applies migrations, then execs uvicorn. ${PORT} is read there:
-# Render (and most PaaS) inject the port to bind, defaulting to 8000 locally.
+# Render (and most PaaS) inject the port to bind; start.sh falls back to 10000,
+# the port Render scans by default.
 # Single worker on purpose — each worker costs ~200 MB of imports, which would
 # blow the 512 MB free tier.
 CMD ["/app/start.sh"]

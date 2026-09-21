@@ -10,8 +10,19 @@
 # containers racing `upgrade head` can deadlock on the alembic_version row.
 set -e
 
-echo "Applying database migrations..."
-alembic upgrade head
+# Render finds the service by scanning for an open port, starting at $PORT and
+# falling back to 10000. Defaulting to anything else makes detection depend on
+# Render's fallback list rather than on this line, which is how the service came
+# up with "Port scan timeout reached, no open ports detected" while the
+# container was alive and the migration had already completed.
+PORT="${PORT:-10000}"
 
-echo "Starting API on port ${PORT:-8000}..."
-exec uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"
+echo "startup: applying database migrations"
+alembic upgrade head
+echo "startup: migrations complete"
+
+echo "startup: launching uvicorn on 0.0.0.0:${PORT}"
+exec uvicorn main:app \
+  --host 0.0.0.0 \
+  --port "${PORT}" \
+  --log-level info

@@ -49,6 +49,11 @@ services:
         value: auto
 
       # --- fixed ---
+      # Render discovers the service by scanning for an open port, starting at
+      # PORT. Set explicitly so detection never depends on Render's fallback
+      # list: start.sh binds exactly this, on 0.0.0.0.
+      - key: PORT
+        value: 10000
       - key: ENVIRONMENT
         value: production
       - key: LOG_LEVEL
@@ -65,4 +70,5 @@ services:
 # roughly 200 MB of imports.
 #
 # Migrations run on container start (backend/start.sh: alembic upgrade head),
-# which is a no-op when the schema is already current.
+# which is a no-op when the schema is already current. Nothing is served until
+# it returns, so a failure there presents as a port that never opens.
