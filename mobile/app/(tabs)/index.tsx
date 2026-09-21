@@ -1,194 +1,365 @@
-import React, { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Path, Circle } from 'react-native-svg';
-import { useAnalysisStore } from '../../store/analysisStore';
-import { useAuthStore } from '../../store/authStore';
-import { FloatingNav } from '../../components/ui/FloatingNav';
-import { Face } from '../../components/illustrations/Face';
-import { ColorCircles } from '../../components/ui/ColorCircles';
-import { Pill } from '../../components/ui/Pill';
-import { Lbl } from '../../components/ui/Lbl';
-import { GoldButton } from '../../components/ui/GoldButton';
-import { C, GRADIENTS } from '../../constants/colors';
-import { FONTS } from '../../constants/fonts';
 
-function SettingsIcon() {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={3} stroke={C.textMuted} strokeWidth={1.7} />
-      <Path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke={C.textMuted} strokeWidth={1.5} strokeLinecap="round" />
-    </Svg>
-  );
-}
+import { Button, Card, Chip, EmptyState, ErrorState, LoadingState, ProgressBar, SectionHeader, Swatch, Txt } from '../../components/ds';
+import { RADIUS, SPACE } from '../../constants/theme';
+import { useColorReport, usePassport } from '../../hooks/useBeauty';
+import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../theme/ThemeProvider';
+import { EXPERIENCES, OCCASIONS, SMALL_TOOLS, tipOfTheDay } from '../../constants/experiences';
+import { ACADEMY_GUIDES } from '../../constants/academy';
+import { INSPIRATION } from '../../constants/inspiration';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
-  const { currentAnalysis, loadLatest } = useAnalysisStore();
+  const passport = usePassport();
+  const report = useColorReport();
+  const [occasion, setOccasion] = useState<string | null>(null);
 
-  const floatY = useSharedValue(0);
-  const floatStyle = useAnimatedStyle(() => ({ transform: [{ translateY: floatY.value }] }));
+  const firstName = (user?.name ?? '').trim().split(' ')[0];
+  const tip = useMemo(tipOfTheDay, []);
 
-  useEffect(() => {
-    loadLatest();
-    floatY.value = withRepeat(withTiming(-4, { duration: 2000, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, []);
+  const recommendations = useMemo(() => {
+    const data = passport.data;
+    if (!data) return [];
+    const by = Object.fromEntries(data.attributes.map((a) => [a.key, a]));
+    const out: { title: string; body: string; route: string; accent: 'blush' | 'peach' | 'lavender' | 'sage' | 'gold' }[] = [];
 
-  if (!currentAnalysis) {
+    if (by.personal_colour?.status === 'present') {
+      out.push({
+        title: `Explore your ${by.personal_colour.value} palette`,
+        body: 'The colours that sit well against your skin, ready to compare.',
+        route: '/colors/palette',
+        accent: 'blush',
+      });
+      out.push({
+        title: 'Lipstick shades from your palette',
+        body: 'Shades drawn from your season rather than a generic chart.',
+        route: '/colors/lipstick',
+        accent: 'peach',
+      });
+    }
+    if (by.face_shape?.status === 'present') {
+      out.push({
+        title: `Hairstyles for a ${by.face_shape.value} face`,
+        body: 'Cuts, lengths and partings that balance your proportions.',
+        route: '/analysis/hair',
+        accent: 'lavender',
+      });
+    }
+    if (by.body_type?.status === 'present') {
+      out.push({
+        title: 'Silhouettes for your styling profile',
+        body: 'Built from what you told us, never from a photograph.',
+        route: '/style/body',
+        accent: 'sage',
+      });
+    }
+    // An incomplete profile gets the next real step instead of filler.
+    if (out.length < 2 && data.nextAction) {
+      out.push({
+        title: data.nextAction.label,
+        body: 'The quickest way to make everything else more personal.',
+        route: data.nextAction.route,
+        accent: 'gold',
+      });
+    }
+    return out.slice(0, 4);
+  }, [passport.data]);
+
+  if (passport.isLoading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
-          <TouchableOpacity style={styles.planBtn} onPress={() => router.push('/plan')} activeOpacity={0.7}>
-            <Text style={styles.planBtnText}>Your Plan</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
-            <SettingsIcon />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.emptyWrap}>
-          <Animated.View style={floatStyle}>
-            <Face color={C.gold} size={90} />
-          </Animated.View>
-          <Text style={styles.emptyTitle}>Welcome{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</Text>
-          <Text style={styles.emptyText}>
-            Upload a photo to unlock your personalized style profile, color palette, and recommendations.
-          </Text>
-          <GoldButton
-            label="Start your scan"
-            onPress={() => router.push('/(tabs)/scan')}
-            style={{ marginTop: 24 }}
-          />
-        </View>
-        <FloatingNav />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center' }}>
+        <LoadingState label="Opening your passport…" />
       </View>
     );
   }
 
-  const faceShape = currentAnalysis.faceAnalysis?.shape ?? '—';
-  const undertone = currentAnalysis.colorAnalysis?.skinUndertone ?? '—';
-  const contrastLevel = currentAnalysis.colorAnalysis?.contrastLevel ?? '—';
-  const palette = currentAnalysis.colorAnalysis?.palette?.primary ?? [];
-  const aesthetics = currentAnalysis.recommendations
-    ?.filter((r) => r.category === 'aesthetic')
-    .slice(0, 4)
-    .map((r) => r.title) ?? [];
-  const hairCount = currentAnalysis.hairAnalysis?.recommendedStyles?.length ?? 0;
-  const outfitCount = currentAnalysis.recommendations?.filter((r) => r.category === 'outfit').length ?? 0;
-  const aestheticCount = currentAnalysis.recommendations?.filter((r) => r.category === 'aesthetic').length ?? 0;
+  const data = passport.data;
+  const isNew = !data || data.completed === 0;
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
-          <TouchableOpacity style={styles.planBtn} onPress={() => router.push('/plan')} activeOpacity={0.7}>
-            <Text style={styles.planBtnText}>Your Plan</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
-            <SettingsIcon />
-          </TouchableOpacity>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={styles.scroll}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ---------------------------------------------------------- A. hero */}
+      <View style={[styles.hero, { backgroundColor: colors.blushSoft }]}>
+        {isNew ? (
+          <>
+            <Txt variant="display" serif>Discover Your Colors.</Txt>
+            <Txt variant="display" serif style={{ marginBottom: SPACE.md }}>Define Your Style.</Txt>
+            <Txt variant="body" tone="muted" style={{ marginBottom: SPACE.xl }}>
+              Your personal beauty and styling journey starts here.
+            </Txt>
+            <Button label="Start Exploring" onPress={() => router.push('/(tabs)/scan' as never)} />
+          </>
+        ) : (
+          <>
+            <Txt variant="title" serif>Welcome back{firstName ? `, ${firstName}` : ''}.</Txt>
+            <Txt variant="body" tone="muted" style={{ marginTop: SPACE.sm, marginBottom: SPACE.xl }}>
+              {data?.nextAction
+                ? `Next: ${data.nextAction.label.toLowerCase()}.`
+                : 'Your passport is complete. Build a look with it.'}
+            </Txt>
+            <Button
+              label={data?.nextAction ? data.nextAction.label : 'Create a look'}
+              onPress={() => router.push((data?.nextAction?.route ?? '/(tabs)/create') as never)}
+            />
+          </>
+        )}
+      </View>
+
+      {/* ------------------------------------------ B. beauty passport preview */}
+      {passport.isError ? (
+        <View style={styles.section}>
+          <ErrorState message="Could not load your passport." onRetry={() => passport.refetch()} />
         </View>
+      ) : data ? (
+        <View style={styles.section}>
+          <SectionHeader title="My Beauty Passport" action="Open" onAction={() => router.push('/(tabs)/passport' as never)} />
+          <Card>
+            <View style={styles.rowBetween}>
+              <Txt variant="bodySm" tone="muted">{data.completed} of {data.total} complete</Txt>
+              <Txt variant="bodySm" weight="semibold">{Math.round(data.completion * 100)}%</Txt>
+            </View>
+            <View style={{ marginTop: SPACE.sm, marginBottom: SPACE.lg }}>
+              <ProgressBar value={data.completion} label="Profile completion" />
+            </View>
+            {data.attributes.slice(0, 5).map((attr) => (
+              <View key={attr.key} style={[styles.attrRow, { borderColor: colors.border }]}>
+                <Txt variant="bodySm" tone="muted">{attr.label}</Txt>
+                {attr.status === 'present' ? (
+                  <Txt variant="bodySm" weight="semibold">
+                    {Array.isArray(attr.value) ? attr.value.slice(0, 2).join(', ') : attr.value}
+                  </Txt>
+                ) : (
+                  <Txt variant="bodySm" tone="accent" weight="semibold">Not yet</Txt>
+                )}
+              </View>
+            ))}
+          </Card>
+        </View>
+      ) : null}
 
-        {/* Hero analysis card */}
-        <LinearGradient colors={GRADIENTS.hero} style={styles.heroCard}>
-          <Animated.View style={[styles.faceWrapper, floatStyle]}>
-            <Face color={C.gold} size={70} />
-          </Animated.View>
-          <View style={styles.heroContent}>
-            <Lbl style={{ marginBottom: 8 }}>Analysis Complete</Lbl>
-            <Text style={styles.heroTitle}>
-              {String(faceShape).charAt(0).toUpperCase() + String(faceShape).slice(1)}{'\n'}
-              <Text style={[styles.heroTitle, { color: C.gold, fontSize: 22 }]}>
-                {String(undertone).charAt(0).toUpperCase() + String(undertone).slice(1)} · {String(contrastLevel).charAt(0).toUpperCase() + String(contrastLevel).slice(1)}
-              </Text>
-            </Text>
-            <TouchableOpacity
-              style={styles.heroLink}
-              onPress={() => router.push('/(tabs)/results')}
-              activeOpacity={0.7}
+      {/* ------------------------------------------- C. flagship experiences */}
+      <View style={styles.section}>
+        <SectionHeader title="Five ways in" />
+        {EXPERIENCES.map((exp, i) => {
+          // Deliberately not five identical cards: the first is a wide feature
+          // card, the rest alternate between split rows and compact tiles.
+          const wide = i === 0;
+          return (
+            <Card
+              key={exp.key}
+              accent={exp.accent}
+              variant="tinted"
+              onPress={() => router.push(exp.route as never)}
+              accessibilityLabel={exp.title}
+              style={wide ? styles.featureCard : styles.rowCard}
             >
-              <Text style={styles.heroLinkText}>View full report</Text>
-              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-                <Path d="M5 12h14M13 6l6 6-6 6" stroke={C.gold} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+              <View style={wide ? undefined : { flex: 1, paddingRight: SPACE.md }}>
+                <Txt variant="overline" tone="muted">{exp.eyebrow}</Txt>
+                <Txt variant={wide ? 'title' : 'heading'} serif style={{ marginTop: SPACE.xs }}>
+                  {exp.title}
+                </Txt>
+                <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>{exp.body}</Txt>
+              </View>
+              <View style={[styles.expSwatches, wide && { marginTop: SPACE.lg }]}>
+                {exp.swatches.map((hex) => (
+                  <View key={hex} style={[styles.expDot, { backgroundColor: hex }]} />
+                ))}
+              </View>
+            </Card>
+          );
+        })}
+      </View>
 
-        {/* Color palette */}
-        {palette.length > 0 && (
-          <View style={styles.section}>
-            <Lbl style={{ marginBottom: 11 }}>Your color palette</Lbl>
-            <View style={styles.paletteRow}>
-              <ColorCircles colors={palette} size={46} />
-              <Text style={styles.paletteCount}>{palette.length} tones</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Aesthetics */}
-        {aesthetics.length > 0 && (
-          <View style={styles.section}>
-            <Lbl style={{ marginBottom: 11 }}>Best aesthetics</Lbl>
-            <View style={styles.pillRow}>
-              {aesthetics.map((a, i) => (
-                <Pill key={a} active={i === 0} gold={i > 0}>{a}</Pill>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          {[
-            { n: String(hairCount), label: 'Hairstyles' },
-            { n: String(outfitCount), label: 'Outfit matches' },
-            { n: String(aestheticCount), label: 'Aesthetics' },
-          ].map((s) => (
-            <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statNum}>{s.n}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
+      {/* ------------------------------------------- D. recommended for you */}
+      {recommendations.length ? (
+        <View style={styles.section}>
+          <SectionHeader title="Recommended for you" />
+          {recommendations.map((rec) => (
+            <Card key={rec.title} onPress={() => router.push(rec.route as never)} style={{ marginBottom: SPACE.md }}>
+              <Txt variant="heading" weight="semibold">{rec.title}</Txt>
+              <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>{rec.body}</Txt>
+            </Card>
           ))}
         </View>
+      ) : null}
 
-        <View style={{ height: 120 }} />
-      </ScrollView>
+      {/* -------------------------------- E. explore more (only real tools) */}
+      <View style={styles.section}>
+        <SectionHeader title="Explore more" />
+        <View style={styles.wrap}>
+          {SMALL_TOOLS.filter((t) => t.available).map((tool) => (
+            <Chip key={tool.label} label={tool.label} accent={tool.accent} onPress={() => router.push(tool.route as never)} />
+          ))}
+        </View>
+      </View>
 
-      <FloatingNav />
-    </View>
+      {/* ------------------------------------------ F. create your next look */}
+      <View style={styles.section}>
+        <SectionHeader title="Create your next look" />
+        <Card variant="tinted" accent="lavender">
+          <Txt variant="bodySm" tone="muted" style={{ marginBottom: SPACE.md }}>
+            Pick an occasion and we will build from your passport.
+          </Txt>
+          <View style={styles.wrap}>
+            {OCCASIONS.map((o) => (
+              <Chip
+                key={o.key}
+                label={o.label}
+                accent="lavender"
+                selected={occasion === o.key}
+                onPress={() => setOccasion(o.key)}
+              />
+            ))}
+          </View>
+          <Button
+            label={occasion ? `Continue with ${OCCASIONS.find((o) => o.key === occasion)?.label}` : 'Choose an occasion'}
+            disabled={!occasion}
+            style={{ marginTop: SPACE.lg }}
+            onPress={() => router.push(`/(tabs)/create?occasion=${occasion}` as never)}
+          />
+        </Card>
+      </View>
+
+      {/* --------------------------------------------- G. your beauty journey */}
+      {data ? (
+        <View style={styles.section}>
+          <SectionHeader title="Your beauty journey" />
+          <View style={styles.statRow}>
+            {[
+              { label: 'Analyses', value: data.journey.analyses },
+              { label: 'Looks saved', value: data.journey.savedLooks },
+              { label: 'Tried', value: data.journey.triedLooks },
+              { label: 'Goals', value: data.journey.activeGoals },
+            ].map((stat) => (
+              <Card key={stat.label} style={styles.statCard}>
+                <Txt variant="title" serif>{stat.value}</Txt>
+                <Txt variant="caption" tone="muted">{stat.label}</Txt>
+              </Card>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ------------------------------------ H. continue where you left off */}
+      {data && data.timeline.length ? (
+        <View style={styles.section}>
+          <SectionHeader title="Continue where you left off" action="All activity" onAction={() => router.push('/(tabs)/passport' as never)} />
+          {data.timeline.slice(0, 3).map((item) => (
+            <Card key={item.id} style={{ marginBottom: SPACE.sm }}>
+              <Txt variant="bodySm">{item.summary}</Txt>
+              <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
+                {new Date(item.createdAt).toLocaleDateString()}
+              </Txt>
+            </Card>
+          ))}
+        </View>
+      ) : null}
+
+      {/* --------------------------------------- your colours, if analysed */}
+      {report.data ? (
+        <View style={styles.section}>
+          <SectionHeader title="Your palette" action="Full report" onAction={() => router.push('/colors/report' as never)} />
+          <Card>
+            <Txt variant="heading" serif>{report.data.label}</Txt>
+            <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.lg }}>
+              {report.data.summary}
+            </Txt>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {report.data.palettes.best.map((s) => (
+                <Swatch key={s.hex} hex={s.hex} name={s.name} size={52} />
+              ))}
+            </ScrollView>
+          </Card>
+        </View>
+      ) : null}
+
+      {/* --------------------------------------------------- I. inspiration */}
+      <View style={styles.section}>
+        <SectionHeader title="Beauty inspiration" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACE.md }}>
+          {INSPIRATION.map((item) => (
+            <Card key={item.title} variant="tinted" accent={item.accent} style={styles.inspoCard}>
+              <View style={styles.inspoSwatches}>
+                {item.palette.map((hex) => (
+                  <View key={hex} style={[styles.inspoDot, { backgroundColor: hex }]} />
+                ))}
+              </View>
+              <Txt variant="bodySm" weight="semibold" style={{ marginTop: SPACE.md }}>{item.title}</Txt>
+              <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>{item.region}</Txt>
+            </Card>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* ---------------------------------------------- J. tip + academy */}
+      <View style={styles.section}>
+        <Card variant="tinted" accent="sage">
+          <Txt variant="overline" tone="muted">Beauty tip of the day</Txt>
+          <Txt variant="body" style={{ marginTop: SPACE.sm }}>{tip}</Txt>
+        </Card>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="Beauty Academy" action="All guides" onAction={() => router.push('/(tabs)/more' as never)} />
+        {ACADEMY_GUIDES.slice(0, 3).map((guide) => (
+          <Card key={guide.slug} onPress={() => router.push(`/academy/${guide.slug}` as never)} style={{ marginBottom: SPACE.sm }}>
+            <Txt variant="bodySm" weight="semibold">{guide.title}</Txt>
+            <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
+              {guide.minutes} min · {guide.level}
+            </Txt>
+          </Card>
+        ))}
+      </View>
+
+      {isNew ? (
+        <View style={styles.section}>
+          <EmptyState
+            title="Nothing here is guessed"
+            body="Every result you see comes from a scan you ran or a preference you set. Until then, sections stay empty on purpose."
+            actionLabel="Run your first analysis"
+            onAction={() => router.push('/(tabs)/scan' as never)}
+          />
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  scroll: { paddingTop: 62 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16, gap: 10 },
-  planBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 9999, backgroundColor: C.goldDim, borderWidth: 0.5, borderColor: C.goldBorder },
-  planBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: C.gold },
-  brand: { fontFamily: FONTS.serif, fontSize: 22, color: C.gold, letterSpacing: 0.5 },
-  brandLogo: { width: 110, height: 32 },
-  settingsBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.surface2, borderWidth: 0.5, borderColor: C.white08, alignItems: 'center', justifyContent: 'center' },
-  heroCard: { marginHorizontal: 20, borderRadius: 22, borderWidth: 0.5, borderColor: C.goldBorder, padding: 18, flexDirection: 'row', gap: 16 },
-  faceWrapper: { flexShrink: 0, width: 70 },
-  heroContent: { flex: 1 },
-  heroTitle: { fontFamily: FONTS.serif, fontSize: 30, color: C.text, lineHeight: 34 },
-  heroLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
-  heroLinkText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: C.gold },
-  section: { paddingHorizontal: 20, paddingTop: 18 },
-  paletteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  paletteCount: { fontFamily: FONTS.sans, fontSize: 11, color: C.textMuted },
-  pillRow: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
-  statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 16 },
-  statCard: { flex: 1, backgroundColor: C.surface, borderWidth: 0.5, borderColor: C.white06, borderRadius: 14, padding: 14 },
-  statNum: { fontFamily: FONTS.serif, fontSize: 28, color: C.gold, lineHeight: 30 },
-  statLabel: { fontFamily: FONTS.sansBold, fontSize: 10, color: C.textMuted, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 80 },
-  emptyTitle: { fontFamily: FONTS.serif, fontSize: 26, color: C.text, marginTop: 24 },
-  emptyText: { fontFamily: FONTS.sans, fontSize: 14, color: C.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 20 },
+  scroll: { paddingBottom: SPACE.xxxl },
+  hero: {
+    paddingHorizontal: SPACE.xl,
+    paddingTop: SPACE.xxxl + SPACE.lg,
+    paddingBottom: SPACE.xxl,
+    borderBottomLeftRadius: RADIUS.xl,
+    borderBottomRightRadius: RADIUS.xl,
+  },
+  section: { paddingHorizontal: SPACE.xl, marginTop: SPACE.xxl },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  attrRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACE.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  featureCard: { marginBottom: SPACE.md, minHeight: 170, justifyContent: 'flex-end' },
+  rowCard: { marginBottom: SPACE.md, flexDirection: 'row', alignItems: 'center' },
+  expSwatches: { flexDirection: 'row', gap: SPACE.xs },
+  expDot: { width: 18, height: 18, borderRadius: RADIUS.pill },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
+  statRow: { flexDirection: 'row', gap: SPACE.sm },
+  statCard: { flex: 1, alignItems: 'center', paddingVertical: SPACE.lg, paddingHorizontal: SPACE.xs },
+  inspoCard: { width: 190 },
+  inspoSwatches: { flexDirection: 'row', gap: SPACE.xs },
+  inspoDot: { width: 26, height: 42, borderRadius: RADIUS.sm },
 });

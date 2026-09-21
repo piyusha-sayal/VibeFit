@@ -35,6 +35,7 @@ export interface AnalysisResult {
   faceAnalysis?: FaceAnalysis;
   colorAnalysis?: ColorAnalysis;
   hairAnalysis?: HairAnalysis;
+  /** Historical only. New scans never derive body shape from a photograph. */
   bodyAnalysis?: BodyAnalysis;
   skinAnalysis?: SkinAnalysis;
   quality?: ImageQuality;
@@ -198,7 +199,9 @@ export interface BodyGuidance {
   fitNotes: string[];
 }
 
-// Matches backend body_analysis.py output (ratios, not raw widths).
+// Historical shape only: the backend analyzer that produced this was retired
+// when body styling moved to the questionnaire. Kept so old stored analyses
+// still parse.
 export interface BodyProportions {
   shoulderToHip?: number;
   waistToHip?: number | null;

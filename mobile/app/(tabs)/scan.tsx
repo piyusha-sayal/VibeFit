@@ -67,7 +67,7 @@ export default function ScanScreen() {
   const handlePick = async () => {
     try {
       const result = await pickAndAnalyze();
-      if (result) router.push('/(tabs)/results');
+      if (result) router.push('/(tabs)/results' as never);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to analyze image');
     }
@@ -76,7 +76,7 @@ export default function ScanScreen() {
   const handleCamera = async () => {
     try {
       const result = await cameraAndAnalyze();
-      if (result) router.push('/(tabs)/results');
+      if (result) router.push('/(tabs)/results' as never);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to analyze image');
     }

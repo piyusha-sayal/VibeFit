@@ -79,8 +79,8 @@ async function request<T>(fn: () => Promise<{ data: unknown }>): Promise<ApiResp
   }
 }
 
-export async function get<T>(path: string): Promise<ApiResponse<T>> {
-  return request<T>(() => api.get(path));
+export async function get<T>(path: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
+  return request<T>(() => api.get(path, params ? { params: snakeize(params) as object } : undefined));
 }
 
 export async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
@@ -89,6 +89,10 @@ export async function post<T>(path: string, body?: unknown): Promise<ApiResponse
 
 export async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
   return request<T>(() => api.put(path, body));
+}
+
+export async function patch<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+  return request<T>(() => api.patch(path, body));
 }
 
 export async function del<T>(path: string): Promise<ApiResponse<T>> {

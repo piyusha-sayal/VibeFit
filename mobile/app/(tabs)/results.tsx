@@ -67,7 +67,7 @@ export default function ResultsScreen() {
         <Face color={C.textSubtle} size={60} />
         <Text style={styles.emptyTitle}>No analysis yet</Text>
         <Text style={styles.emptyText}>Upload a photo to get your personalized style profile.</Text>
-        <GoldButton label="Scan Now" onPress={() => router.push('/(tabs)/scan')} style={{ marginTop: 24 }} />
+        <GoldButton label="Scan Now" onPress={() => router.push('/(tabs)/scan' as never)} style={{ marginTop: 24 }} />
         <FloatingNav />
       </View>
     );

@@ -17,7 +17,7 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useAuthStore } from '../store/authStore';
-import { C } from '../constants/colors';
+import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,6 +27,32 @@ const queryClient = new QueryClient({
     mutations: { retry: 0 },
   },
 });
+
+/** Inside the provider, so the whole shell repaints when the theme changes. */
+function ThemedStack() {
+  const { colors, name, reducedMotion } = useTheme();
+  const fade = reducedMotion ? 'none' : 'fade';
+  const push = reducedMotion ? 'none' : 'slide_from_right';
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={name === 'dark' ? 'light' : 'dark'} backgroundColor={colors.bg} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        {/* First screen = initial route on native cold start (no deep-link path).
+            Without it the Stack opened (auth)/login and skipped the session check. */}
+        <Stack.Screen name="index" options={{ animation: 'none' }} />
+        <Stack.Screen name="(auth)" options={{ animation: fade }} />
+        <Stack.Screen name="(tabs)" options={{ animation: fade }} />
+        <Stack.Screen name="analysis" options={{ animation: push }} />
+        <Stack.Screen name="colors" options={{ animation: push }} />
+        <Stack.Screen name="style" options={{ animation: push }} />
+        <Stack.Screen name="settings" options={{ animation: push }} />
+        <Stack.Screen name="plan" options={{ animation: push }} />
+        <Stack.Screen name="vibe-profile" options={{ animation: push }} />
+      </Stack>
+    </GestureHandlerRootView>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -52,20 +78,10 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.bg }}>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" backgroundColor={C.bg} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
-          {/* First screen = initial route on native cold start (no deep-link path).
-              Without it the Stack opened (auth)/login and skipped the session check. */}
-          <Stack.Screen name="index" options={{ animation: 'none' }} />
-          <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-          <Stack.Screen name="analysis" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="plan" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="vibe-profile" options={{ animation: 'slide_from_right' }} />
-        </Stack>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ThemedStack />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
