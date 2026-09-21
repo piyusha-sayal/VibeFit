@@ -44,6 +44,13 @@ class BeautyProfile(Base):
     hair_length: Mapped[str | None] = mapped_column(String(20), nullable=True)
     hair_density: Mapped[str | None] = mapped_column(String(20), nullable=True)
     makeup_experience: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Style questionnaire. Kept as JSON because these are open-ended sets that
+    # grow with the garment library; the structured preferences above stay in
+    # their own columns and are not duplicated here.
+    garment_preferences: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    sizes: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    style_quiz: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    comfort_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
