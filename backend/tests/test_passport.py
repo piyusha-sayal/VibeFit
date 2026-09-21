@@ -193,3 +193,33 @@ async def test_photo_reuse_consent_surfaces_on_the_passport(client: AsyncClient)
     assert (await client.get("/api/v1/passport", headers=auth)).json()["photoReuseConsent"] is False
     await client.patch("/api/v1/passport/settings", headers=auth, json={"photo_reuse_consent": True})
     assert (await client.get("/api/v1/passport", headers=auth)).json()["photoReuseConsent"] is True
+
+
+@pytest.mark.asyncio
+async def test_a_scan_never_produces_body_analysis(client: AsyncClient, _jpeg):
+    """The pipeline must not write body_analysis, even for a frontal photo.
+
+    Historical rows keep whatever they already stored; what matters is that no
+    new scan derives a body shape from a photograph.
+    """
+    auth = await _register(client, "passport-nobody@test.com")
+    res = await client.post("/api/v1/analysis/upload", headers=auth,
+                            files={"file": ("scan.jpg", _jpeg(), "image/jpeg")})
+    assert res.status_code == 201, res.text
+    assert res.json().get("body_analysis") is None
+
+
+@pytest.mark.asyncio
+async def test_body_shape_on_the_vibe_profile_comes_from_the_user(client: AsyncClient):
+    auth = await _register(client, "passport-selfselect@test.com")
+    before = (await client.get("/api/v1/profile/vibe", headers=auth)).json()
+    assert before["attributes"]["body_shape"]["value"] is None
+    assert before["attributes"]["body_shape"]["source"] == "none"
+
+    await client.put("/api/v1/passport/profile", headers=auth, json={"body_type": "hourglass"})
+
+    after = (await client.get("/api/v1/profile/vibe", headers=auth)).json()
+    attr = after["attributes"]["body_shape"]
+    assert attr["value"] == "hourglass"
+    assert attr["source"] == "questionnaire"
+    assert attr["confidence"] == "user_selected"

@@ -9,14 +9,12 @@ from models.analysis import Analysis, Recommendation
 from ml.face_analysis import analyze_face
 from ml.color_analysis import analyze_colors
 from ml.hair_analysis import analyze_hair
-from ml.body_analysis import analyze_body
 from ml.skin_analysis import analyze_skin
 from ml.quality import assess_quality
 from ml.feature_analysis import analyze_features
 from .ai_service import AIService
 from .cache_service import CacheService
 from rules.engine import build_rule_recommendations, merge_recommendations
-from rules.body_guidance import body_balance_tips
 from .progress import build_progress
 from .aggregate import aggregate_analysis
 
@@ -60,7 +58,7 @@ class AnalysisService:
         """Run all analyzers on one image -> dict of result blocks (hash-cached)."""
         # Bump when analyzer semantics change so old cached fallback profiles
         # cannot survive a deployment that fixes them.
-        img_key = f"imghash:v2:{hashlib.sha256(image_bytes).hexdigest()}"
+        img_key = f"imghash:v3:{hashlib.sha256(image_bytes).hexdigest()}"
         cached = await self._cache.get(img_key)  # F12: skip recompute
         if cached:
             return cached
@@ -74,15 +72,15 @@ class AnalysisService:
         face = await asyncio.to_thread(analyze_face, image_bytes)
         colors = await asyncio.to_thread(analyze_colors, image_bytes)
         hair = await asyncio.to_thread(analyze_hair, image_bytes)
-        body = await asyncio.to_thread(analyze_body, image_bytes)
         skin = await asyncio.to_thread(analyze_skin, image_bytes)
         quality = await asyncio.to_thread(assess_quality, image_bytes)
         features = await asyncio.to_thread(analyze_features, image_bytes)
         face = _merge_features(face, features)
-        if body.get("shape"):
-            body = {**body, "guidance": body_balance_tips(body)}
+        # Body shape is no longer inferred from a photograph. A selfie cannot
+        # support a shoulder-to-hip ratio, and the product decision is that
+        # body styling comes from what the user tells us, not from their image.
         result = {"face": face, "colors": colors, "hair": hair,
-                  "body": body, "skin": skin, "quality": quality}
+                  "skin": skin, "quality": quality}
         await self._cache.set(img_key, result, ttl=3600)
         return result
 
@@ -91,12 +89,11 @@ class AnalysisService:
         analysis.face_analysis = ml.get("face")
         analysis.color_analysis = ml.get("colors")
         analysis.hair_analysis = ml.get("hair")
-        analysis.body_analysis = ml.get("body")
         analysis.skin_analysis = ml.get("skin")
         analysis.quality = ml.get("quality")
         analysis.status = "complete"
 
-        rule_recs = build_rule_recommendations(ml.get("face"), ml.get("colors"), ml.get("body"))
+        rule_recs = build_rule_recommendations(ml.get("face"), ml.get("colors"), None)
         llm_recs = []
         if (ml.get("face") or {}).get("shape"):
             try:

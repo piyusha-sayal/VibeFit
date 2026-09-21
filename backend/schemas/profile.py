@@ -41,7 +41,7 @@ class AttributeValueOut(BaseModel):
     """One derived attribute in the Vibe Profile, always self-explaining."""
     value: Any = None
     original_value: Optional[Any] = None  # set only when a user correction overrides a scan/questionnaire value
-    confidence: str  # high | usable_with_caution | retake_recommended | self_reported | user_corrected | unknown
+    confidence: str  # high | usable_with_caution | retake_recommended | self_reported | user_selected | user_corrected | unknown
     source: str      # scan | questionnaire | user_correction | rules | none
     updated_at: Optional[datetime] = None
     explanation: str

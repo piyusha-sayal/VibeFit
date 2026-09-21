@@ -13,7 +13,6 @@ from PIL import Image
 
 import mediapipe as mp
 
-from ml.body_analysis import analyze_body
 from ml.color_analysis import analyze_colors
 from ml.face_analysis import analyze_face
 from ml.feature_analysis import analyze_features
@@ -57,7 +56,7 @@ def _recording_solution(frames: list):
 
 
 @pytest.mark.parametrize("analyzer", [
-    analyze_face, analyze_colors, analyze_hair, analyze_body,
+    analyze_face, analyze_colors, analyze_hair,
     analyze_skin, assess_quality, analyze_features, annotate_face,
 ])
 def test_mediapipe_receives_rgb(monkeypatch, red_png, analyzer):

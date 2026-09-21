@@ -80,3 +80,28 @@ regresses, and is not wired into any new styling surface.
   the photo's lighting cannot support a firm call.
 - No AI call, no paid service: pure data and arithmetic over values the existing
   MediaPipe/OpenCV pass already produces.
+
+## 4. Production migration (applied 2026-09-21)
+
+`0003_beauty_passport` is live on Neon. Verified before and after:
+
+| | before | after |
+|---|---|---|
+| alembic_version | 0002_profile_plan | 0003_beauty_passport |
+| tables | 10 | 18 |
+| users | 6 | 6 |
+| analyses | 4 | 4 |
+
+The revision is additive: eight `CREATE TABLE`s, no `ALTER`, no `DROP`, no data
+touched. A `--sql` dry run was inspected before applying.
+
+**Recovery:** Neon point-in-time restore covers the window, and
+`alembic downgrade 0002_profile_plan` drops only the eight new tables — no
+pre-existing table is in the revision's blast radius.
+
+**Repeatable from here:** the image no longer starts uvicorn directly.
+`backend/start.sh` runs `alembic upgrade head` and then execs uvicorn, so a
+deploy migrates itself. `upgrade head` is a no-op once the schema is current.
+This is safe with the single worker this plan runs; if the service is ever
+scaled to multiple instances, move the migration to a Render pre-deploy command
+so two containers cannot race the `alembic_version` row.

@@ -13,7 +13,6 @@ from PIL import Image
 from ml.face_analysis import analyze_face
 from ml.color_analysis import analyze_colors
 from ml.hair_analysis import analyze_hair
-from ml.body_analysis import analyze_body
 from ml.skin_analysis import analyze_skin
 from ml.quality import assess_quality
 from ml.feature_analysis import analyze_features
@@ -44,11 +43,6 @@ def test_colors_contract(image_bytes):
 def test_hair_contract(image_bytes):
     out = analyze_hair(image_bytes)
     assert {"texture", "recommendedStyles"} <= set(out)
-
-
-def test_body_contract(image_bytes):
-    out = analyze_body(image_bytes)
-    assert "shape" in out and "proportions" in out
 
 
 def test_skin_contract_no_face(image_bytes):

@@ -49,7 +49,11 @@ _DEFAULT = {
 
 
 def body_balance_tips(body: dict) -> dict:
-    """Return balance/fit guidance for the detected body shape + ratio note."""
+    """Return balance/fit guidance for a self-selected body shape.
+
+    The shape arrives from the user's own selection in Discover My Style; it is
+    never measured from a photograph. Guidance is framed as options, not rules.
+    """
     shape = (body or {}).get("shape")
     guide = dict(_SHAPE_GUIDE.get(shape, _DEFAULT))
 

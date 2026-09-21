@@ -14,6 +14,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.analysis import Analysis
+from models.beauty import BeautyProfile
 from models.profile import OnboardingResponse, ProfileCorrection
 from schemas.profile import AttributeValueOut, VibeProfileOut
 
@@ -64,9 +65,6 @@ ATTRIBUTE_SPECS: list[_Spec] = [
     _Spec("hair_texture", lambda a: _get(a.hair_analysis, "texture"),
           "Estimated from the visible hair strand pattern in your scan photo.",
           "Wet hair, styling products, or updos can obscure natural texture."),
-    _Spec("body_shape", lambda a: _get(a.body_analysis, "shape"),
-          "Estimated from shoulder/waist/hip proportions in a frontal-pose scan photo.",
-          "Loose clothing or a non-frontal pose reduces accuracy."),
 ]
 
 CONSTRAINT_FIELDS = [
@@ -105,10 +103,16 @@ async def get_latest_corrections(db: AsyncSession, user_id: str) -> dict[str, Pr
     return latest
 
 
+async def get_beauty_profile(db: AsyncSession, user_id: str) -> Optional[BeautyProfile]:
+    result = await db.execute(select(BeautyProfile).where(BeautyProfile.user_id == user_id))
+    return result.scalar_one_or_none()
+
+
 async def build_vibe_profile(db: AsyncSession, user_id: str) -> VibeProfileOut:
     analysis = await get_latest_analysis(db, user_id)
     onboarding = await get_onboarding(db, user_id)
     corrections = await get_latest_corrections(db, user_id)
+    beauty = await get_beauty_profile(db, user_id)
 
     quality_overall = _get(analysis.quality if analysis else None, "overall")
     scan_confidence = _QUALITY_TO_CONFIDENCE.get(quality_overall, "unknown")
@@ -148,6 +152,20 @@ async def build_vibe_profile(db: AsyncSession, user_id: str) -> VibeProfileOut:
                 explanation=spec.explanation,
                 limitations="No scan or correction yet for this attribute.",
             )
+
+    # Body shape is what the user selected for themselves, never read off a
+    # photograph. Absent selection stays absent rather than being guessed.
+    attributes["body_shape"] = AttributeValueOut(
+        value=beauty.body_type if beauty else None,
+        original_value=None,
+        confidence="user_selected" if (beauty and beauty.body_type) else "unknown",
+        source="questionnaire" if (beauty and beauty.body_type) else "none",
+        updated_at=beauty.updated_at if (beauty and beauty.body_type) else None,
+        explanation="The body type you selected yourself in Discover My Style.",
+        limitations=("A body type is a starting point for silhouettes, not a rule."
+                     if (beauty and beauty.body_type)
+                     else "Not selected yet. VibeFit never infers this from a photo."),
+    )
 
     constraints: dict[str, Any] = {}
     if onboarding is not None:
