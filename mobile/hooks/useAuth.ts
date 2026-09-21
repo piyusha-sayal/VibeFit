@@ -20,6 +20,12 @@ export function useAuth() {
     router.replace('/(auth)/onboarding');
   };
 
+  // A guest has no profile yet, so it lands where a new account lands.
+  const guestLoginAndRedirect = async () => {
+    await store.loginAsGuest();
+    router.replace('/(auth)/onboarding');
+  };
+
   const logoutAndRedirect = async () => {
     await store.logout();
     router.replace('/(auth)/login');
@@ -32,6 +38,7 @@ export function useAuth() {
     error: store.error,
     login: loginAndRedirect,
     register: registerAndRedirect,
+    loginAsGuest: guestLoginAndRedirect,
     logout: logoutAndRedirect,
     clearError: store.clearError,
   };

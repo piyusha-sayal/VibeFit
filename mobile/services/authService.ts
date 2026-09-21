@@ -6,6 +6,7 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithCredential,
+  signInAnonymously,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from './firebase';
@@ -21,7 +22,7 @@ function mapUser(fbUser: FirebaseUser, name?: string): User {
   return {
     id: fbUser.uid,
     email: fbUser.email ?? '',
-    name: name ?? fbUser.displayName ?? '',
+    name: name ?? fbUser.displayName ?? (fbUser.isAnonymous ? 'Guest' : ''),
     avatar: fbUser.photoURL ?? undefined,
     createdAt: fbUser.metadata.creationTime ?? new Date().toISOString(),
   };
@@ -49,6 +50,8 @@ function errorMessage(err: unknown): string {
       case 'auth/invalid-credential':
         return 'Invalid email or password.';
       case 'auth/too-many-requests': return 'Too many attempts. Try again later.';
+      case 'auth/operation-not-allowed':
+        return 'Anonymous sign-in is disabled. Enable it in Firebase console → Authentication → Sign-in method.';
       case 'auth/network-request-failed': return 'Network error. Check your connection.';
       default: return code.replace('auth/', '').replace(/-/g, ' ');
     }
@@ -84,6 +87,21 @@ export async function loginWithGoogleIdToken(idToken: string): Promise<ApiRespon
   try {
     const credential = GoogleAuthProvider.credential(idToken);
     const cred = await signInWithCredential(auth, credential);
+    const tokens = await buildTokens(cred.user);
+    return { success: true, data: { user: mapUser(cred.user), tokens } };
+  } catch (err) {
+    return { success: false, data: null, error: errorMessage(err) };
+  }
+}
+
+/**
+ * Opens an anonymous Firebase session: a real uid and a real ID token, so the
+ * backend creates and authorizes a normal user row without any credentials.
+ * Only reachable from builds with the guest flag on.
+ */
+export async function loginAsGuest(): Promise<ApiResponse<AuthData>> {
+  try {
+    const cred = await signInAnonymously(auth);
     const tokens = await buildTokens(cred.user);
     return { success: true, data: { user: mapUser(cred.user), tokens } };
   } catch (err) {

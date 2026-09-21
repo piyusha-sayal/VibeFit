@@ -12,10 +12,11 @@ import { GoogleButton } from '../../components/ui/GoogleButton';
 import { PasswordInput } from '../../components/ui/PasswordInput';
 import { Face } from '../../components/illustrations/Face';
 import { C, GRADIENTS } from '../../constants/colors';
+import { isGuestLoginEnabled } from '../../constants/flags';
 import { FONTS } from '../../constants/fonts';
 
 export default function LoginScreen() {
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, loginAsGuest, isLoading, error, clearError } = useAuth();
   const { signInWithGoogle, loading: googleLoading, error: googleError } = useGoogleAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +29,15 @@ export default function LoginScreen() {
     }
     try {
       await login(email.trim().toLowerCase(), password);
+    } catch {
+      // error shown via store
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    clearError();
+    try {
+      await loginAsGuest();
     } catch {
       // error shown via store
     }
@@ -90,6 +100,15 @@ export default function LoginScreen() {
             </View>
 
             <GoogleButton onPress={signInWithGoogle} loading={googleLoading} />
+
+            {isGuestLoginEnabled ? (
+              <GoldButton
+                label="Continue as guest"
+                variant="outline"
+                onPress={handleGuestLogin}
+                loading={isLoading}
+              />
+            ) : null}
 
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>New to VibeFit? </Text>

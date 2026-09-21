@@ -14,6 +14,7 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
   setUser: (user: User) => void;
@@ -51,6 +52,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: response.data.user, tokens: response.data.tokens, isAuthenticated: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Registration failed';
+      set({ error: msg });
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  loginAsGuest: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.loginAsGuest();
+      if (!response.success || !response.data) throw new Error(response.error ?? 'Guest sign-in failed');
+      set({ user: response.data.user, tokens: response.data.tokens, isAuthenticated: true });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Guest sign-in failed';
       set({ error: msg });
       throw err;
     } finally {
