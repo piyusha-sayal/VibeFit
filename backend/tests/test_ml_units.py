@@ -4,7 +4,7 @@ Pure functions only — no MediaPipe inference, no DB.
 """
 import numpy as np
 
-from ml.face_analysis import _compute_harmony, _classify_face_shape
+from ml.face_analysis import _compute_harmony, classify_face_shape
 from ml.hair_analysis import (_classify_texture, _estimate_thickness,
                               _dominant_hair_color, _recommend_styles)
 
@@ -55,7 +55,8 @@ def test_face_shape_uses_true_jaw_corners():
     pts[234], pts[454] = (cx - 100, 200), (cx + 100, 200)  # cheek width 200; ratio 0.9
     pts[172], pts[397] = (cx - 95, 250), (cx + 95, 250)    # jaw width 190; jaw_ratio 0.95
     pts[67], pts[297] = (cx - 90, 150), (cx + 90, 150)     # forehead width
-    assert _classify_face_shape(pts, 500, 500) == "square"
+    pts[149], pts[378] = (cx - 60, 265), (cx + 60, 265)    # chin corners
+    assert classify_face_shape(pts)["shape"] == "square"
 
 
 # ---- #5 hair_analysis ----

@@ -137,7 +137,10 @@ class GuideProgress(Base):
     guide_slug: Mapped[str] = mapped_column(String(80), nullable=False)
     saved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Where the reader stopped, so a guide can be resumed rather than restarted.
+    last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (UniqueConstraint("user_id", "guide_slug", name="uq_guide_per_user"),)
 

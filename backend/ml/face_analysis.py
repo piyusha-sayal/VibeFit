@@ -28,42 +28,117 @@ def analyze_face(image_bytes: bytes) -> dict:
     lm = results.multi_face_landmarks[0].landmark
     pts = [(int(p.x * w), int(p.y * h)) for p in lm]
 
-    shape = _classify_face_shape(pts, w, h)
+    classification = classify_face_shape(pts)
     harmony = _compute_harmony(pts)
     proportions = _compute_proportions(pts, w, h)
 
     return {
-        "shape": shape,
+        "shape": classification["shape"],
+        "alternateShape": classification["alternate"],
+        "shapeConfidence": classification["confidence"],
+        "shapeMeasurements": classification["measurements"],
         "harmony": round(harmony, 3),
         "landmarks": [{"x": p[0] / w, "y": p[1] / h} for p in pts[:68]],
         "proportions": proportions,
     }
 
 
-def _classify_face_shape(pts: list, w: int, h: int) -> str:
-    # Key landmark distances for heuristic classification.
-    # 172/397 = true jaw corners (gonial angle); 234/454 = cheekbones (widest);
-    # 67/297 = temples; 10 = forehead top; 152 = chin.
+# Thresholds are ratios of measured landmark distances. They are stylist
+# conventions expressed as geometry, not learned parameters — which is why they
+# live here in the open rather than inside a model file.
+_LONG_FACE = 1.45          # height / cheek width above this reads as a long face
+_STRONG_JAW = 0.92         # jaw / cheek at or above this reads as a strong jaw
+_NARROW_JAW = 0.80         # jaw / cheek below this reads as a narrow jaw
+_POINTED_CHIN = 0.45       # chin / jaw below this reads as a pointed chin
+_SHORT_FACE = 1.15
+
+
+def classify_face_shape(pts: list) -> dict:
+    """Classify a face into one of nine styling categories.
+
+    Returns the shape, the runner-up worth comparing, the four measured ratios
+    the call was made from, and a confidence that drops as those ratios approach
+    a threshold. Returns a null shape rather than a default when the landmarks
+    are unusable: a fallback shape is indistinguishable from a real result.
+    """
     try:
         jaw_width = abs(pts[397][0] - pts[172][0])
         face_height = abs(pts[10][1] - pts[152][1])
         forehead_width = abs(pts[297][0] - pts[67][0])
         cheek_width = abs(pts[234][0] - pts[454][0])
+        chin_width = abs(pts[378][0] - pts[149][0])
+    except (IndexError, TypeError):
+        return _no_shape()
 
-        ratio = face_height / max(cheek_width, 1)
-        jaw_ratio = jaw_width / max(cheek_width, 1)
+    if not all((jaw_width, face_height, forehead_width, cheek_width)):
+        return _no_shape()
 
-        if ratio > 1.5:
-            return "oblong"
-        if jaw_ratio < 0.75 and ratio < 1.2:
-            return "heart"
-        if jaw_ratio > 0.9 and ratio < 1.1:
-            return "square"
-        if cheek_width > jaw_width * 1.15 and ratio < 1.3:
-            return "round"
-        return "oval"
-    except (IndexError, ZeroDivisionError):
-        return "oval"
+    length = face_height / cheek_width
+    jaw = jaw_width / cheek_width
+    forehead = forehead_width / cheek_width
+    chin = chin_width / jaw_width if jaw_width else 0.0
+
+    shape, alternate = _shape_from_ratios(length, jaw, forehead, chin)
+    return {
+        "shape": shape,
+        "alternate": alternate,
+        "confidence": _confidence(length, jaw, forehead),
+        "measurements": {
+            "lengthToWidth": round(length, 3),
+            "jawToCheek": round(jaw, 3),
+            "foreheadToCheek": round(forehead, 3),
+            "chinToJaw": round(chin, 3),
+        },
+    }
+
+
+def _no_shape() -> dict:
+    return {"shape": None, "alternate": None, "confidence": 0.0, "measurements": {}}
+
+
+def _shape_from_ratios(length: float, jaw: float, forehead: float, chin: float) -> tuple[str, str]:
+    """Return (shape, alternate). The alternate is the neighbour it nearly was."""
+    if length >= _LONG_FACE:
+        # A long face is rectangle or oblong depending on how square the jaw is.
+        return ("rectangle", "oblong") if jaw >= _STRONG_JAW else ("oblong", "rectangle")
+
+    if jaw > 1.0 and jaw > forehead:
+        # Jaw wider than the cheekbones: the styling problem is the opposite of
+        # a heart, so it gets its own category rather than being called square.
+        return "triangle", "square"
+
+    if forehead > 1.0 and jaw < _NARROW_JAW:
+        # Wide forehead over a narrow jaw. The chin decides which of the two.
+        return ("heart", "inverted_triangle") if chin < _POINTED_CHIN else ("inverted_triangle", "heart")
+
+    if jaw >= _STRONG_JAW and forehead >= 0.9:
+        return ("square", "rectangle") if length < _SHORT_FACE else ("rectangle", "square")
+
+    if jaw < _NARROW_JAW and forehead < 0.95 and length >= _SHORT_FACE:
+        return "diamond", "oval"
+
+    if length < 1.25 and jaw < 0.9:
+        return "round", "oval"
+
+    return ("oval", "round") if length < 1.3 else ("oval", "oblong")
+
+
+def _confidence(length: float, jaw: float, forehead: float) -> float:
+    """Lower confidence the closer a measurement sits to a decision threshold.
+
+    A photo cannot support certainty; a face that is millimetres from being
+    called something else should not be reported as firmly as one that is not.
+    """
+    margins = [
+        abs(length - _LONG_FACE),
+        abs(jaw - _STRONG_JAW),
+        abs(jaw - _NARROW_JAW),
+        abs(forehead - 1.0),
+    ]
+    closest = min(margins)
+    # 0.10 away from every threshold is as certain as this method gets.
+    confidence = 0.45 + min(closest / 0.10, 1.0) * 0.35
+    return round(confidence, 2)
 
 
 def _compute_harmony(pts: list) -> float:

@@ -9,6 +9,11 @@ from api.routes.profile import router as profile_router
 from api.routes.plan import router as plan_router
 from api.routes.color import router as color_router
 from api.routes.passport import router as passport_router
+from api.routes.face import router as face_router
+from api.routes.hair import router as hair_router
+from api.routes.makeup import router as makeup_router
+from api.routes.accessories import router as accessories_router
+from api.routes.guides import router as guides_router
 
 
 app = FastAPI(
@@ -34,6 +39,11 @@ app.include_router(profile_router, prefix=API_PREFIX)
 app.include_router(plan_router, prefix=API_PREFIX)
 app.include_router(color_router, prefix=API_PREFIX)
 app.include_router(passport_router, prefix=API_PREFIX)
+app.include_router(face_router, prefix=API_PREFIX)
+app.include_router(hair_router, prefix=API_PREFIX)
+app.include_router(makeup_router, prefix=API_PREFIX)
+app.include_router(accessories_router, prefix=API_PREFIX)
+app.include_router(guides_router, prefix=API_PREFIX)
 
 
 @app.get("/health")

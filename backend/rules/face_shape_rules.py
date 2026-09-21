@@ -2,7 +2,12 @@
 
 Static domain knowledge (stylist conventions). Editable, version-controlled,
 no DB/network. Keyed on the `shape` produced by ml/face_analysis.py
-(oval | round | square | heart | oblong | diamond).
+(oval | round | square | rectangle | oblong | heart | diamond | triangle |
+inverted_triangle).
+
+Guidance is framed as balance and proportion, never as correction: no entry
+here describes a face as needing to be fixed, and none recommends changing a
+feature rather than styling around it.
 """
 from __future__ import annotations
 
@@ -110,6 +115,42 @@ FACE_SHAPE_GUIDES: dict[str, FaceShapeGuide] = {
         earrings=["Studs / hugging styles", "Wider-at-top shapes"],
         makeup=["Highlight forehead and chin", "Soften cheekbone with light contour"],
         beard=["Fuller jaw beard to widen chin", "Light cheek coverage"],
+    ),
+    "rectangle": FaceShapeGuide(
+        summary="Longer face with a squared jaw. Goal: add width and break the vertical line.",
+        goals=["Add horizontal volume at the cheekbones", "Soften the jaw corners", "Shorten the apparent length"],
+        hairstyles=["Curtain bangs", "Shoulder-length layers with body", "Soft waves at the jaw", "Blunt lob"],
+        avoid_hairstyles=["Long straight centre parts with no volume", "Very high updos"],
+        necklines=["Scoop", "Boat", "Cowl"],
+        avoid_necklines=["Deep V", "High turtleneck with no volume above"],
+        glasses=["Round", "Oval", "Wide rectangular with soft corners"],
+        earrings=["Hoops", "Rounded studs", "Short drops"],
+        makeup=["Blush swept outward across the cheekbone", "Soften the jaw corners with a light contour"],
+        beard=["Short, rounded at the corners", "Avoid a long chin-lengthening shape"],
+    ),
+    "triangle": FaceShapeGuide(
+        summary="Jaw wider than the forehead. Goal: build volume and interest above the cheekbone.",
+        goals=["Add width and height at the temples", "Draw the eye upward", "Keep the jawline uncluttered"],
+        hairstyles=["Volume at the crown", "Side-swept fringe", "Layers cut above the jaw", "Textured pixie"],
+        avoid_hairstyles=["Heavy weight sitting at the jaw", "Flat, close-to-the-head styles"],
+        necklines=["V-neck", "Scoop", "Open collars"],
+        avoid_necklines=["Boat", "High crew"],
+        glasses=["Cat-eye", "Top-heavy frames", "Browline"],
+        earrings=["Drops narrowing at the bottom", "Shoulder-dusters", "Slim jhumkas"],
+        makeup=["Highlight the upper cheekbone and temples", "Keep the lower face matte and simple"],
+        beard=["Neat and close at the jaw", "Fuller at the moustache to balance upward"],
+    ),
+    "inverted_triangle": FaceShapeGuide(
+        summary="Broad forehead over a narrower jaw. Goal: carry width down toward the chin.",
+        goals=["Add fullness below the cheekbone", "Keep the forehead uncrowded", "Widen the jaw visually"],
+        hairstyles=["Chin-length bob", "Waves starting below the ear", "Layers that flare at the jaw", "Side part"],
+        avoid_hairstyles=["Volume piled at the crown", "Blunt-cut heavy full fringe"],
+        necklines=["Boat", "Crew", "Collared shirts"],
+        avoid_necklines=["Halter", "Narrow deep V"],
+        glasses=["Rimless", "Oval", "Bottom-weighted frames"],
+        earrings=["Teardrops", "Chandbalis", "Wider-at-the-bottom drops"],
+        makeup=["Blush low on the apple of the cheek", "Soften the temples, warm the jaw"],
+        beard=["Fuller along the jaw to add width", "Light at the cheeks"],
     ),
 }
 
