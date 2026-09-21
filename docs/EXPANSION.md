@@ -296,3 +296,127 @@ look or goal.
   everything is labelled as inspiration rather than a predicted result.
 - The EAS slug, Android package, URL scheme and API host still say vibefit.
 - No physical-device testing has been performed by the assistant.
+
+---
+
+## Phase 5 — Create My Look
+
+The flagship. Everything the other four experiences produce is composed into
+one coordinated look that the user can then take apart and rebuild.
+
+### Composition, not a second recommender
+`rules/look_composer.py` calls the engines that already exist and owns none of
+their knowledge: `outfit_rules` for garments, `hair_rules` for cuts and colour,
+`makeup_rules` for looks, `accessories_rules` for jewellery, `outfit_colors`
+for harmony. Deterministic throughout — no AI call, no network, no per-request
+cost, nothing new that is paid for.
+
+### Flexible outfit structures
+A saree is a drape plus a blouse. Jeans are a top plus a bottom. A dress is one
+piece. `rules/look_structures.py` models fourteen structures with their own
+slots rather than forcing all of them through one top-and-bottom schema, which
+is why a lehenga carries a dupatta slot that a shirt-and-trouser look simply
+does not have. Every `garment_keys` entry resolves against the existing
+54-garment library — asserted by a test, so a structure can never name a
+garment that is not there.
+
+When an occasion filter would empty a required slot it is dropped for that slot
+alone: a saree blouse is not tagged "wedding" in its own right, and an outfit
+that cannot be completed is worse than a companion piece chosen without a tag.
+
+### Three levels, none of them required
+A user with no colour analysis, no face scan and no questionnaire still gets a
+complete, coherent look. It is explained by the occasion, and the explanation
+says so. A missing palette produces an empty palette and a prompt, never an
+invented swatch; there is no lipstick suggestion and no hair colour suggestion
+without a season to reason from.
+
+Individual attributes can also be left out of one particular look. Excluding a
+colour analysis affects that look only; the stored profile is untouched and the
+next look sees it again.
+
+### Explanations name their basis
+Every explanation carries one of `personal_colour`, `face_shape`, `preference`,
+`occasion` or `general`, and the UI prints the basis in words. An occasion
+default can therefore never be presented as personal analysis. Nothing frames a
+recommendation as a judgement about how anyone looks.
+
+### Replacing one component leaves the rest alone
+`apply_selection` returns a new composition with exactly one component changed.
+A parametrised test asserts that after a hair swap the outfit, makeup,
+jewellery, accessories and lipstick are byte-identical, and vice versa. The
+smart variations — more casual, more formal, softer or bolder makeup, new
+colours, another hairstyle — preserve everything they do not name; a formality
+shift keeps the user's own hair, makeup and jewellery.
+
+A variation with nowhere to go says so instead of silently returning the same
+look.
+
+### Persistence
+Migration `0006_create_my_look` is additive only: one nullable column on
+`saved_looks` plus a unique constraint scoped to `(user_id, client_token)`, and
+two new tables. Nothing is dropped, altered or moved, and no existing saved
+look, collection or user row is read or rewritten. Batch mode is used so the
+constraint can be added under SQLite in tests as well as under Postgres in
+production; the downgrade removes exactly what the upgrade adds.
+
+- **Drafts** live in their own table. A draft is not something the user kept,
+  and counting unfinished work as "saved looks" would misreport the Passport.
+- **Saving and duplicating are idempotent** on a client token, so a request
+  replayed after a slow network returns the look already saved.
+- **Feedback** is one upserted row per item. A rejected item is demoted in
+  future recommendations and never removed from the library.
+
+Saved looks are `SavedLook` rows of kind `complete` — the Passport's existing
+store. There is no second saved-items system.
+
+### Reopening a saved look
+A garment or cut the catalogue has since lost is reported as unavailable and
+the stored selection is kept verbatim. It is never silently swapped for
+something else: that would rewrite a decision the user made. A look saved
+before Phase 5 opens read-only rather than crashing.
+
+### The builder
+Nine independently replaceable components: outfit (per slot), outfit colours
+(per slot), hairstyle, hair colour, makeup, lipstick, jewellery (metal,
+earrings, necklace), hair accessories and footwear. Each opens a bottom sheet
+of real alternatives with a love / not-my-style verdict beside each one.
+
+Every edit posts the whole composition to the server, which recomposes and
+hands the document back, so the styling rules are not re-implemented in the
+client. That makes a composition server-owned data, and those requests opt out
+of the client's snake_case conversion — it would otherwise rewrite the
+document's inner keys and corrupt it silently.
+
+One shared draft store: changing the hairstyle does not reset the outfit, and
+opening another tab does not lose the work. It autosaves into a single draft
+row updated in place. Editing a saved look is a separate mode that never
+autosaves and rewrites that look on save; duplicating is a deliberate action.
+
+### Visual composition
+The existing vector system, extended rather than replaced — `GarmentFigure` for
+the outfit, `FaceFigure` for hair and makeup, the real palette for the colours.
+The stage is labelled "styling illustration — not a photograph or a try-on" on
+the screen itself. There is no photography, no virtual try-on and no body
+photograph anywhere in this phase.
+
+### Accessories
+Necklaces were added to the accessories library and are ordered against the
+neckline a structure presents, with "no necklace" always available as an
+option rather than an omission. Traditional Indian pieces surface when the
+*outfit* is traditional — never because of anything about the person.
+
+### Completion, reconciled
+The Beauty Passport counts attributes; the style questionnaire counts answers.
+They were two different numbers both labelled "completion", which is why a
+journey could show 0.33 on one screen and 0.31 on another. Both payloads now
+carry a `completionOf` label and both screens print it.
+
+### Known gaps after this phase
+- The `GET /passport` transient is still not root-caused. Render logs remain
+  unreadable from here.
+- The cold start is unchanged at roughly 62s. The 90s timeout and the waking
+  banner remain; neither makes the server faster.
+- The visual system is still illustration. No photography, no try-on.
+- The EAS slug, Android package, URL scheme and API host still say vibefit.
+- No physical-device testing has been performed by the assistant.
