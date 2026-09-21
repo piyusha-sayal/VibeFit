@@ -47,13 +47,30 @@ regresses, and is not wired into any new styling surface.
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Shared beauty-profile spine, persistence, navigation, home redesign, design system | in progress |
-| 2 | Discover My Colors — 12-season engine, report, explorers | engine landed |
+| 1 | Shared beauty-profile spine, persistence, navigation, home redesign, design system | backend landed; mobile pending |
+| 2 | Discover My Colors — 12-season engine, report, explorers | engine + API landed; screens pending |
 | 3 | Discover My Face — eye/brow/lip/cheek, Hair Studio, Makeup Studio, accessories | not started |
 | 4 | Discover My Style — questionnaire, global + Indian fashion library | not started |
 | 5 | Create My Look | not started |
 | 6 | Beauty Passport, collections, journey, goals | not started |
 | 7 | Academy, Settings, privacy, accessibility, polish | not started |
+
+### Phase 1 — persistence spine (backend landed, 2026-09-21)
+- `models/beauty.py` + migration `0003_beauty_passport`: beauty_profiles,
+  saved_looks, look_collections, collection_items, beauty_goals,
+  beauty_activities, guide_progress, user_settings. Nothing existing altered.
+- Deliberately **not** duplicated: climate, maintenance tolerance, modesty
+  preference, style preferences and budget stay in `onboarding_responses` and
+  are read from there by the passport.
+- `services/passport_service.py` aggregates the passport. An attribute with no
+  data comes back as `missing` with the action that fills it — never a
+  placeholder value.
+- `api/routes/passport.py`: passport, styling profile (partial upsert), saved
+  looks (list/create/patch/delete, owner-scoped), goals, settings. Saving a
+  look, trying a look, starting a profile and completing a goal each append one
+  real timeline entry; nothing is seeded.
+- Body type is self-selected, including `unsure` and `uncategorised`. No body
+  photograph is requested anywhere in this path.
 
 ### Phase 2 — colour engine (landed)
 - `rules/color_palettes.py`: the twelve seasons with clothing, lipstick, blush,
