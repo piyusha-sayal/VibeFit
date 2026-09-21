@@ -231,3 +231,68 @@ from the app being up.
 - The legacy analysis screens (hair, makeup, accessories, facial-canon) still
   work and are still reachable. They are deliberately not deleted.
 - No physical-device testing has been performed by the assistant.
+
+
+## Phase 4 — Discover My Style, brand integration, visual system
+
+### The brand conflict, and what was decided
+The supplied kit is branded **MyLookFit**, not VibeFit: `brand-colors.json`
+says so, and every wordmark spells it. That was reported before any asset was
+touched. The decision was to rename the app, so the kit is used in full.
+
+What did **not** change, deliberately: the EAS slug (`vibefit`), the Android
+package `com.vibefit.app`, the URL scheme, and the API host. Those are tied to
+the existing build project and every installed copy; renaming them is a
+separate job with real breakage risk.
+
+Theme tokens now come from the kit: `#080808` ground, `#1E1E1E` surface,
+`#FAF7EE` ivory. The dark gold is the kit's champagne `#F1D9A7` rather than
+its rich gold `#D4AF37`, which reads dull as UI text on near-black.
+
+### Body styling stays questionnaire-only
+Unchanged and permanent. No body photographs, no measurement from a selfie, no
+inference of body type from anything. "Not sure" and "prefer not to
+categorise" are first-class answers that fall back to stated preferences, and
+every section can be skipped.
+
+Body type orders results and changes the explanation. It never hides a
+garment — asserted by a test that counts the library for every body type.
+
+### One library, two traditions
+54 garments across all 14 categories. Sarees, lehengas, anarkalis, sharara and
+gharara sets, sherwanis, Nehru jackets and dhoti trousers sit beside blazers,
+jeans, trench coats and athleisure. Region tags describe a garment's
+tradition, never a prediction about the reader: both traditions are offered to
+everyone by default, and stating a preference reorders rather than filters.
+
+### The visual system
+Original vector artwork, bundled with the app. No hotlinked images, nothing
+licensed from elsewhere, nothing that can fail to load.
+
+Representation is an input, not an accident: six skin tones spanning a genuinely
+wide range and four hair textures, assigned deterministically per item so a
+list of hairstyles shows a spread rather than one appearance repeated. Tested
+as a product property.
+
+`ReferenceImage` fixes the aspect ratio, shows a loading state and falls back
+to an illustration, so an image failure degrades a card instead of breaking a
+screen. Adding photography later is a change to one prop.
+
+### Cold start, honestly
+The request timeout moved to 90s, which covers the 62.5s measured cold start.
+**This does not fix the cold start.** The server is still asleep and the first
+request still waits; the change stops the app failing a request that would have
+succeeded, and a banner now explains the wait.
+
+Retries are limited to idempotent methods and to network errors or 502/503/504.
+A POST or PATCH is never retried, so a save cannot become a duplicate saved
+look or goal.
+
+### Known gaps after this phase
+- The `GET /passport` transient is still not root-caused. The Phase 3
+  diagnostics remain in place; Render logs are still unread from here.
+- The cold start itself is unchanged.
+- The visual system is vector illustration. There is no photography, and
+  everything is labelled as inspiration rather than a predicted result.
+- The EAS slug, Android package, URL scheme and API host still say vibefit.
+- No physical-device testing has been performed by the assistant.
