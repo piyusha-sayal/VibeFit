@@ -35,7 +35,7 @@ export const EXPERIENCES: Experience[] = [
     eyebrow: 'Face and hair',
     title: 'Discover My Face',
     body: 'Face shape, features, Hair Studio and Makeup Studio.',
-    route: '/(tabs)/discover?section=face',
+    route: '/face',
     accent: 'lavender',
     swatches: ['#9187b8', '#7f9480'],
   },
@@ -84,9 +84,11 @@ export const SMALL_TOOLS: SmallTool[] = [
   { label: 'Jewellery', route: '/colors/jewellery', accent: 'gold', available: true },
   { label: 'Outfit colours', route: '/colors/outfit', accent: 'sage', available: true },
   { label: 'Clothing', route: '/colors/clothing', accent: 'sage', available: true },
-  // Phase 3 — the analysis behind these does not exist yet.
-  { label: 'Bangs', route: '/analysis/hair', accent: 'lavender', available: false },
-  { label: 'Glasses', route: '/analysis/accessories', accent: 'blush', available: false },
+  { label: 'Haircuts', route: '/hair/cuts', accent: 'peach', available: true },
+  { label: 'Fringes', route: '/hair/bangs', accent: 'lavender', available: true },
+  { label: 'Makeup looks', route: '/makeup', accent: 'blush', available: true },
+  { label: 'Glasses', route: '/accessories/glasses', accent: 'blush', available: true },
+  { label: 'Earrings', route: '/accessories/earrings', accent: 'gold', available: true },
 ];
 
 export const OCCASIONS = [
@@ -109,6 +111,8 @@ const TIPS = [
   'Silver and gold both suit most people; the question is which one your eye goes to first.',
   'A haircut that suits your face shape still has to suit your morning. Maintenance is part of the fit.',
   'Undertone does not change with a tan. Depth does, which is why summer photos can shift a reading.',
+  'Eye shape decides more of your makeup than eye colour does. Check yours in a mirror, not a photo.',
+  'A fringe is the hardest cut to undo. Face-framing pieces test the idea for a fraction of the commitment.',
 ];
 
 /** Deterministic per calendar day, so the tip does not change on every render. */

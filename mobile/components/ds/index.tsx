@@ -199,10 +199,10 @@ export function Chip({ label, selected, onPress, accent = 'gold' }: ChipProps) {
 // ------------------------------------------------------------------ sections
 
 export function SectionHeader({
-  title, action, onAction,
-}: { title: string; action?: string; onAction?: () => void }) {
+  title, action, onAction, style,
+}: { title: string; action?: string; onAction?: () => void; style?: ViewStyle }) {
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, style]}>
       <Txt variant="heading" serif accessibilityRole="header">{title}</Txt>
       {action && onAction ? (
         <TouchableOpacity accessibilityRole="button" hitSlop={HIT_SLOP} onPress={onAction}>

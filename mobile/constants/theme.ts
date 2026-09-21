@@ -1,10 +1,13 @@
 /**
  * VibeFit design system.
  *
- * Warm ivory ground, deep charcoal text, and muted blush / peach / lavender /
- * sage / gold accents used sparingly — a beauty product, not a dashboard. The
- * dark theme is the same system with the ground and ink swapped, not a
- * different palette.
+ * Light: warm ivory ground, deep charcoal ink, gold as the signature accent.
+ * Dark: near-black ground with gold — the same system, not a second palette.
+ *
+ * Gold carries the brand in both themes, so it is the accent used for primary
+ * actions and for anything that should read as premium. The blush / peach /
+ * lavender / sage accents stay for categorising, used on small areas and never
+ * as a full-bleed wash: a beauty product, not a dashboard.
  *
  * The legacy gold-on-near-black tokens in `constants/colors.ts` still back the
  * older analysis screens; those migrate screen by screen rather than in one
@@ -80,31 +83,34 @@ const light: Palette = {
 };
 
 const dark: Palette = {
-  bg: '#16130f',
-  surface: '#221d18',
-  surfaceAlt: '#2c2620',
-  border: 'rgba(245,238,228,0.10)',
-  borderStrong: 'rgba(245,238,228,0.22)',
-  text: '#f5eee4',
-  textMuted: '#b0a598',
-  textSubtle: '#7d7266',
-  onAccent: '#16130f',
+  // Near-black rather than a warm brown: gold reads as gold against it, and
+  // the ground disappears on an OLED panel instead of glowing.
+  bg: '#0b0b0c',
+  surface: '#141416',
+  surfaceAlt: '#1d1d20',
+  border: 'rgba(240,235,226,0.10)',
+  borderStrong: 'rgba(240,235,226,0.24)',
+  text: '#f2ece2',
+  textMuted: '#a9a199',
+  textSubtle: '#746d66',
+  onAccent: '#0b0b0c',
   blush: '#e0a0a6',
   peach: '#e8b28d',
   lavender: '#b3a8d8',
   sage: '#a3b8a4',
-  gold: '#d6b078',
+  // Warmer and brighter than the light-theme gold, to hold its own on black.
+  gold: '#e0bd7a',
   blushSoft: 'rgba(224,160,166,0.14)',
   peachSoft: 'rgba(232,178,141,0.14)',
   lavenderSoft: 'rgba(179,168,216,0.14)',
   sageSoft: 'rgba(163,184,164,0.14)',
-  goldSoft: 'rgba(214,176,120,0.14)',
+  goldSoft: 'rgba(224,189,122,0.16)',
   success: '#7cc094',
   successSoft: 'rgba(124,192,148,0.14)',
   danger: '#e08a84',
   dangerSoft: 'rgba(224,138,132,0.12)',
-  scrim: 'rgba(0,0,0,0.35)',
-  shadow: 'rgba(0,0,0,0.45)',
+  scrim: 'rgba(0,0,0,0.55)',
+  shadow: 'rgba(0,0,0,0.6)',
 };
 
 export const PALETTES: Record<ThemeName, Palette> = { light, dark };

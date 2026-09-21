@@ -13,10 +13,12 @@ describe('navigation content', () => {
   });
 
   it('never renders a tool that does not exist yet', () => {
-    // The home screen filters on `available`; anything false must stay hidden.
-    const pending = SMALL_TOOLS.filter((t) => !t.available);
-    expect(pending.length).toBeGreaterThan(0);
-    expect(SMALL_TOOLS.filter((t) => t.available).every((t) => t.route.startsWith('/'))).toBe(true);
+    // The home screen filters on `available`. Phase 3 built the last of the
+    // pending tools, so the list may now be empty — the invariant is that an
+    // unbuilt tool is marked, not that one always exists.
+    const available = SMALL_TOOLS.filter((t) => t.available);
+    expect(available.length).toBeGreaterThan(0);
+    expect(available.every((t) => t.route.startsWith('/'))).toBe(true);
   });
 
   it('covers the occasions the spec names', () => {

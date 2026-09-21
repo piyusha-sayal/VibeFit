@@ -5,6 +5,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Card, Chip, SectionHeader, Txt } from '../../components/ds';
 import { ACADEMY_CATEGORIES, ACADEMY_GUIDES } from '../../constants/academy';
 import { SPACE } from '../../constants/theme';
+import { useGuideProgress } from '../../hooks/useFace';
+import { useGuideSync } from '../../hooks/useGuideSync';
 import { useTheme } from '../../theme/ThemeProvider';
 
 export default function AcademyScreen() {
@@ -12,6 +14,11 @@ export default function AcademyScreen() {
   const { colors } = useTheme();
   const { category: initial } = useLocalSearchParams<{ category?: string }>();
   const [category, setCategory] = useState<string | null>(initial ?? null);
+
+  // Brings anything completed before progress moved to the account upward.
+  useGuideSync();
+  const progress = useGuideProgress();
+  const completedSlugs = new Set((progress.data?.progress ?? []).filter((r) => r.completed).map((r) => r.slug));
 
   const shown = category ? ACADEMY_GUIDES.filter((g) => g.category === category) : ACADEMY_GUIDES;
 
@@ -51,6 +58,7 @@ export default function AcademyScreen() {
             <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{guide.summary}</Txt>
             <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.sm }}>
               {guide.minutes} min · {guide.level}
+              {completedSlugs.has(guide.slug) ? ' · completed' : ''}
             </Txt>
           </Card>
         ))}

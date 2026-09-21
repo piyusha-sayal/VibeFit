@@ -6,16 +6,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button, Card, EmptyState, SectionHeader, Txt } from '../../components/ds';
 import { guideBySlug } from '../../constants/academy';
 import { SPACE } from '../../constants/theme';
+import { useGuideProgress, useUpdateGuideProgress } from '../../hooks/useFace';
 import { useTheme } from '../../theme/ThemeProvider';
 
 const STORAGE_KEY = 'vibefit.guidesCompleted';
 
 /**
- * Guide progress is device-local for now. The `guide_progress` table exists,
- * but it has no endpoint yet, and storing progress locally is honest about
- * that: it survives restarts, and it does not pretend to sync.
+ * Progress now lives on the account, so it survives a reinstall and follows
+ * the reader to a second device. The device-local list is still read once and
+ * merged upward — anything finished before this existed is not thrown away —
+ * and it stays as the offline fallback if the write fails.
  */
-async function readCompleted(): Promise<string[]> {
+async function readLocalCompleted(): Promise<string[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as string[]) : [];
@@ -24,16 +26,27 @@ async function readCompleted(): Promise<string[]> {
   }
 }
 
+async function writeLocalCompleted(next: string[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Progress is a convenience; failing to store it must not break reading.
+  }
+}
+
 export default function GuideScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const guide = slug ? guideBySlug(slug) : undefined;
-  const [completed, setCompleted] = useState(false);
+
+  const progress = useGuideProgress();
+  const update = useUpdateGuideProgress();
+  const [localCompleted, setLocalCompleted] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
-    readCompleted().then((list) => setCompleted(list.includes(slug)));
+    void readLocalCompleted().then((list) => setLocalCompleted(list.includes(slug)));
   }, [slug]);
 
   if (!guide) {
@@ -49,15 +62,21 @@ export default function GuideScreen() {
     );
   }
 
+  const serverRow = progress.data?.progress.find((row) => row.slug === guide.slug);
+  // Server wins once it has an answer; the local flag covers the offline case
+  // and anything completed before progress moved to the account.
+  const completed = serverRow?.completed ?? localCompleted;
+
   const toggleCompleted = async () => {
-    const list = await readCompleted();
-    const next = completed ? list.filter((s) => s !== guide.slug) : [...list, guide.slug];
-    setCompleted(!completed);
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Progress is a convenience; failing to store it must not break reading.
-    }
+    const next = !completed;
+    setLocalCompleted(next);
+
+    const list = await readLocalCompleted();
+    await writeLocalCompleted(
+      next ? Array.from(new Set([...list, guide.slug])) : list.filter((s) => s !== guide.slug),
+    );
+
+    update.mutate({ slug: guide.slug, completed: next });
   };
 
   return (
@@ -66,8 +85,17 @@ export default function GuideScreen() {
       <Txt variant="title" serif style={{ marginTop: SPACE.xs }}>{guide.title}</Txt>
       <Txt variant="body" tone="muted" style={{ marginTop: SPACE.sm }}>{guide.summary}</Txt>
 
-      {guide.sections.map((section) => (
-        <View key={section.heading} style={styles.section}>
+      {guide.sections.map((section, index) => (
+        <View
+          key={section.heading}
+          style={styles.section}
+          // Remember how far the reader got, so the Academy can offer to resume.
+          onLayout={() => {
+            if ((serverRow?.lastStep ?? -1) < index) {
+              update.mutate({ slug: guide.slug, lastStep: index });
+            }
+          }}
+        >
           <SectionHeader title={section.heading} />
           <Txt variant="body" style={{ lineHeight: 24 }}>{section.body}</Txt>
         </View>
@@ -88,8 +116,13 @@ export default function GuideScreen() {
         label={completed ? 'Completed — tap to undo' : 'Mark as completed'}
         variant={completed ? 'secondary' : 'primary'}
         style={{ marginTop: SPACE.xxl }}
-        onPress={toggleCompleted}
+        onPress={() => { void toggleCompleted(); }}
       />
+      {update.isError ? (
+        <Txt variant="caption" tone="muted" style={{ marginTop: SPACE.sm }}>
+          Saved on this device. We could not reach your account just now.
+        </Txt>
+      ) : null}
     </ScrollView>
   );
 }
