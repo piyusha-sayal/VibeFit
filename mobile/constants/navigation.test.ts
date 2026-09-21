@@ -58,6 +58,19 @@ describe('small tools', () => {
   });
 });
 
+describe('Create My Look', () => {
+  // Every route the studio, the homepage and the Passport push to.
+  it.each([
+    '/(tabs)/create',
+    '/look/new',
+    '/look/builder',
+    '/look/compare',
+    '/look/abc123',
+  ])('%s resolves to a screen', (route: string) => {
+    expect(routeExists(route)).toBe(true);
+  });
+});
+
 describe('legacy analysis screens', () => {
   // Phase 3 replaced these in navigation, but the screens still work and are
   // deliberately not deleted until the replacements have been used in anger.

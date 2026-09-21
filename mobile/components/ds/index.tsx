@@ -8,7 +8,7 @@
  */
 import React from 'react';
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextStyle,
+  ActivityIndicator, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextStyle,
   TouchableOpacity, View, ViewStyle,
 } from 'react-native';
 
@@ -69,7 +69,8 @@ interface CardProps {
   accent?: AccentKey;
   /** `tinted` washes the card in its accent; `plain` keeps it on surface. */
   variant?: 'plain' | 'tinted' | 'outlined';
-  style?: ViewStyle;
+  /** Accepts an array, so a caller can layer a theme colour over a base style. */
+  style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }
 

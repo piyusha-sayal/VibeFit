@@ -66,8 +66,33 @@ export interface Passport {
   completion: number;
   completed: number;
   total: number;
+  /**
+   * What this completion counts. The style questionnaire reports its own,
+   * over a different set of answers — the two are never the same number, so
+   * both are labelled rather than shown as a bare percentage.
+   */
+  completionOf: string;
   nextAction: { label: string; route: string } | null;
-  journey: { analyses: number; savedLooks: number; triedLooks: number; activeGoals: number };
+  journey: {
+    analyses: number;
+    savedLooks: number;
+    triedLooks: number;
+    wantToTry: number;
+    completeLooks: number;
+    looksInProgress: number;
+    collections: number;
+    activeGoals: number;
+  };
+  recentLooks: {
+    id: string;
+    name: string;
+    status: string;
+    occasion: string | null;
+    updatedAt: string;
+    swatches: Swatch[];
+  }[];
+  favouriteAesthetics: { key: string; name: string }[];
+  lovedItems: string[];
   timeline: { id: string; kind: string; summary: string; refId: string | null; createdAt: string }[];
   latestAnalysisId: string | null;
   photoReuseConsent: boolean;

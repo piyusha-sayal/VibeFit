@@ -1,107 +1,102 @@
-import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+/**
+ * Create My Look — the studio landing page.
+ *
+ * One obvious action: Create a Look. Everything under it is a shortcut into
+ * the same flow, or something the user has already made. Nothing on this page
+ * is invented to fill a slot: with no drafts and no saved looks the page is
+ * simply shorter.
+ */
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
-import { Button, Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
-import { OCCASIONS } from '../../constants/experiences';
+import {
+  Button, Card, Chip, ErrorState, LoadingState, SectionHeader, Txt,
+} from '../../components/ds';
+import { LookSwatches } from '../../components/look';
+import { GarmentFigure } from '../../components/visual';
 import { RADIUS, SPACE } from '../../constants/theme';
-import { useBeautyProfile, useColorReport, usePassport, useSaveLook } from '../../hooks/useBeauty';
+import { usePassport } from '../../hooks/useBeauty';
+import { useDrafts, useLookOptions, useSavedLooks } from '../../hooks/useLook';
 import { useTheme } from '../../theme/ThemeProvider';
 
-/**
- * Create My Look, honest edition.
- *
- * The full Look Builder is Phase 5. What exists now assembles a look from what
- * the passport actually holds — palette, face shape, hair, styling profile —
- * names the parts it cannot fill, and saves the result as a real SavedLook.
- * Nothing on this screen is invented to fill a slot.
- */
+/** The silhouette each structure is drawn with on the inspiration row. */
+const STRUCTURE_SILHOUETTE: Record<string, string> = {
+  saree_set: 'draped',
+  lehenga_set: 'a_line',
+  anarkali_set: 'fit_and_flare',
+  kurta_set: 'straight',
+  salwar_set: 'relaxed',
+  sharara_set: 'wide_leg',
+  indo_western_set: 'varied',
+  sherwani_set: 'structured',
+  shirt_trouser: 'straight',
+  top_jeans: 'straight',
+  dress_look: 'wrap',
+  skirt_look: 'a_line',
+  coord_set: 'relaxed',
+  layered_smart: 'column',
+};
+
 export default function CreateScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { occasion: initialOccasion } = useLocalSearchParams<{ occasion?: string }>();
-  const [occasion, setOccasion] = useState<string | null>(initialOccasion ?? null);
-  const [name, setName] = useState('');
-  const [saved, setSaved] = useState<string | null>(null);
-
+  const options = useLookOptions();
+  const drafts = useDrafts();
+  const saved = useSavedLooks();
   const passport = usePassport();
-  const report = useColorReport();
-  const profile = useBeautyProfile();
-  const saveLook = useSaveLook();
 
-  const attrs = useMemo(
-    () => Object.fromEntries((passport.data?.attributes ?? []).map((a) => [a.key, a])),
-    [passport.data],
-  );
-
-  const parts = useMemo(() => {
-    const rows: { slot: string; value: string | null; missing?: { label: string; route: string } }[] = [];
-
-    rows.push({
-      slot: 'Outfit colours',
-      value: report.data ? report.data.palettes.best.slice(0, 3).map((s) => s.name).join(', ') : null,
-      missing: { label: 'Run a colour analysis', route: '/(tabs)/scan' },
-    });
-    rows.push({
-      slot: 'Lipstick',
-      value: report.data ? report.data.palettes.lipstick[0].name : null,
-      missing: { label: 'Run a colour analysis', route: '/(tabs)/scan' },
-    });
-    rows.push({
-      slot: 'Blush and eyes',
-      value: report.data
-        ? `${report.data.palettes.blush[0].name} · ${report.data.palettes.eyeshadow[0].name}`
-        : null,
-      missing: { label: 'Run a colour analysis', route: '/(tabs)/scan' },
-    });
-    rows.push({
-      slot: 'Jewellery',
-      value: report.data ? report.data.metals.join(' or ') : null,
-      missing: { label: 'Run a colour analysis', route: '/(tabs)/scan' },
-    });
-    rows.push({
-      slot: 'Hairstyle',
-      value: attrs.face_shape?.status === 'present' ? `Cuts for a ${attrs.face_shape.value} face` : null,
-      missing: { label: 'Scan your face', route: '/(tabs)/scan' },
-    });
-    rows.push({
-      slot: 'Silhouette',
-      value: profile.data?.bodyType && profile.data.bodyType !== 'uncategorised'
-        ? `Shapes for your ${profile.data.bodyType.replace('_', ' ')} selection`
-        : null,
-      missing: { label: 'Set your styling profile', route: '/style/body' },
-    });
-
-    const garments = occasion && report.data
-      ? (['wedding', 'indian_wedding', 'festival'].includes(occasion)
-        ? report.data.garments.indian
-        : report.data.garments.global)
-      : null;
-    rows.push({
-      slot: 'Outfit ideas',
-      value: garments ? garments.join(' · ') : null,
-      missing: { label: 'Run a colour analysis', route: '/(tabs)/scan' },
-    });
-
-    return rows;
-  }, [report.data, attrs, profile.data, occasion]);
-
-  const ready = parts.filter((p) => p.value).length;
-
-  const handleSave = async () => {
-    if (!occasion) return;
-    const label = OCCASIONS.find((o) => o.key === occasion)?.label ?? occasion;
-    const look = await saveLook.mutateAsync({
-      name: name.trim() || `${label} look`,
-      kind: 'complete',
-      occasion,
-      payload: Object.fromEntries(parts.filter((p) => p.value).map((p) => [p.slot, p.value as string])),
-    });
-    setSaved(look.name);
-    setName('');
+  const start = (params: Record<string, string> = {}) => {
+    const query = new URLSearchParams(params).toString();
+    router.push(`/look/new${query ? `?${query}` : ''}` as never);
   };
 
-  if (passport.isLoading) return <LoadingState label="Reading your passport…" />;
+  /** Shortcuts built from the passport, or the one step that unlocks the most. */
+  const recommended = useMemo(() => {
+    const data = passport.data;
+    if (!data) return [];
+    const by = Object.fromEntries(data.attributes.map((a) => [a.key, a]));
+    const rows: { title: string; body: string; onPress: () => void }[] = [];
+
+    if (by.personal_colour?.status === 'present') {
+      rows.push({
+        title: `A look in your ${by.personal_colour.value} palette`,
+        body: 'Outfit colours drawn from your season rather than a generic chart.',
+        onPress: () => start({ occasion: 'everyday' }),
+      });
+    }
+    for (const aesthetic of (data.favouriteAesthetics ?? []).slice(0, 2)) {
+      rows.push({
+        title: `Something ${aesthetic.name.toLowerCase()}`,
+        body: 'Built around an aesthetic you saved.',
+        onPress: () => start({ aesthetic: aesthetic.key }),
+      });
+    }
+    if (rows.length < 2 && data.nextAction) {
+      rows.push({
+        title: data.nextAction.label,
+        body: 'The quickest way to make every look here more personal.',
+        onPress: () => router.push(data.nextAction!.route as never),
+      });
+    }
+    return rows.slice(0, 3);
+  }, [passport.data]);
+
+  if (options.isLoading) return <LoadingState label="Opening the studio…" />;
+  if (options.error) {
+    return (
+      <ErrorState
+        message="We could not open the studio."
+        onRetry={() => { void options.refetch(); }}
+      />
+    );
+  }
+
+  const occasions = options.data?.occasions ?? [];
+  const structures = options.data?.structures ?? [];
+  const aesthetics = options.data?.aesthetics ?? [];
+  const draftList = drafts.data?.drafts ?? [];
+  const savedList = saved.data?.looks ?? [];
 
   return (
     <ScrollView
@@ -109,99 +104,139 @@ export default function CreateScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
-      <Txt variant="display" serif>Create My Look</Txt>
-      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
-        Choose an occasion. Everything below is drawn from your passport — never invented to fill a gap.
+      {/* --------------------------------------------------------- A. hero */}
+      <Txt variant="display" serif>Create your perfect look</Txt>
+      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs }}>
+        Outfits, colours, hair, makeup and accessories, put together as one look.
+        Nothing here needs an analysis first.
       </Txt>
+      <Button
+        label="Create a look"
+        onPress={() => start()}
+        style={{ marginTop: SPACE.lg }}
+        accessibilityHint="Starts a new look, beginning with the occasion"
+      />
 
-      <SectionHeader title="Occasion" />
+      {/* -------------------------------------------------- B. quick start */}
+      <SectionHeader title="Dressing for something?" style={{ marginTop: SPACE.xxl }} />
       <View style={styles.wrap}>
-        {OCCASIONS.map((o) => (
+        {occasions.map((occasion) => (
           <Chip
-            key={o.key}
-            label={o.label}
+            key={occasion.key}
+            label={occasion.label}
             accent="peach"
-            selected={occasion === o.key}
-            onPress={() => setOccasion(o.key)}
+            onPress={() => start({ occasion: occasion.key })}
           />
         ))}
       </View>
 
-      {report.data ? (
+      {/* --------------------------------------------- C. continue creating */}
+      {draftList.length ? (
         <View style={{ marginTop: SPACE.xxl }}>
-          <SectionHeader title="Your colours for it" action="Report" onAction={() => router.push('/colors/report' as never)} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {report.data.palettes.best.map((s) => (
-              <Swatch key={s.hex} hex={s.hex} name={s.name} size={50} />
-            ))}
-          </ScrollView>
+          <SectionHeader title="Pick up where you left off" />
+          {draftList.map((draft) => (
+            <Card
+              key={draft.id}
+              style={{ marginBottom: SPACE.sm }}
+              onPress={() => router.push(`/look/builder?draftId=${draft.id}` as never)}
+            >
+              <Txt variant="body" weight="semibold">{draft.name ?? 'Unnamed look'}</Txt>
+              <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
+                {(draft.occasion ?? 'No occasion yet').replace(/_/g, ' ')} · unfinished
+              </Txt>
+              <LookSwatches
+                swatches={(draft.composition?.outfit?.pieces ?? [])
+                  .map((p) => p.colour)
+                  .filter(Boolean) as { hex: string; name: string }[]}
+              />
+            </Card>
+          ))}
         </View>
       ) : null}
 
-      <View style={{ marginTop: SPACE.xxl }}>
-        <SectionHeader title={`The look (${ready} of ${parts.length} ready)`} />
-        {parts.map((part) => (
-          <Card key={part.slot} style={{ marginBottom: SPACE.sm }}>
-            <Txt variant="overline" tone="muted">{part.slot}</Txt>
-            {part.value ? (
-              <Txt variant="body" style={{ marginTop: SPACE.xs }}>{part.value}</Txt>
-            ) : (
-              <View style={styles.missingRow}>
-                <Txt variant="bodySm" tone="subtle">Not enough in your passport yet</Txt>
-                {part.missing ? (
-                  <Txt
-                    variant="bodySm"
-                    tone="accent"
-                    weight="semibold"
-                    onPress={() => router.push(part.missing!.route as never)}
-                  >
-                    {part.missing.label}
-                  </Txt>
-                ) : null}
-              </View>
-            )}
+      {/* ------------------------------------------------- D. look inspiration */}
+      <SectionHeader title="Start from a shape" style={{ marginTop: SPACE.xxl }} />
+      <Txt variant="bodySm" tone="muted" style={{ marginBottom: SPACE.md }}>
+        Both traditions, offered to everyone. Illustrations, not photographs.
+      </Txt>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {structures.map((structure) => (
+          <Card
+            key={structure.key}
+            style={[styles.inspiration, { borderColor: colors.border }]}
+            onPress={() => start({ structure: structure.key })}
+            accessibilityLabel={`${structure.name}. ${structure.summary}`}
+          >
+            <GarmentFigure
+              silhouette={STRUCTURE_SILHOUETTE[structure.key] ?? 'straight'}
+              seed={structure.key}
+              width={78}
+            />
+            <Txt variant="bodySm" weight="semibold" style={{ marginTop: SPACE.xs }}>
+              {structure.name}
+            </Txt>
+            <Txt variant="caption" tone="subtle" numberOfLines={2}>{structure.summary}</Txt>
           </Card>
         ))}
-      </View>
+      </ScrollView>
 
-      {ready === 0 ? (
-        <EmptyState
-          title="Nothing to build from yet"
-          body="A colour analysis fills most of this in one step."
-          actionLabel="Run an analysis"
-          onAction={() => router.push('/(tabs)/scan' as never)}
-        />
-      ) : (
-        <View style={{ marginTop: SPACE.xl }}>
-          <SectionHeader title="Save it" />
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Name this look"
-            placeholderTextColor={colors.textSubtle}
-            accessibilityLabel="Look name"
-            style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surface }]}
-          />
-          <Button
-            label={occasion ? 'Save to my looks' : 'Choose an occasion first'}
-            disabled={!occasion}
-            loading={saveLook.isPending}
-            onPress={handleSave}
-            style={{ marginTop: SPACE.md }}
-          />
-          {saved ? (
-            <Card variant="tinted" accent="sage" style={{ marginTop: SPACE.md }}>
-              <Txt variant="bodySm" tone="success" weight="semibold">Saved “{saved}”</Txt>
-              <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
-                It is in your passport, and on your timeline.
-              </Txt>
+      {/* ----------------------------------------------- E. recommended rows */}
+      {recommended.length ? (
+        <View style={{ marginTop: SPACE.xxl }}>
+          <SectionHeader title="Because of your passport" />
+          {recommended.map((row) => (
+            <Card key={row.title} variant="tinted" accent="gold"
+                  style={{ marginBottom: SPACE.sm }} onPress={row.onPress}>
+              <Txt variant="body" weight="semibold">{row.title}</Txt>
+              <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{row.body}</Txt>
             </Card>
-          ) : null}
-          {saveLook.isError ? (
-            <ErrorState message="Could not save that look." onRetry={handleSave} />
-          ) : null}
+          ))}
         </View>
-      )}
+      ) : null}
+
+      {/* -------------------------------------------------- F. recent looks */}
+      {savedList.length ? (
+        <View style={{ marginTop: SPACE.xxl }}>
+          <SectionHeader
+            title="Your looks"
+            action={savedList.length > 1 ? 'Compare' : undefined}
+            onAction={savedList.length > 1
+              ? () => router.push('/look/compare' as never)
+              : undefined}
+          />
+          {savedList.slice(0, 4).map((look) => (
+            <Card
+              key={look.id}
+              style={{ marginBottom: SPACE.sm }}
+              onPress={() => router.push(`/look/${look.id}` as never)}
+            >
+              <Txt variant="body" weight="semibold">{look.name}</Txt>
+              <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
+                {(look.occasion ?? 'any occasion').replace(/_/g, ' ')} ·{' '}
+                {look.status.replace(/_/g, ' ')}
+              </Txt>
+              <LookSwatches
+                swatches={(look.payload?.outfit?.pieces ?? [])
+                  .map((p) => p.colour)
+                  .filter(Boolean) as { hex: string; name: string }[]}
+              />
+            </Card>
+          ))}
+        </View>
+      ) : null}
+
+      {/* ---------------------------------------------- G. explore aesthetics */}
+      <SectionHeader title="Or start from an aesthetic" style={{ marginTop: SPACE.xxl }} />
+      <View style={styles.wrap}>
+        {aesthetics.slice(0, 12).map((aesthetic) => (
+          <Chip
+            key={aesthetic.key}
+            label={aesthetic.name}
+            accent="lavender"
+            onPress={() => start({ aesthetic: aesthetic.key })}
+          />
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -209,11 +244,10 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
-  missingRow: { marginTop: SPACE.xs, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.md },
-  input: {
-    minHeight: 48,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+  inspiration: {
+    width: 150,
+    marginRight: SPACE.sm,
+    alignItems: 'center',
     borderRadius: RADIUS.md,
-    paddingHorizontal: SPACE.lg,
   },
 });

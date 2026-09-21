@@ -52,7 +52,7 @@ export const EXPERIENCES: Experience[] = [
     key: 'create',
     eyebrow: 'Put it together',
     title: 'Create My Look',
-    body: 'One occasion, one coordinated look, drawn from your passport.',
+    body: 'Outfit, colours, hair, makeup and jewellery as one look — and every part of it swappable.',
     route: '/(tabs)/create',
     accent: 'peach',
     swatches: ['#d99873', '#c97f86'],
@@ -93,6 +93,8 @@ export const SMALL_TOOLS: SmallTool[] = [
   { label: 'Silhouettes', route: '/style/silhouettes', accent: 'sage', available: true },
   { label: 'Indian fashion', route: '/style/library', accent: 'gold', available: true },
   { label: 'My aesthetic', route: '/style/aesthetics', accent: 'lavender', available: true },
+  { label: 'Build a look', route: '/look/new', accent: 'peach', available: true },
+  { label: 'Compare looks', route: '/look/compare', accent: 'gold', available: true },
 ];
 
 export const OCCASIONS = [

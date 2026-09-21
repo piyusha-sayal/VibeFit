@@ -6,6 +6,20 @@ import {
   REQUEST_TIMEOUT_MS, retryDelayMs, shouldRetry, trackSlowRequest,
 } from './coldStart';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /**
+     * Send and receive this body exactly as written, with no case conversion.
+     *
+     * A Create My Look composition is a document the server produced and the
+     * client hands straight back. Rewriting its inner keys to snake_case on the
+     * way out would corrupt it, so those requests opt out. Nothing is sent over
+     * the wire for this — it is a local axios flag.
+     */
+    preserveCase?: boolean;
+  }
+}
+
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 const API_VERSION = process.env.EXPO_PUBLIC_API_VERSION ?? 'v1';
 
@@ -47,15 +61,23 @@ export function snakeize(data: unknown): unknown {
   return convertKeys(data, toSnake);
 }
 
+/**
+ * The body as it should be sent.
+ *
+ * Exported so the rule is testable on its own: FormData and opted-out bodies
+ * go over the wire exactly as written, everything else is converted.
+ */
+export function encodeBody(data: unknown, preserveCase = false): unknown {
+  if (!data || data instanceof FormData || preserveCase) return data;
+  return snakeize(data);
+}
+
 // ---- interceptors ----
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await getFreshIdToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  // Convert JSON bodies to snake_case; leave FormData untouched.
-  if (config.data && !(config.data instanceof FormData)) {
-    config.data = snakeize(config.data);
-  }
+  config.data = encodeBody(config.data, config.preserveCase);
   return config;
 });
 
@@ -84,13 +106,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function request<T>(
   fn: () => Promise<{ data: unknown }>,
   method: string = 'get',
+  preserveCase = false,
 ): Promise<ApiResponse<T>> {
   const endSlowTracking = trackSlowRequest();
   try {
     for (let attempt = 0; ; attempt += 1) {
       try {
         const { data } = await fn();
-        return { success: true, data: camelize<T>(data) };
+        return { success: true, data: (preserveCase ? data : camelize<T>(data)) as T };
       } catch (error) {
         const status = axios.isAxiosError(error) ? error.response?.status : undefined;
         const isNetworkError = axios.isAxiosError(error) && !error.response;
@@ -107,21 +130,42 @@ async function request<T>(
   }
 }
 
-export async function get<T>(path: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
-  return request<T>(() => api.get(path, params ? { params: snakeize(params) as object } : undefined), 'get');
+export interface RequestOptions {
+  /** Opt this request out of snake_case / camelCase conversion. */
+  preserveCase?: boolean;
 }
 
-export async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+export async function get<T>(
+  path: string, params?: Record<string, unknown>, options?: RequestOptions,
+): Promise<ApiResponse<T>> {
+  const preserveCase = options?.preserveCase ?? false;
+  return request<T>(
+    () => api.get(path, { params: params ? (snakeize(params) as object) : undefined, preserveCase }),
+    'get',
+    preserveCase,
+  );
+}
+
+export async function post<T>(
+  path: string, body?: unknown, options?: RequestOptions,
+): Promise<ApiResponse<T>> {
   // Never retried: a repeated POST creates a duplicate.
-  return request<T>(() => api.post(path, body ?? {}), 'post');
+  const preserveCase = options?.preserveCase ?? false;
+  return request<T>(() => api.post(path, body ?? {}, { preserveCase }), 'post', preserveCase);
 }
 
-export async function put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-  return request<T>(() => api.put(path, body), 'put');
+export async function put<T>(
+  path: string, body: unknown, options?: RequestOptions,
+): Promise<ApiResponse<T>> {
+  const preserveCase = options?.preserveCase ?? false;
+  return request<T>(() => api.put(path, body, { preserveCase }), 'put', preserveCase);
 }
 
-export async function patch<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-  return request<T>(() => api.patch(path, body), 'patch');
+export async function patch<T>(
+  path: string, body: unknown, options?: RequestOptions,
+): Promise<ApiResponse<T>> {
+  const preserveCase = options?.preserveCase ?? false;
+  return request<T>(() => api.patch(path, body, { preserveCase }), 'patch', preserveCase);
 }
 
 export async function del<T>(path: string): Promise<ApiResponse<T>> {

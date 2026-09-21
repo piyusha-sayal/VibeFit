@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { Button, Card, Chip, EmptyState, ErrorState, LoadingState, ProgressBar, SectionHeader, Swatch, Txt } from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { useColorReport, usePassport } from '../../hooks/useBeauty';
+import { useDrafts } from '../../hooks/useLook';
+import { LookSwatches } from '../../components/look';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeProvider';
 import { EXPERIENCES, OCCASIONS, SMALL_TOOLS, tipOfTheDay } from '../../constants/experiences';
@@ -19,6 +21,7 @@ export default function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const passport = usePassport();
   const report = useColorReport();
+  const drafts = useDrafts();
   const [occasion, setOccasion] = useState<string | null>(null);
 
   const firstName = (user?.name ?? '').trim().split(' ')[0];
@@ -122,7 +125,62 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* ------------------------------------------ B. beauty passport preview */}
+      {/* ----------------------------------------- B. create your next look */}
+      <View style={styles.section}>
+        <SectionHeader
+          title="Create your next look"
+          action="Open studio"
+          onAction={() => router.push('/(tabs)/create' as never)}
+        />
+
+        {/* Unfinished work first — it is the thing most likely to be wanted. */}
+        {(drafts.data?.drafts ?? []).slice(0, 2).map((draft) => (
+          <Card
+            key={draft.id}
+            variant="tinted"
+            accent="peach"
+            style={{ marginBottom: SPACE.sm }}
+            onPress={() => router.push(`/look/builder?draftId=${draft.id}` as never)}
+          >
+            <Txt variant="overline" tone="muted">Continue</Txt>
+            <Txt variant="body" weight="semibold">{draft.name ?? 'Unnamed look'}</Txt>
+            <LookSwatches
+              swatches={(draft.composition?.outfit?.pieces ?? [])
+                .map((piece) => piece.colour)
+                .filter(Boolean) as { hex: string; name: string }[]}
+            />
+          </Card>
+        ))}
+
+        <View style={styles.wrap}>
+          {OCCASIONS.slice(0, 6).map((entry) => (
+            <Chip
+              key={entry.key}
+              label={entry.label}
+              accent="gold"
+              onPress={() => router.push(`/look/new?occasion=${entry.key}` as never)}
+            />
+          ))}
+        </View>
+
+        {(data?.recentLooks ?? []).length ? (
+          <View style={{ marginTop: SPACE.lg }}>
+            {data!.recentLooks.slice(0, 2).map((look) => (
+              <Card
+                key={look.id}
+                style={{ marginBottom: SPACE.sm }}
+                onPress={() => router.push(`/look/${look.id}` as never)}
+              >
+                <Txt variant="overline" tone="muted">Recently saved</Txt>
+                <Txt variant="body" weight="semibold">{look.name}</Txt>
+                <LookSwatches swatches={look.swatches} />
+              </Card>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      {/* ------------------------------------------ C. beauty passport preview */}
       {passport.isError ? (
         <View style={styles.section}>
           <ErrorState message="Could not load your passport." onRetry={() => passport.refetch()} />
@@ -132,7 +190,9 @@ export default function HomeScreen() {
           <SectionHeader title="My Beauty Passport" action="Open" onAction={() => router.push('/(tabs)/passport' as never)} />
           <Card>
             <View style={styles.rowBetween}>
-              <Txt variant="bodySm" tone="muted">{data.completed} of {data.total} complete</Txt>
+              <Txt variant="bodySm" tone="muted">
+                {data.completed} of {data.total} {data.completionOf ?? 'attributes'}
+              </Txt>
               <Txt variant="bodySm" weight="semibold">{Math.round(data.completion * 100)}%</Txt>
             </View>
             <View style={{ marginTop: SPACE.sm, marginBottom: SPACE.lg }}>

@@ -9,6 +9,8 @@ import { RADIUS, SPACE } from '../../constants/theme';
 import {
   useCreateGoal, useDeleteLook, useGoals, useLooks, usePassport, useUpdateGoal, useUpdateLook,
 } from '../../hooks/useBeauty';
+import { LookSwatches } from '../../components/look';
+import { useCollections } from '../../hooks/useLook';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Logo } from '../../components/ds/Logo';
 
@@ -19,10 +21,20 @@ const LOOK_FILTERS = [
   { key: 'tried', label: 'Tried' },
 ] as const;
 
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={{ minWidth: 92 }}>
+      <Txt variant="heading" serif>{value}</Txt>
+      <Txt variant="caption" tone="subtle">{label}</Txt>
+    </View>
+  );
+}
+
 export default function PassportScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const [lookFilter, setLookFilter] = useState<string | undefined>(undefined);
+  const collections = useCollections();
   const [goalTitle, setGoalTitle] = useState('');
 
   const passport = usePassport();
@@ -71,6 +83,10 @@ export default function PassportScreen() {
           <Txt variant="heading" serif>{Math.round(data.completion * 100)}% complete</Txt>
           <Txt variant="bodySm" tone="muted">{data.completed}/{data.total}</Txt>
         </View>
+        <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
+          {data.completionOf ?? 'Beauty Passport attributes'}. The style questionnaire
+          tracks its own, separate progress.
+        </Txt>
         <View style={{ marginTop: SPACE.md }}>
           <ProgressBar value={data.completion} label="Profile completion" />
         </View>
@@ -116,9 +132,74 @@ export default function PassportScreen() {
         ))}
       </View>
 
-      {/* -------------------------------------------------------------- looks */}
+      {/* ------------------------------------------------------- my looks */}
       <View style={styles.section}>
-        <SectionHeader title="Saved looks" action="Create one" onAction={() => router.push('/(tabs)/create' as never)} />
+        <SectionHeader
+          title="My looks"
+          action={data.journey.completeLooks > 1 ? 'Compare' : 'Create one'}
+          onAction={() => router.push(
+            (data.journey.completeLooks > 1 ? '/look/compare' : '/(tabs)/create') as never)}
+        />
+        <Card>
+          <View style={styles.wrap}>
+            <Stat label="Created" value={data.journey.completeLooks} />
+            <Stat label="Saved" value={data.journey.savedLooks} />
+            <Stat label="Tried" value={data.journey.triedLooks} />
+            <Stat label="Want to try" value={data.journey.wantToTry} />
+            <Stat label="In progress" value={data.journey.looksInProgress} />
+            <Stat label="Collections" value={data.journey.collections} />
+          </View>
+        </Card>
+
+        {data.favouriteAesthetics?.length ? (
+          <View style={{ marginTop: SPACE.md }}>
+            <Txt variant="overline" tone="subtle">Favourite aesthetics</Txt>
+            <View style={[styles.wrap, { marginTop: SPACE.xs }]}>
+              {data.favouriteAesthetics.map((aesthetic) => (
+                <Chip key={aesthetic.key} label={aesthetic.name} accent="lavender" />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {(collections.data?.collections ?? []).length ? (
+          <View style={{ marginTop: SPACE.md }}>
+            <Txt variant="overline" tone="subtle">Collections</Txt>
+            <View style={[styles.wrap, { marginTop: SPACE.xs }]}>
+              {collections.data!.collections.map((collection) => (
+                <Chip
+                  key={collection.id}
+                  label={`${collection.name} · ${collection.count}`}
+                  accent="gold"
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {(data.recentLooks ?? []).length ? (
+          <View style={{ marginTop: SPACE.md }}>
+            {data.recentLooks.map((look) => (
+              <Card
+                key={look.id}
+                style={{ marginBottom: SPACE.sm }}
+                onPress={() => router.push(`/look/${look.id}` as never)}
+              >
+                <Txt variant="body" weight="semibold">{look.name}</Txt>
+                <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
+                  {(look.occasion ?? 'any occasion').replace(/_/g, ' ')} ·{' '}
+                  {look.status.replace(/_/g, ' ')} · tap to edit
+                </Txt>
+                <LookSwatches swatches={look.swatches} />
+              </Card>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      {/* ------------------------------------------------------ everything else */}
+      <View style={styles.section}>
+        <SectionHeader title="Everything saved" action="Create one" onAction={() => router.push('/(tabs)/create' as never)} />
         <View style={styles.wrap}>
           {LOOK_FILTERS.map((f) => (
             <Chip
