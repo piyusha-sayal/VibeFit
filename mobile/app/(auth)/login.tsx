@@ -10,10 +10,10 @@ import { useGoogleAuth } from '../../hooks/useGoogleAuth';
 import { GoldButton } from '../../components/ui/GoldButton';
 import { GoogleButton } from '../../components/ui/GoogleButton';
 import { PasswordInput } from '../../components/ui/PasswordInput';
-import { Face } from '../../components/illustrations/Face';
 import { C, GRADIENTS } from '../../constants/colors';
 import { isGuestLoginEnabled } from '../../constants/flags';
 import { FONTS } from '../../constants/fonts';
+import { Logo } from '../../components/ds/Logo';
 
 export default function LoginScreen() {
   const { login, loginAsGuest, isLoading, error, clearError } = useAuth();
@@ -47,10 +47,9 @@ export default function LoginScreen() {
     <LinearGradient colors={GRADIENTS.heroAlt} style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          {/* Logo */}
+          {/* The supplied brand lockup, at its own aspect ratio. */}
           <View style={styles.logoRow}>
-            <Face color={C.gold} size={52} />
-            <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
+            <Logo variant="horizontal" width={240} showTagline />
           </View>
 
           <Text style={styles.headline}>Welcome back</Text>
@@ -111,7 +110,7 @@ export default function LoginScreen() {
             ) : null}
 
             <View style={styles.registerRow}>
-              <Text style={styles.registerText}>New to VibeFit? </Text>
+              <Text style={styles.registerText}>New to MyLookFit? </Text>
               <Link href="/(auth)/register" asChild>
                 <TouchableOpacity>
                   <Text style={styles.registerLink}>Create account</Text>
@@ -129,7 +128,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scroll: { padding: 28, paddingTop: 80, flexGrow: 1 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 40 },
+  logoRow: { alignItems: 'center', marginBottom: 40 },
   brand: { fontFamily: FONTS.serif, fontSize: 28, color: C.gold },
   brandLogo: { width: 160, height: 48, marginVertical: 4 },
   headline: { fontFamily: FONTS.serif, fontSize: 36, color: C.text, marginBottom: 8 },

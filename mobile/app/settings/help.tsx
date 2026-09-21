@@ -21,14 +21,14 @@ const SECTIONS = [
       'A season is an estimate with a confidence, not a measurement.',
       'The runner-up season exists because photographs are unreliable. Compare both.',
       'The "compare against these" palette is not a list of colours to avoid.',
-      'VibeFit gives no scores, no ratings and no ranking of appearance.',
+      'MyLookFit gives no scores, no ratings and no ranking of appearance.',
     ],
   },
   {
     title: 'Photos and privacy',
     items: [
       'Photos are analysed and not kept, unless you turn on photo reuse in Settings.',
-      'VibeFit never asks for body photographs and never estimates body shape from an image.',
+      'MyLookFit never asks for body photographs and never estimates body shape from an image.',
       'Nothing about your ethnicity, nationality or background is inferred from a photo.',
       'Deleting an analysis removes its results from your passport.',
     ],

@@ -158,7 +158,7 @@ export default function SettingsScreen() {
         </Card>
         <Card variant="outlined" style={{ marginTop: SPACE.md }}>
           <Txt variant="bodySm" tone="muted">
-            VibeFit does not request body photographs, does not infer ethnicity, nationality or any
+            MyLookFit does not request body photographs, does not infer ethnicity, nationality or any
             other personal attribute from a photo, and does not score appearance.
           </Txt>
         </Card>

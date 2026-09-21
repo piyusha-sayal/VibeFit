@@ -1,0 +1,13 @@
+{
+  "name": "MyLookFit",
+  "tagline": "Find what fits you.",
+  "palette": {
+    "Black": "#080808",
+    "Charcoal": "#1E1E1E",
+    "Rich Gold": "#D4AF37",
+    "Champagne Gold": "#F1D9A7",
+    "Soft Ivory": "#FAF7EE"
+  },
+  "primary_background": "#080808",
+  "primary_metallic": "#D4AF37"
+}

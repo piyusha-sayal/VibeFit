@@ -4,6 +4,8 @@
  * The API module is mocked, so these assert what this layer sends and returns,
  * not what the network does.
  */
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
 import * as api from './api';
 import * as faceService from './faceService';
 
@@ -15,9 +17,12 @@ jest.mock('./api', () => ({
   del: jest.fn(),
 }));
 
-const mockGet = api.get as jest.Mock;
-const mockPut = api.put as jest.Mock;
-const mockPost = api.post as jest.Mock;
+// Loosely typed on purpose: these stand in for any endpoint's response shape.
+type AnyMock = { mockResolvedValue: (v: unknown) => void } & jest.Mock;
+
+const mockGet = api.get as unknown as AnyMock;
+const mockPut = api.put as unknown as AnyMock;
+const mockPost = api.post as unknown as AnyMock;
 
 beforeEach(() => {
   jest.clearAllMocks();

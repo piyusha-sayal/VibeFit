@@ -4,6 +4,7 @@
  * A button that navigates nowhere is worse than no button, and this is the
  * cheapest way to catch one.
  */
+import { describe, expect, it } from '@jest/globals';
 import fs from 'fs';
 import path from 'path';
 
@@ -30,9 +31,12 @@ function routeExists(route: string): boolean {
 }
 
 describe('experience routes', () => {
-  it.each(EXPERIENCES.map((e) => [e.title, e.route]))('%s points at a real screen', (_title, route) => {
-    expect(routeExists(route as string)).toBe(true);
-  });
+  it.each(EXPERIENCES.map((e) => [e.title, e.route] as const))(
+    '%s points at a real screen',
+    (_title: string, route: string) => {
+      expect(routeExists(route)).toBe(true);
+    },
+  );
 });
 
 describe('small tools', () => {
@@ -59,7 +63,7 @@ describe('legacy analysis screens', () => {
   // deliberately not deleted until the replacements have been used in anger.
   it.each(['analysis/hair', 'analysis/makeup', 'analysis/accessories', 'analysis/facial-canon'])(
     '%s still exists',
-    (route) => {
+    (route: string) => {
       expect(routeExists(`/${route}`)).toBe(true);
     },
   );

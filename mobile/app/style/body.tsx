@@ -31,7 +31,7 @@ export default function BodyStyleScreen() {
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
       <Txt variant="title" serif>Body type</Txt>
       <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        You choose this, not a camera. VibeFit does not ask for body photographs and does not estimate
+        You choose this, not a camera. MyLookFit does not ask for body photographs and does not estimate
         proportions from your face scan.
       </Txt>
 

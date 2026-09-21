@@ -80,7 +80,7 @@ export default function StyleQuestionnaireScreen() {
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
       <Txt variant="display" serif>Discover My Style</Txt>
       <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs }}>
-        Answer what you like and skip the rest. VibeFit never asks for a body photograph, and never
+        Answer what you like and skip the rest. MyLookFit never asks for a body photograph, and never
         infers your shape from one.
       </Txt>
 

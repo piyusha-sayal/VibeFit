@@ -1,8 +1,13 @@
 /**
- * VibeFit design system.
+ * MyLookFit design system.
  *
  * Light: warm ivory ground, deep charcoal ink, gold as the signature accent.
  * Dark: near-black ground with gold — the same system, not a second palette.
+ *
+ * The core values come from the supplied MyLookFit brand kit, so the app, the
+ * icon and the splash screen are literally the same colours:
+ *   Black #080808 · Charcoal #1E1E1E · Rich gold #D4AF37
+ *   Champagne #F1D9A7 · Soft ivory #FAF7EE
  *
  * Gold carries the brand in both themes, so it is the accent used for primary
  * actions and for anything that should read as premium. The blush / peach /
@@ -55,9 +60,9 @@ export interface Palette {
 }
 
 const light: Palette = {
-  bg: '#faf6f0',
+  bg: '#faf7ee',
   surface: '#ffffff',
-  surfaceAlt: '#f2ece3',
+  surfaceAlt: '#f2ecdd',
   border: 'rgba(43,38,34,0.10)',
   borderStrong: 'rgba(43,38,34,0.22)',
   text: '#2b2622',
@@ -68,12 +73,12 @@ const light: Palette = {
   peach: '#d99873',
   lavender: '#9187b8',
   sage: '#7f9480',
-  gold: '#b0894e',
+  gold: '#a8862f',
   blushSoft: 'rgba(201,127,134,0.12)',
   peachSoft: 'rgba(217,152,115,0.14)',
   lavenderSoft: 'rgba(145,135,184,0.12)',
   sageSoft: 'rgba(127,148,128,0.14)',
-  goldSoft: 'rgba(176,137,78,0.12)',
+  goldSoft: 'rgba(168,134,47,0.12)',
   success: '#4f8a63',
   successSoft: 'rgba(79,138,99,0.12)',
   danger: '#b4554f',
@@ -85,26 +90,27 @@ const light: Palette = {
 const dark: Palette = {
   // Near-black rather than a warm brown: gold reads as gold against it, and
   // the ground disappears on an OLED panel instead of glowing.
-  bg: '#0b0b0c',
-  surface: '#141416',
-  surfaceAlt: '#1d1d20',
-  border: 'rgba(240,235,226,0.10)',
-  borderStrong: 'rgba(240,235,226,0.24)',
-  text: '#f2ece2',
+  bg: '#080808',
+  surface: '#161616',
+  surfaceAlt: '#1e1e1e',
+  border: 'rgba(250,247,238,0.10)',
+  borderStrong: 'rgba(250,247,238,0.24)',
+  text: '#faf7ee',
   textMuted: '#a9a199',
   textSubtle: '#746d66',
-  onAccent: '#0b0b0c',
+  onAccent: '#080808',
   blush: '#e0a0a6',
   peach: '#e8b28d',
   lavender: '#b3a8d8',
   sage: '#a3b8a4',
-  // Warmer and brighter than the light-theme gold, to hold its own on black.
-  gold: '#e0bd7a',
+  // The kit's champagne rather than its rich gold: #D4AF37 is the flat
+  // fallback for a gradient and reads dull as UI text on #080808.
+  gold: '#f1d9a7',
   blushSoft: 'rgba(224,160,166,0.14)',
   peachSoft: 'rgba(232,178,141,0.14)',
   lavenderSoft: 'rgba(179,168,216,0.14)',
   sageSoft: 'rgba(163,184,164,0.14)',
-  goldSoft: 'rgba(224,189,122,0.16)',
+  goldSoft: 'rgba(241,217,167,0.14)',
   success: '#7cc094',
   successSoft: 'rgba(124,192,148,0.14)',
   danger: '#e08a84',

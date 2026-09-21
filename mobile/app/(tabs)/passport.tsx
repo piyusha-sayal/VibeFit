@@ -10,6 +10,7 @@ import {
   useCreateGoal, useDeleteLook, useGoals, useLooks, usePassport, useUpdateGoal, useUpdateLook,
 } from '../../hooks/useBeauty';
 import { useTheme } from '../../theme/ThemeProvider';
+import { Logo } from '../../components/ds/Logo';
 
 const LOOK_FILTERS = [
   { key: undefined, label: 'All' },
@@ -56,7 +57,10 @@ export default function PassportScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
-      <Txt variant="display" serif>My Beauty Passport</Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.md }}>
+        <Logo variant="symbol" width={36} />
+        <Txt variant="display" serif>My Beauty Passport</Txt>
+      </View>
       <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
         Everything you have told us, and everything a scan has found. Nothing else.
       </Txt>

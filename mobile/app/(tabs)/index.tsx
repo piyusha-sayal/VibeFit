@@ -10,6 +10,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { EXPERIENCES, OCCASIONS, SMALL_TOOLS, tipOfTheDay } from '../../constants/experiences';
 import { ACADEMY_GUIDES } from '../../constants/academy';
 import { INSPIRATION } from '../../constants/inspiration';
+import { Logo } from '../../components/ds/Logo';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -87,8 +88,12 @@ export default function HomeScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
-      {/* ---------------------------------------------------------- A. hero */}
-      <View style={[styles.hero, { backgroundColor: colors.blushSoft }]}>
+      {/* ------------------------------------------------- A. brand + hero */}
+      {/* The mark appears once, here. Repeating it on every screen would
+          clutter navigation without telling anyone anything new. */}
+      <Logo variant="horizontal" width={150} style={{ marginBottom: SPACE.lg }} />
+
+      <View style={[styles.hero, { backgroundColor: colors.goldSoft }]}>
         {isNew ? (
           <>
             <Txt variant="display" serif>Discover Your Colors.</Txt>

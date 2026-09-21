@@ -12,6 +12,7 @@ import { GoogleButton } from '../../components/ui/GoogleButton';
 import { PasswordInput } from '../../components/ui/PasswordInput';
 import { C, GRADIENTS } from '../../constants/colors';
 import { FONTS } from '../../constants/fonts';
+import { Logo } from '../../components/ds/Logo';
 
 export default function RegisterScreen() {
   const { register, isLoading, error, clearError } = useAuth();
@@ -46,6 +47,10 @@ export default function RegisterScreen() {
     <LinearGradient colors={GRADIENTS.heroAlt} style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.logoRow}>
+            <Logo variant="symbol" width={64} />
+          </View>
+
           <Text style={styles.headline}>Create account</Text>
           <Text style={styles.sub}>Start your style journey</Text>
 
@@ -130,6 +135,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scroll: { padding: 28, paddingTop: 80, flexGrow: 1 },
+  logoRow: { alignItems: 'center', marginBottom: 24 },
   headline: { fontFamily: FONTS.serif, fontSize: 36, color: C.text, marginBottom: 8 },
   sub: { fontFamily: FONTS.sans, fontSize: 15, color: C.textMuted, marginBottom: 32 },
   errorBox: { backgroundColor: C.redDim, borderWidth: 0.5, borderColor: C.redBorder, borderRadius: 10, padding: 12, marginBottom: 16 },

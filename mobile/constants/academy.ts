@@ -30,7 +30,7 @@ export const ACADEMY_GUIDES: Guide[] = [
       },
       {
         heading: 'Why a photo can only estimate',
-        body: 'Every phone camera white-balances a scene before you ever see it. Warm indoor light makes skin read warmer; a cool screen makes it read cooler. That is why VibeFit reports a confidence rather than a verdict, and always offers a runner-up season to compare against.',
+        body: 'Every phone camera white-balances a scene before you ever see it. Warm indoor light makes skin read warmer; a cool screen makes it read cooler. That is why MyLookFit reports a confidence rather than a verdict, and always offers a runner-up season to compare against.',
       },
       {
         heading: 'How to check it yourself',
@@ -88,7 +88,7 @@ export const ACADEMY_GUIDES: Guide[] = [
       },
       {
         heading: 'On exact product matches',
-        body: 'VibeFit names colour families, not brand shades. A screen cannot tell you how a particular product will oxidise on your lips, and an app that claims otherwise is guessing.',
+        body: 'MyLookFit names colour families, not brand shades. A screen cannot tell you how a particular product will oxidise on your lips, and an app that claims otherwise is guessing.',
       },
     ],
     related: [{ label: 'Lipstick explorer', route: '/colors/lipstick' }],

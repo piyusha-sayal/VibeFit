@@ -1,5 +1,5 @@
 /**
- * VibeFit design-system primitives.
+ * MyLookFit design-system primitives.
  *
  * Everything here reads its colours from the active theme at render time, so a
  * theme switch repaints without a reload. Loading, empty and error states are

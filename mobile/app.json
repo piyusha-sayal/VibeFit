@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "VibeFit",
+    "name": "MyLookFit",
     "slug": "vibefit",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#0c0a07",
+    "icon": "./assets/brand/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#080808",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/brand/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0c0a07"
+      "backgroundColor": "#080808"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -19,15 +19,16 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.vibefit.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "VibeFit needs access to your photos for style analysis.",
-        "NSCameraUsageDescription": "VibeFit uses your camera for real-time style analysis.",
+        "NSPhotoLibraryUsageDescription": "MyLookFit needs access to your photos for style analysis.",
+        "NSCameraUsageDescription": "MyLookFit uses your camera for real-time style analysis.",
         "NSFaceIDUsageDescription": "Used for secure authentication."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0c0a07"
+        "foregroundImage": "./assets/brand/adaptive-icon.png",
+        "monochromeImage": "./assets/brand/adaptive-monochrome.png",
+        "backgroundColor": "#080808"
       },
       "package": "com.vibefit.app",
       "permissions": [
@@ -36,7 +37,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/brand/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -45,8 +46,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "VibeFit needs access to your photos for style analysis.",
-          "cameraPermission": "VibeFit uses your camera for real-time style analysis."
+          "photosPermission": "MyLookFit needs access to your photos for style analysis.",
+          "cameraPermission": "MyLookFit uses your camera for real-time style analysis."
         }
       ],
       "expo-web-browser"

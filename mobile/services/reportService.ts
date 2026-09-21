@@ -46,14 +46,14 @@ async function downloadAndShare(
 export function downloadAndShareReport(analysisId: string): Promise<ReportResult> {
   return downloadAndShare(
     `analysis/${analysisId}/report`, `vibefit-report-${analysisId}.pdf`,
-    'application/pdf', 'com.adobe.pdf', 'VibeFit Face Report');
+    'application/pdf', 'com.adobe.pdf', 'MyLookFit Face Report');
 }
 
 /** Download the shareable summary card (PNG) for an analysis (F6). */
 export function downloadAndShareCard(analysisId: string): Promise<ReportResult> {
   return downloadAndShare(
     `analysis/${analysisId}/card`, `vibefit-card-${analysisId}.png`,
-    'image/png', 'public.png', 'VibeFit Summary Card');
+    'image/png', 'public.png', 'MyLookFit Summary Card');
 }
 
 /**
@@ -86,7 +86,7 @@ export async function downloadAndShareOverlay(imageUrl: string): Promise<ReportR
     const target = `${FileSystem.cacheDirectory}vibefit-overlay.png`;
     await FileSystem.writeAsStringAsync(target, base64, { encoding: 'base64' });
 
-    await shareFile(target, 'image/png', 'VibeFit Facial Overlay', 'public.png');
+    await shareFile(target, 'image/png', 'MyLookFit Facial Overlay', 'public.png');
     return { success: true, uri: target };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Overlay failed.' };
