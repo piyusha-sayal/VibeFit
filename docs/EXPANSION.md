@@ -47,8 +47,8 @@ regresses, and is not wired into any new styling surface.
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Shared beauty-profile spine, persistence, navigation, home redesign, design system | backend landed; mobile pending |
-| 2 | Discover My Colors — 12-season engine, report, explorers | engine + API landed; screens pending |
+| 1 | Shared beauty-profile spine, persistence, navigation, home redesign, design system | landed |
+| 2 | Discover My Colors — 12-season engine, report, explorers | landed |
 | 3 | Discover My Face — eye/brow/lip/cheek, Hair Studio, Makeup Studio, accessories | not started |
 | 4 | Discover My Style — questionnaire, global + Indian fashion library | not started |
 | 5 | Create My Look | not started |
@@ -105,3 +105,65 @@ deploy migrates itself. `upgrade head` is a no-op once the schema is current.
 This is safe with the single worker this plan runs; if the service is ever
 scaled to multiple instances, move the migration to a Render pre-deploy command
 so two containers cannot race the `alembic_version` row.
+
+## 5. Phase 1 and 2 — mobile (landed 2026-09-21)
+
+### Design system
+`constants/theme.ts` holds one token set in two themes: warm ivory ground,
+charcoal ink, and blush / peach / lavender / sage / gold used on small areas
+rather than as washes. `theme/ThemeProvider.tsx` resolves light / dark / system,
+honours the OS reduce-motion setting, and persists both to the device so the
+first paint after launch is already correct. Settings mirrors the choice to the
+backend, which is what makes it follow the account.
+
+`components/ds/` carries the primitives — Txt, Card, Button, Chip, Swatch,
+SectionHeader, ProgressBar, and Loading / Empty / Error states as components,
+because every data screen owes the user all three.
+
+The legacy gold-on-near-black palette in `constants/colors.ts` still backs the
+older analysis screens. Those migrate screen by screen in Phase 3 rather than in
+one sweep that would break working surfaces.
+
+### Navigation
+Five experiences, one route each: Home, Discover, Create, Passport, More. The
+scan, results and chat routes are unchanged, so existing links and deep links
+keep working; they are reached from Home, Discover and More instead of owning a
+tab.
+
+### What is genuinely functional
+- **Home** reads the passport: hero copy, recommendations, journey counters and
+  timeline are all real. A missing attribute renders as its completion action.
+  Tools that do not exist yet carry `available: false` and are filtered out
+  rather than shipped as dead buttons.
+- **Colour Studio**: report, palette, lipstick, blush, eyeshadow, hair colour,
+  jewellery, clothing and the outfit matcher, plus the twelve-season browser.
+  Every explorer compares two swatches side by side and saves a real SavedLook.
+- **Passport**: attributes, saved looks (status changes, deletion), goals and
+  the activity timeline, all persisted.
+- **Discover My Style**: the questionnaire, body type (including "Not sure" and
+  "Rather not"), and the wardrobe library.
+- **Settings**: theme, reduce motion, country, photo-reuse consent, sign out.
+- **Academy**: six guides with real bodies, and device-local completion.
+
+### Confidence, stated honestly
+The report turns the engine's confidence into words — "reasonably confident",
+"a working estimate", "a loose estimate" — rather than a decimal. A selfie
+cannot support "83.4%". Reports built from pre-engine analyses say on screen
+that depth and clarity were estimated rather than measured.
+
+### Colour maths, not AI
+`utils/colorHarmony.ts` classifies a pair of colours with HSL geometry. Three
+bugs in it were caught by its own tests: HSL saturation alone called ivory a
+colour (#f2ece3 reports s = 0.37 at l = 0.92), so neutrality now uses chroma;
+20° of hue separation was classified monochrome rather than analogous; and
+together those made a colour-on-neutral pair read as analogous.
+
+### Known gaps after this phase
+- Guide progress is device-local. `guide_progress` exists in the schema but has
+  no endpoint yet.
+- Create My Look assembles from the passport and saves a real look, but the
+  interactive Look Builder (swap hairstyle, swap outfit, compare alternatives)
+  is Phase 5.
+- The older analysis screens (hair, makeup, accessories, facial-canon) still use
+  the legacy dark palette and have not been rebuilt for Phase 3.
+- Account deletion and data export are specified but not built.
