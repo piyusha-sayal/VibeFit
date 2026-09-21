@@ -35,3 +35,4 @@ Thumbs.db
 
 # stray zero-byte artifact from a shell redirect typo
 dict
+.playwright-mcp/

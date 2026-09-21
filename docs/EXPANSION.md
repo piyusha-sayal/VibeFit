@@ -420,3 +420,115 @@ carry a `completionOf` label and both screens print it.
 - The visual system is still illustration. No photography, no try-on.
 - The EAS slug, Android package, URL scheme and API host still say vibefit.
 - No physical-device testing has been performed by the assistant.
+
+## Incident: production API unreachable after the Phase 5 deploy (2026-09-21)
+
+**Status: unresolved.** The root cause has not been confirmed. What follows is
+the evidence, not a conclusion.
+
+### What happened
+`0264fb3` was pushed at about 14:05 local. The API at
+`https://vibefit-api-awx9.onrender.com` has not answered an HTTP request since.
+Probes at 14:44, and again across the following hours, all end the same way:
+TCP and TLS complete, the request is written, and nothing comes back.
+
+```
+/health      code=000 ttfb=0.000000 total=90.017513
+/health/db   code=000 ttfb=0.000000 total=90.004202
+/            code=000 ttfb=0.000000 total=90.004498
+```
+
+`ttfb=0` matters. Not one byte of a response header arrives. This is not a slow
+response; it is no response.
+
+### What the evidence rules out
+
+**The container started, and it reached the database.** A read-only
+`alembic current` against the production database reports
+`0006_create_my_look (head)`. Migration 0006 ships with `0264fb3` and has never
+been run from a workstation. Something on Render ran `start.sh` far enough to
+complete `alembic upgrade head`. That disposes of "the build never finished"
+and "the migration hung".
+
+**The database is healthy and fast.** Three consecutive `alembic current` runs
+against production took 3327 ms, 2739 ms and 3130 ms end to end, Python
+interpreter startup included. Neon is not asleep and is not the thing being
+waited on.
+
+**The migration is not destructive.** Rendered offline against a Postgres
+dialect, 0006 emits two plain `ALTER TABLE`s, two `CREATE TABLE`s and two
+`CREATE INDEX`es. No table is recreated and nothing is dropped.
+
+**The image inputs did not change.** `git diff --name-only c6b97f4..0264fb3`
+over `requirements.txt`, `requirements-dev.txt`, `Dockerfile` and `start.sh` is
+empty. Phase 5 added no dependency.
+
+**The application is not slower to start.** Importing `main` under the same
+interpreter and the same production-shaped environment:
+
+| commit | import | modules | routes |
+|---|---|---|---|
+| `c6b97f4` last known good | 6.24 s | 2129 | 83 |
+| `0264fb3` deployed | 5.96 s | 2133 | 106 |
+
+Phase 5 costs four modules and adds 23 routes. It does not cost start-up time.
+
+**The app has no start-up hook that could hang.** `main.py` registers no
+`lifespan` and no `on_event`. `/health` returns a literal dict and touches
+nothing.
+
+**The edge knows the service.** This is the sharpest piece of evidence:
+
+| request | result |
+|---|---|
+| `https://` on an unknown `*.onrender.com` host | `404` in 0.34 s, `x-render-routing: no-server` |
+| `http://` on the real host | `301` to `https://`, served instantly by the edge |
+| `https://` on the real host | nothing, for 300 s |
+
+The router resolves the hostname and answers at the edge in milliseconds. When
+it forwards to the origin, the origin never replies — and no previous
+deployment answers either.
+
+### What that leaves
+The service exists and is routed; its instance accepts forwarded connections
+and never responds. That is a Render-side instance state. It is not visible
+from a workstation and it did not reproduce locally: the same commit, the same
+migration and the same `uvicorn main:app` command serve `/health` and pass all
+21 journey checks against a local instance.
+
+Root cause remains **unresolved**, and will remain so until the service logs
+are read.
+
+### The exact information needed to close this
+From the Render dashboard, service `vibefit-api`:
+
+1. The **Events** tab — the deploy triggered by `0264fb3`: its status, and
+   whether it was ever promoted to live.
+2. Whether the **commit** Render shows for the live deploy is `0264fb3` or an
+   earlier one.
+3. The **deploy log** tail — specifically whether `Applying database
+   migrations...` and `Starting API on port ...` were both printed, and what
+   follows the second line.
+4. The **restart count** since the deploy, which separates a crash loop from a
+   single stuck instance.
+5. Any `Out of memory` or `Exited with status` line in the log.
+6. Whether the **health check** at `/health` ever passed after the deploy.
+7. The **Metrics** tab — memory and CPU at the time of the deploy, against the
+   512 MB limit.
+
+Items 3, 4 and 5 are the ones that decide it. A screenshot or a paste of the
+log tail is enough; no key needs to be shared to obtain them.
+
+### What was deliberately not done
+No migration was downgraded. No production data was written or deleted. Neon
+was not reset, the service was not recreated, and no paid plan was purchased.
+The only production access used was one read-only query for the schema version.
+
+### The structural risk this exposed
+`start.sh` runs `set -e`, then `alembic upgrade head`, then `exec uvicorn`.
+Nothing is served until the migration returns. That is correct for a
+single-instance deploy, and the migration was not the culprit here, but it does
+mean any future failure between those two lines presents identically to this
+one: a port that never opens and an edge that hangs. The log line after
+`Starting API on port ...` is the only thing that distinguishes them, which is
+why item 3 above is the deciding question rather than a formality.
