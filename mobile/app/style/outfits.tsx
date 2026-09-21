@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
+import { Card, Chip, EmptyState, ErrorState, LoadingState, Swatch, Txt } from '../../components/ds';
 import { GarmentFigure, INSPIRATION_NOTE } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useSaveLook } from '../../hooks/useBeauty';

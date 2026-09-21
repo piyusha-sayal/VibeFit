@@ -16,10 +16,14 @@ import { Txt } from './index';
 import { SPACE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
+// Static requires: Metro resolves these at build time so the artwork is
+// bundled rather than fetched. There is no import form for a PNG here.
+/* eslint-disable @typescript-eslint/no-var-requires */
 const SYMBOL_GOLD = require('../../assets/brand/symbol-gold.png');
 const SYMBOL_BLACK = require('../../assets/brand/symbol-black.png');
 const HORIZONTAL_GOLD = require('../../assets/brand/logo-horizontal.png');
 const HORIZONTAL_BLACK = require('../../assets/brand/logo-horizontal-black.png');
+/* eslint-enable @typescript-eslint/no-var-requires */
 
 const SYMBOL_RATIO = 1;
 const HORIZONTAL_RATIO = 1600 / 400;
