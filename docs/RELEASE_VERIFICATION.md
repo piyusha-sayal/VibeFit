@@ -98,7 +98,7 @@ into a neighbouring pass.
 |---|---|
 | LOCAL VERIFIED | Yes — backend 399 tests, mobile 117, tsc and lint clean |
 | STAGING VERIFIED | **Not verified** — no Docker daemon available on this workstation |
-| PRODUCTION VERIFIED | **Not verified** — the production API has returned no bytes since the deploy |
+| PRODUCTION VERIFIED | Yes, `58c70a7` — `/health` and `/health/db` both 200 from the real host, `x-render-origin-server: uvicorn`, migration `0006`, journey 21/21 |
 | DEVICE VERIFIED | **Not verified** — no physical device testing has been performed |
 
 Build under verification:
