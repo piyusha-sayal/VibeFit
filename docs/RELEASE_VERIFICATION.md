@@ -71,7 +71,24 @@ recorded as one.
 
 ---
 
-## DEVICE VERIFIED
+## ANDROID BUILD VERIFIED
+
+**Claim:** an APK exists, it was built from a known commit, and the backend it
+talks to has not changed underneath it.
+
+- The EAS build reports `status: FINISHED`
+- Its `gitCommitHash` is recorded, and whether that commit is on the remote
+- `EXPO_PUBLIC_API_URL` points at the production host
+- Nothing in the backend's API surface changed after that commit — check with
+  `git diff --name-only <build commit>..HEAD`, and say what did change
+- The APK installs and its process survives launch
+
+**Does not establish:** that a person can use the app. An emulator launch, even
+a clean one, is evidence about the package, not about the experience.
+
+---
+
+## ANDROID DEVICE VERIFIED
 
 **Claim:** a human installed the build on a physical Android device and used it.
 
@@ -81,7 +98,7 @@ not earn it.
 Record with the claim: the EAS build id, the `gitCommitHash` that build reports,
 the device model, and the Android version.
 
-Device verification depends on **PRODUCTION VERIFIED** — the APK talks to the
+This depends on **PRODUCTION VERIFIED** — the APK talks to the
 production host. Attempting it while production is down tests nothing.
 
 ---
@@ -96,10 +113,37 @@ into a neighbouring pass.
 
 | Label | Status |
 |---|---|
-| LOCAL VERIFIED | Yes — backend 399 tests, mobile 117, tsc and lint clean |
-| STAGING VERIFIED | **Not verified** — no Docker daemon available on this workstation |
-| PRODUCTION VERIFIED | Yes, `58c70a7` — `/health` and `/health/db` both 200 from the real host, `x-render-origin-server: uvicorn`, migration `0006`, journey 21/21 |
-| DEVICE VERIFIED | **Not verified** — no physical device testing has been performed |
+| LOCAL VERIFIED | **Yes** — backend 407 passed (incl. 8 startup config tests), mobile 117 passed across 15 suites, `tsc --noEmit` clean, ESLint clean |
+| STAGING VERIFIED | **Not verified** — no Docker daemon on this workstation, so the image was never run as a container |
+| PRODUCTION VERIFIED | **Yes**, behaviour consistent with `58c70a7` — see below |
+| ANDROID BUILD VERIFIED | **Yes** — build FINISHED, installs, launches, process survives; API base URL correct; no API-surface change since the build commit |
+| ANDROID DEVICE VERIFIED | **Not verified** — no physical device testing has been performed |
+
+**PRODUCTION VERIFIED, in detail.** Measured against
+`https://vibefit-api-awx9.onrender.com`:
+
+| check | result |
+|---|---|
+| `/health` first request (asleep) | 200, 41.6s — free-plan cold start |
+| `/health` × 5 sequential | all 200, median 260 ms |
+| `/health` × 4 concurrent | all 200, 267–491 ms |
+| `/health` after 45s idle | 200, 273 ms |
+| `/health/db` | 200, `"database": "reachable"`, 1434 ms |
+| origin header | `x-render-origin-server: uvicorn` |
+| Alembic version | `0006_create_my_look` |
+| Phase 5 tables and constraint | `look_drafts`, `look_feedback`, `saved_looks.client_token`, `uq_look_client_token_per_user` all present |
+| user data | 23 users, 8 saved looks, 0 orphans — counts only, nothing written |
+| five flagship experiences | 26 / 26 endpoint checks |
+| Phase 5 journey | **22 / 22**, including reauthentication and re-read |
+| passport reliability, 30 bounded requests | 30 / 30, avg 1866 ms, max 3704 ms — **not reproduced during this verification** |
+
+**One caveat, kept separate from the HTTP results.** Which commit Render is
+actually running could not be read: there is no `RENDER_API_KEY` and no
+authenticated dashboard session on this workstation. The host answers, the
+origin header names uvicorn, and the behaviour matches `58c70a7` — but that is
+inference from HTTP, not a reading of Render's own deploy record. Pushing a
+commit is not proof it was deployed, and this row is written as inference for
+that reason.
 
 Build under verification:
 
@@ -108,16 +152,25 @@ Build under verification:
 | EAS build | `8cacce00-11b3-4237-8ee1-c98f4ac5ec5f` |
 | status | FINISHED |
 | artifact | `https://expo.dev/artifacts/eas/JH4CJ_Ot404Ok3AfbnnWxPWRGoS7FkYAPQjiycWXcG8.apk` |
-| source commit | `b064dfe` (local only — **not pushed**) |
+| source commit | `b064dfe` — now on `origin/main` as an ancestor of `9e9285c` |
 | profile / distribution | `preview` / INTERNAL |
 | package | `com.vibefit.app`, version 1.0.0 (1) |
 | Expo SDK | 54.0.0 |
 
-Note the mismatch worth knowing about: the APK was built from `b064dfe`, which
-exists only on this workstation. The deployed backend is `0264fb3`. The three
-commits between them are documentation only, so the APK's application code
-matches the deployed backend — but "the build's commit is not on the remote" is
-the kind of fact that is cheap to record now and expensive to reconstruct later.
+`git diff --name-only b064dfe..HEAD` touches only `.claude/CLAUDE.md`,
+`.gitignore`, `backend/Dockerfile`, `backend/requirements-dev.txt`,
+`backend/start.sh`, `backend/tests/test_startup_command.py`, `docs/` and
+`render.yaml` — deployment configuration, a test and documentation. No route,
+schema or response shape changed after the build, and `git diff` over `mobile/`
+is empty. The APK does not need rebuilding.
+
+What the emulator run did and did not show: the APK installed on an x86_64
+Android 15 emulator, `MainActivity` resumed, and the process stayed alive with
+no `FATAL EXCEPTION` from `com.vibefit.app`. No UI-level verification was
+obtained — under headless software rendering the emulator's own launcher and
+System UI went unresponsive and `com.google.android.gms` crashed with a
+`NoSuchFieldError` from its own bundled dex, none of which is this app. So the
+package is sound and the experience is untested.
 
 ---
 

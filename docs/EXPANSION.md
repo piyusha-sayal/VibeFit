@@ -604,3 +604,92 @@ had just woken. A direct call to the same endpoint immediately afterwards
 returned a full composition, and the re-run passed 21 of 21. This is not
 claimed as fixed and is not claimed to share a cause with the outage. It is
 recorded because it resembles the `GET /passport` transient, which remains open.
+
+### Recovery verification (2026-09-21)
+
+Run after `58c70a7` had been live for some hours, against the real host. The
+outage above is not rewritten: it happened, it lasted roughly three hours, and
+the service was unreachable for all of it. What follows is the evidence that it
+is over.
+
+**Deployed configuration.** `58c70a7` is on `main` and on `origin/main`, the
+working tree is clean, `render.yaml` pins `PORT: 10000`, `start.sh` resolves
+`${PORT:-10000}` and binds `0.0.0.0`, `EXPOSE 10000` matches, and `render.yaml`
+declares no `dockerCommand` that could bypass the entrypoint.
+
+**Which commit Render is running is not directly verifiable from here.** There
+is no `RENDER_API_KEY` and no authenticated dashboard session available to this
+workstation, so the deploy record cannot be read. What can be shown is that the
+host answers, that `x-render-origin-server: uvicorn` names the origin Render
+routed to, and that the behaviour matches `58c70a7` and not its predecessor.
+That is strong, but it is inference from HTTP rather than a reading of Render's
+own record, and it is recorded separately for that reason.
+
+**Health, measured externally.**
+
+| request | result |
+|---|---|
+| first `/health` (instance asleep) | 200, 41.6s — free-plan cold start |
+| 5 sequential `/health` | all 200, median 260 ms |
+| 4 concurrent `/health` | all 200, 267–491 ms |
+| `/health/db` | 200, `"database": "reachable"`, 1434 ms |
+| `/health` after 45s idle | 200, 273 ms |
+
+**Database, read-only.** `alembic_version` is `0006_create_my_look`.
+`look_drafts` and `look_feedback` exist, `saved_looks.client_token` exists, and
+the unique constraint `uq_look_client_token_per_user` is present on
+`(user_id, client_token)`. Counts only, no personal data read: 23 users, 8
+saved looks, 0 drafts, 1 feedback row, 5 beauty profiles, 4 analyses, and **0
+orphaned saved looks**. Nothing was written, downgraded or reset.
+
+**The five flagship experiences, against production.** 26 of 26 endpoint checks
+pass. Discover My Colors returns its 12-season reference, serves one season's
+detail, 404s an unknown season, and `/color/report` returns
+`{"detail": "No completed analysis yet"}` for an account with no analysis
+rather than inventing one. Discover My Face serves profile, shape reference,
+hair, makeup and accessories. Discover My Style serves the profile, accepts a
+questionnaire update with `bodyType: uncategorised`, serves 54 garments and
+returns outfits. Create My Look serves 14 structures, names the four gaps in an
+empty profile and generates. My Beauty Passport serves aggregation, goals,
+settings, guide progress and collections.
+
+**Phase 5 journey against production: 22 of 22**, including one check the local
+run never had — logging in again on a fresh token and confirming the edited
+look is still there, with its silver metal and its revised name.
+
+**Passport reliability.** 30 bounded requests: 15 sequential, 10 at
+concurrency 5, and 5 interleaved with other authenticated endpoints. 30 of 30
+succeeded, average 1866 ms, maximum 3704 ms, no failures to report request IDs
+for. **Not reproduced during this verification.** This is not a fix and the
+`GET /passport` transient stays open.
+
+**Regression tests.** Backend 407 passed. Mobile totals are recorded in
+`RELEASE_VERIFICATION.md`.
+
+**Startup diagnostics confirmed** to distinguish all five phases, from a real
+run of the entrypoint:
+
+```
+startup: applying database migrations
+startup: migrations complete
+startup: launching uvicorn on 0.0.0.0:10000
+INFO:     Started server process [34208]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:10000
+```
+
+No environment variable or secret is printed by any of them.
+
+**A correction to this session's own verification.** Three checks failed on the
+first production run and two of those were my script's errors, not the API's:
+the colour routes are mounted at `/color`, not `/colors`, and `/style/garments`
+requires a token. A third, "report 404s rather than inventing a season", was
+*passing for the wrong reason* — it was requesting a path that does not exist,
+so its 404 was a routing miss rather than the endpoint's own answer. Corrected
+and re-run, all three pass on their merits. Worth recording because a 404 that
+means "no such route" and a 404 that means "no analysis yet" are the same
+status code, and only one of them is the check being claimed.
+
+**Remaining risks.** The `GET /passport` transient is unresolved. The cold start
+is ~41s on a woken instance and unchanged in character. Which commit Render is
+running cannot be read from here. No physical-device testing has been performed.
