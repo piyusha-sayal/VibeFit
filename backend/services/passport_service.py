@@ -99,9 +99,23 @@ async def _latest_analysis(db: AsyncSession, user_id: str) -> Analysis | None:
     return result.scalars().first()
 
 
-async def _count(db: AsyncSession, model, *conditions) -> int:
-    result = await db.execute(select(func.count()).select_from(model).where(*conditions))
-    return int(result.scalar() or 0)
+def _count_of(model, *conditions):
+    """One count as a scalar subquery, so several can share a round-trip."""
+    return (select(func.count()).select_from(model)
+            .where(*conditions).scalar_subquery())
+
+
+async def _counts(db: AsyncSession, **subqueries) -> dict[str, int]:
+    """Every count in a single SELECT.
+
+    These counts are independent of each other, and an AsyncSession cannot run
+    queries concurrently, so issued separately they were eight serial network
+    round-trips to Neon for eight integers.
+    """
+    keys = list(subqueries)
+    row = (await db.execute(
+        select(*(subqueries[k] for k in keys)))).one()
+    return {k: int(v or 0) for k, v in zip(keys, row)}
 
 
 async def build_passport(db: AsyncSession, user_id: str) -> dict:
@@ -157,16 +171,30 @@ async def build_passport(db: AsyncSession, user_id: str) -> dict:
     present = sum(1 for a in attributes if a["status"] == "present")
     completion = round(present / len(ATTRIBUTE_ORDER), 2)
 
-    saved_looks = await _count(db, SavedLook, SavedLook.user_id == user_id)
-    tried_looks = await _count(db, SavedLook, SavedLook.user_id == user_id, SavedLook.status == "tried")
-    complete_looks = await _count(db, SavedLook, SavedLook.user_id == user_id,
-                                  SavedLook.kind == "complete")
-    want_to_try = await _count(db, SavedLook, SavedLook.user_id == user_id,
-                               SavedLook.status == "want_to_try")
-    drafts = await _count(db, LookDraft, LookDraft.user_id == user_id)
-    collections = await _count(db, LookCollection, LookCollection.user_id == user_id)
-    analyses_done = await _count(db, Analysis, Analysis.user_id == user_id, Analysis.status == "complete")
-    active_goals = await _count(db, BeautyGoal, BeautyGoal.user_id == user_id, BeautyGoal.status == "active")
+    counts = await _counts(
+        db,
+        saved_looks=_count_of(SavedLook, SavedLook.user_id == user_id),
+        tried_looks=_count_of(SavedLook, SavedLook.user_id == user_id,
+                              SavedLook.status == "tried"),
+        complete_looks=_count_of(SavedLook, SavedLook.user_id == user_id,
+                                 SavedLook.kind == "complete"),
+        want_to_try=_count_of(SavedLook, SavedLook.user_id == user_id,
+                              SavedLook.status == "want_to_try"),
+        drafts=_count_of(LookDraft, LookDraft.user_id == user_id),
+        collections=_count_of(LookCollection, LookCollection.user_id == user_id),
+        analyses_done=_count_of(Analysis, Analysis.user_id == user_id,
+                                Analysis.status == "complete"),
+        active_goals=_count_of(BeautyGoal, BeautyGoal.user_id == user_id,
+                               BeautyGoal.status == "active"),
+    )
+    saved_looks = counts["saved_looks"]
+    tried_looks = counts["tried_looks"]
+    complete_looks = counts["complete_looks"]
+    want_to_try = counts["want_to_try"]
+    drafts = counts["drafts"]
+    collections = counts["collections"]
+    analyses_done = counts["analyses_done"]
+    active_goals = counts["active_goals"]
 
     recent_looks = (await db.execute(
         select(SavedLook)
