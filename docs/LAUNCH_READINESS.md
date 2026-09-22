@@ -30,13 +30,13 @@ Verification labels are kept apart. There is no combined PASS.
 | Onboarding redesign | **Not started** | — |
 | UX consistency audit | **Not started** | — |
 | Visual refinement | **Not started** | — |
-| Accessibility audit | **Not started** | — |
+| Accessibility audit | Started | colour is no longer the only selection signal; swatches meet MIN_TOUCH and carry label + hint |
 | Settings completion | Partly | Privacy and Delete account added; Help is a single screen |
-| Legal documents | **Not started** | no Privacy Policy or Terms in the app |
+| Legal documents | Drafted and in the app | Settings → Help; no legal review yet |
 | Performance measurement | Partly | cold start ~41s measured; in-app timings not measured |
 | Production API | Live | `58c70a7` behaviour, `/health` and `/health/db` 200 |
 | Database | **`0008` live** | 24 users, 12 saved looks, 4 analyses — nothing lost |
-| Android build | Rebuilt for Phase 6 | `1b07a01f-93fa-462c-85ee-15616424b193` |
+| Android build | **FINISHED** | `1b07a01f`, from `3fbd321` — has the privacy screens, not the P1 legal/accessibility work |
 | Physical-device testing | **Not performed** | — |
 
 ---
@@ -45,7 +45,7 @@ Verification labels are kept apart. There is no combined PASS.
 
 | label | status |
 |---|---|
-| LOCAL VERIFIED | **Yes** — backend 443 passed, mobile 122 across 16 suites, `tsc` clean, ESLint clean |
+| LOCAL VERIFIED | **Yes** — backend 443 passed, mobile 144 across 18 suites, `tsc` clean, ESLint clean |
 | STAGING VERIFIED | **Not verified** — no Docker daemon on this workstation |
 | PRODUCTION VERIFIED | **Yes** — `3fbd321` live, migration `0008`, privacy 27/27, flagship 28/28, Phase 5 journey 22/22 |
 | ANDROID BUILD VERIFIED | **Yes** — installs, launches, process survives; API base URL correct |
@@ -79,17 +79,23 @@ Consequences, stated rather than implied:
 The manual checklist is in `RELEASE_VERIFICATION.md`. No amount of API testing
 substitutes for it.
 
-### 3. No legal documents in the app
+### 3. The legal documents have had no legal review
 
-There is no Privacy Policy and no Terms of Service reachable from a screen.
-The retention wording now used in the app (`privacy_service.RETENTION_NOTE`)
-is written to match what the code does and is the right starting text, but it
-is not a policy and has had no legal review.
+Both are now in the app, reachable from Settings → Help and from the privacy
+screen, and both say so at the top. They are written clause by clause against
+what the code does — the backup paragraph is asserted in a test to be byte-for-
+byte the sentence the API returns — and they name no company, address or
+support contact, because there are none to name. That is a truthful starting
+point for a lawyer, not a substitute for one.
 
-### 4. Onboarding, UX, visual and accessibility work not started
+### 4. Onboarding, UX and visual work not started
 
-P1 items. Deliberately left until the P0 privacy work was finished and tested,
-per the brief's own ordering.
+P1. Accessibility has begun — colour is no longer the sole carrier of
+selection state — but the wider audit (text scaling, screen-reader passes over
+each flagship screen, focus order) has not been done.
+
+The current APK predates the P1 work, so the legal screens and the swatch
+changes are in `main` but not in any build yet.
 
 ---
 
