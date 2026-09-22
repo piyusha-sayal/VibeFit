@@ -955,3 +955,53 @@ makeup,wardrobe}`, `plan`, `vibe-profile`. They are internally consistent and
 none of them is broken — they simply do not follow the theme, so they stay dark
 in light mode. This was not converted in this session, and is stated here
 rather than implied to be done.
+
+---
+
+## Phase 6 P1 §4 — one application instead of two
+
+### The twelve screens, and the nine primitives behind them
+
+Twelve screens were written against `constants/colors`, a single hard-coded
+dark scheme, and so were nine of the shared primitives they use — `GoldButton`,
+`Pill`, `Tag`, `Lbl`, `Screen`, `ScreenHeader`, `PasswordInput`,
+`GoogleButton`, `FloatingNav`. Fixing only the screens would have left their
+buttons dark on ivory, so both layers moved together.
+
+What did **not** happen: eighteen hundred lines of layout were not rewritten.
+Those screens carry sign-in, registration, scanning, results, chat, the hair,
+makeup, accessories and wardrobe studios, the plan and the vibe profile. A
+colour problem is not a reason to put those journeys at risk.
+
+What happened instead: `theme/legacy.ts` serves the old key names from the
+active palette, and each static `StyleSheet.create` became a factory the
+component builds from the live theme. Two details worth recording —
+
+- The three `white06/08/18` values were hairlines. A white hairline is
+  invisible on ivory, so they map to the theme's borders rather than to white.
+- The gradients were three fixed stops of near-black. Rebuilt from the palette,
+  so light mode gets ivory warmed with gold instead of a dark slab in the
+  middle of a pale screen.
+
+`theme/palette.test.ts` checks that **no file under `app/` or `components/`
+imports the fixed palette** — 108 files — and checks the bridge's own behaviour
+in both themes, including that every gradient stop is a colour the active theme
+actually defines.
+
+This is a bridge, not a destination. New screens use `components/ds`.
+
+### The stale assertion, corrected rather than removed
+
+The production privacy journey reported 26/27. The failing check expected
+granting retention to succeed unconditionally — written before storage
+availability existed, and now describing behaviour that would be a defect.
+
+It is now conditioned on `storageAvailable` and asserts **more** than before:
+where storage exists, a grant succeeds; where it does not, the grant is refused
+with 409, **the refusal records nothing**, `reuseEffective` stays false, and
+withdrawal still works. The journey now reports **29/29**, passing for the
+correct reason on either kind of deployment.
+
+The same lesson as the `/health` and `/looks` mistakes: a check that fails for
+the checker's reason, or passes for the wrong one, is worth no more than no
+check at all.
