@@ -27,6 +27,8 @@ export interface DeletionResult {
   deleted: boolean;
   photographsAttempted: number;
   photographsRemoved: number;
+  /** Objects storage refused right now. Queued server-side, not forgotten. */
+  photographsQueuedForRetry: number;
   retentionNote: string;
 }
 

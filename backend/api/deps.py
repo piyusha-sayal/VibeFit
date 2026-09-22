@@ -1,4 +1,6 @@
 import uuid
+import time
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,3 +66,28 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+
+# How recently an externally authenticated user must have proved who they are
+# before an irreversible action. Firebase rotates ID tokens hourly on its own,
+# so a valid token is not evidence of a present person; a fresh `auth_time` is.
+REAUTH_MAX_AGE_SECONDS = 5 * 60
+
+
+def firebase_auth_age(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+) -> float | None:
+    """Seconds since this caller last authenticated, or None if not Firebase.
+
+    None means "this is not a Firebase session", which is a different answer
+    from "it has been a long time" — the caller decides what to do with each.
+    """
+    claims = verify_firebase_token(credentials.credentials)
+    if not claims:
+        return None
+    auth_time = claims.get("auth_time")
+    if not auth_time:
+        # A Firebase token without auth_time cannot be shown to be recent, so
+        # it is treated as arbitrarily old rather than as acceptable.
+        return float("inf")
+    return max(0.0, time.time() - float(auth_time))

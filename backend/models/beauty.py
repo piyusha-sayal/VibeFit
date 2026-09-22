@@ -231,3 +231,24 @@ class UserSettings(Base):
         Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class PendingPhotoDeletion(Base):
+    """An object key whose delete failed, kept so it cannot become an orphan.
+
+    Deliberately holds no user_id and no foreign key. The whole point is to
+    outlive the account: once the user's rows are gone, this row is the only
+    thing that still knows the object exists. A key here is not personal data —
+    it is a random UUID under uploads/ — and it is removed as soon as the
+    delete succeeds.
+    """
+
+    __tablename__ = "pending_photo_deletions"
+
+    object_key: Mapped[str] = mapped_column(String(300), primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False)
+    last_tried_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True)

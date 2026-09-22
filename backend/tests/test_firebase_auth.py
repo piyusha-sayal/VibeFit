@@ -29,11 +29,30 @@ def test_verify_firebase_token_rejects_bad_token():
 def test_verify_firebase_token_maps_claims():
     original = settings.firebase_project_id
     settings.firebase_project_id = "vibefit-a897e"
-    fake_claims = {"user_id": "uid-1", "email": "person@gmail.com", "name": "Person"}
+    fake_claims = {"user_id": "uid-1", "email": "person@gmail.com",
+                   "name": "Person", "auth_time": 1_700_000_000}
     try:
         with patch("core.firebase_auth.google_id_token.verify_firebase_token", return_value=fake_claims):
             claims = verify_firebase_token("fake-but-well-formed-token")
-        assert claims == {"uid": "uid-1", "email": "person@gmail.com", "name": "Person"}
+        # auth_time is carried through because irreversible actions check how
+        # recently the person actually signed in, not when Firebase last
+        # rotated their token.
+        assert claims == {"uid": "uid-1", "email": "person@gmail.com",
+                          "name": "Person", "auth_time": 1_700_000_000}
+    finally:
+        settings.firebase_project_id = original
+
+
+def test_verify_firebase_token_tolerates_a_missing_auth_time():
+    """Older tokens may not carry it; the caller treats None as "cannot show
+    this is recent" rather than as an acceptable age."""
+    original = settings.firebase_project_id
+    settings.firebase_project_id = "vibefit-a897e"
+    try:
+        with patch("core.firebase_auth.google_id_token.verify_firebase_token",
+                   return_value={"user_id": "uid-2", "email": "a@b.com"}):
+            claims = verify_firebase_token("fake-but-well-formed-token")
+        assert claims["auth_time"] is None
     finally:
         settings.firebase_project_id = original
 

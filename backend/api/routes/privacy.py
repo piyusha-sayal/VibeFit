@@ -12,7 +12,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_current_user
+from api.deps import REAUTH_MAX_AGE_SECONDS, firebase_auth_age, get_current_user
 from core.database import get_db
 from core.security import verify_password
 from models.user import User
@@ -40,6 +40,9 @@ class DeleteAccountIn(BaseModel):
 @router.get("/photos")
 async def list_photos(db: AsyncSession = Depends(get_db),
                       current_user: User = Depends(get_current_user)):
+    # There is no scheduler on this plan, so the retry queue is drained from
+    # the screen most likely to be open when someone cares about it.
+    await privacy_service.sweep_pending_deletions(db)
     return await privacy_service.list_photos(db, current_user.id)
 
 
@@ -58,7 +61,9 @@ async def delete_photo(analysis_id: str,
 @router.delete("/photos")
 async def delete_all_photos(db: AsyncSession = Depends(get_db),
                             current_user: User = Depends(get_current_user)):
-    return await privacy_service.delete_all_photos(db, current_user.id)
+    result = await privacy_service.delete_all_photos(db, current_user.id)
+    await privacy_service.sweep_pending_deletions(db)
+    return result
 
 
 @router.get("/consent")
@@ -99,20 +104,37 @@ async def export_data(db: AsyncSession = Depends(get_db),
 @router.post("/delete-account")
 async def delete_account(body: DeleteAccountIn,
                          db: AsyncSession = Depends(get_db),
-                         current_user: User = Depends(get_current_user)):
+                         current_user: User = Depends(get_current_user),
+                         auth_age: float | None = Depends(firebase_auth_age)):
     if body.confirmation.strip() != privacy_service.DELETE_CONFIRMATION:
         raise HTTPException(
             status_code=400,
             detail=f'Type "{privacy_service.DELETE_CONFIRMATION}" to confirm')
 
-    # Firebase-provisioned accounts carry no usable local password, so the
-    # typed confirmation plus a currently valid token is what stands in for
-    # reauthentication there. A password account must re-enter its password.
     if current_user.hashed_password:
+        # A password account reauthenticates by re-entering it.
         if not body.password:
             raise HTTPException(status_code=400,
                                 detail="Enter your password to confirm")
         if not verify_password(body.password, current_user.hashed_password):
             raise HTTPException(status_code=401, detail="Password is incorrect")
+    elif auth_age is not None:
+        # A Firebase account has no local password to check, so recency of the
+        # sign-in itself is the evidence. Firebase rotates ID tokens hourly
+        # without the user doing anything, so "the token is valid" says nothing
+        # about who is holding the phone — `auth_time` does.
+        if auth_age > REAUTH_MAX_AGE_SECONDS:
+            raise HTTPException(
+                status_code=401,
+                detail="Please sign in again before deleting your account.")
+    else:
+        # Neither a local password nor a Firebase session. Nothing here proves
+        # a present account holder, so this irreversible action is refused
+        # rather than performed on the strength of a bearer token alone.
+        raise HTTPException(
+            status_code=401,
+            detail="Please sign in again before deleting your account.")
 
-    return await privacy_service.delete_account(db, current_user.id)
+    result = await privacy_service.delete_account(db, current_user.id)
+    await privacy_service.sweep_pending_deletions(db)
+    return result

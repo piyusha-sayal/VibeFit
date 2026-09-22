@@ -37,6 +37,12 @@ def verify_firebase_token(token: str) -> Optional[dict]:
             "uid": claims.get("user_id") or claims.get("sub"),
             "email": claims.get("email", ""),
             "name": claims.get("name") or (claims.get("email", "").split("@")[0]),
+            # Seconds since the epoch at which this person last actually
+            # authenticated — not when the token was minted. Firebase refreshes
+            # ID tokens hourly without the user doing anything, so `iat` says
+            # nothing about who is holding the phone. Irreversible actions
+            # check this.
+            "auth_time": claims.get("auth_time"),
         }
     except Exception as exc:
         logger.info("Firebase token verification failed: %s", exc)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -7,6 +7,7 @@ import { RADIUS, SPACE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useAuthStore } from '../../store/authStore';
 import { DELETE_CONFIRMATION, deleteAccount } from '../../services/privacyService';
+import { getFreshIdToken } from '../../services/authService';
 
 /** Everything that goes. Listed plainly, because "your data" tells nobody anything. */
 const GOES = [
@@ -27,9 +28,25 @@ export default function DeleteAccountScreen() {
   const [phrase, setPhrase] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  // A Firebase account has no local password to re-enter; the backend checks
+  // how recently that session signed in instead. Asking for a password the
+  // account does not have would leave those users unable to press the button.
+  const [usesFirebase, setUsesFirebase] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void getFreshIdToken().then((token) => {
+      if (alive) setUsesFirebase(!!token);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const phraseMatches = phrase.trim() === DELETE_CONFIRMATION;
-  const ready = phraseMatches && password.length > 0;
+  const needsPassword = usesFirebase === false;
+  const ready = phraseMatches && usesFirebase !== null
+    && (!needsPassword || password.length > 0);
 
   const confirm = () => {
     Alert.alert(
@@ -44,7 +61,10 @@ export default function DeleteAccountScreen() {
 
   const run = async () => {
     setBusy(true);
-    const response = await deleteAccount({ confirmation: phrase.trim(), password });
+    const response = await deleteAccount({
+      confirmation: phrase.trim(),
+      ...(needsPassword ? { password } : {}),
+    });
     setBusy(false);
 
     if (!response.success) {
@@ -92,7 +112,9 @@ export default function DeleteAccountScreen() {
       <View style={styles.section}>
         <SectionHeader title="Confirm" />
         <Txt variant="bodySm" tone="muted">
-          Type {DELETE_CONFIRMATION} and enter your password.
+          {needsPassword
+            ? `Type ${DELETE_CONFIRMATION} and enter your password.`
+            : `Type ${DELETE_CONFIRMATION} to confirm. You may be asked to sign in again.`}
         </Txt>
         <TextInput
           value={phrase}
@@ -114,21 +136,23 @@ export default function DeleteAccountScreen() {
           </Txt>
         ) : null}
 
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          placeholder="Your password"
-          placeholderTextColor={colors.textSubtle}
-          accessibilityLabel="Your password"
-          style={[styles.input, {
-            marginTop: SPACE.md,
-            borderColor: colors.border,
-            color: colors.text,
-            backgroundColor: colors.surfaceAlt,
-          }]}
-        />
+        {needsPassword ? (
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            placeholder="Your password"
+            placeholderTextColor={colors.textSubtle}
+            accessibilityLabel="Your password"
+            style={[styles.input, {
+              marginTop: SPACE.md,
+              borderColor: colors.border,
+              color: colors.text,
+              backgroundColor: colors.surfaceAlt,
+            }]}
+          />
+        ) : null}
 
         <Button
           label="Delete my account"

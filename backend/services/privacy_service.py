@@ -19,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.analysis import Analysis, ChatMessage, ChatSession, Recommendation
 from models.beauty import (BeautyActivity, BeautyGoal, BeautyProfile,
                            CollectionItem, GuideProgress, LookCollection,
-                           LookDraft, LookFeedback, SavedLook, UserSettings)
+                           LookDraft, LookFeedback, PendingPhotoDeletion,
+                           SavedLook, UserSettings)
 from models.profile import (ActionFeedback, OnboardingResponse, PlanAction,
                             ProfileCorrection)
 from models.user import User
@@ -83,14 +84,66 @@ async def list_photos(db: AsyncSession, user_id: str) -> dict:
     }
 
 
+async def _queue_orphan(db: AsyncSession, url: str | None, error: str) -> None:
+    """Remember an object whose delete failed, so it is not lost with the row."""
+    key = photo_storage.key_for(url)
+    if key is None:
+        return
+    existing = await db.get(PendingPhotoDeletion, key)
+    if existing is None:
+        existing = PendingPhotoDeletion(object_key=key)
+        db.add(existing)
+    existing.attempts = (existing.attempts or 0) + 1
+    existing.last_error = error[:200]
+    existing.last_tried_at = _now()
+
+
+async def sweep_pending_deletions(db: AsyncSession, *, limit: int = 25) -> dict:
+    """Retry queued deletes; rows that succeed leave the queue.
+
+    There is no scheduler on this plan, so this runs opportunistically from the
+    privacy endpoints. A retry that fails stays queued with its attempt count
+    raised, which is the difference between a backlog and a leak.
+    """
+    rows = await db.execute(
+        select(PendingPhotoDeletion)
+        .order_by(PendingPhotoDeletion.created_at).limit(limit))
+    pending = list(rows.scalars())
+    cleared = 0
+    for row in pending:
+        try:
+            if await photo_storage.delete(photo_storage.public_url(row.object_key)):
+                await db.delete(row)
+                cleared += 1
+                continue
+            row.last_error = "delete returned false"
+        except Exception as exc:
+            row.last_error = type(exc).__name__[:200]
+        row.attempts = (row.attempts or 0) + 1
+        row.last_tried_at = _now()
+    await db.flush()
+    remaining = await db.execute(select(PendingPhotoDeletion))
+    return {"retried": len(pending), "cleared": cleared,
+            "stillPending": len(list(remaining.scalars()))}
+
+
 async def _forget_photo(db: AsyncSession, analysis: Analysis) -> bool:
     """Delete the object and record that we did. Returns True if one went."""
-    removed = await photo_storage.delete(analysis.image_url)
-    if photo_storage.is_stored(analysis.image_url):
+    url = analysis.image_url
+    removed = False
+    error = "not stored"
+    try:
+        removed = await photo_storage.delete(url)
+    except Exception as exc:
+        error = type(exc).__name__
+    if photo_storage.is_stored(url):
         # Record the intent even when the object store refused: the reference
         # is gone from our side either way, and leaving the URL would let a
-        # later request hand it back out.
+        # later request hand it back out. The object is queued so that losing
+        # the reference does not mean losing the file.
         analysis.photo_deleted_at = _now()
+        if not removed:
+            await _queue_orphan(db, url, error)
     analysis.image_url = None
     return removed
 
@@ -178,23 +231,75 @@ async def _rows(db: AsyncSession, model, user_id: str) -> list:
     return list(result.scalars())
 
 
-def _plain(row, *, drop: tuple[str, ...] = ()) -> dict:
-    """A model row as JSON, with named columns left out.
+# An allowlist, not a denylist. A denylist exports every column nobody
+# remembered to exclude, so the day someone adds `refresh_token` or
+# `reset_token` to a table it ships to the user's device in a file they may
+# then mail to themselves. Under an allowlist that column is simply absent
+# until a person decides otherwise.
+#
+# `None` means "every column on this table" — used for tables that hold only
+# content the user created. Those are still filtered by FORBIDDEN_FRAGMENTS
+# below, so a credential column added to one of them does not ride along.
+EXPORTABLE: dict[str, tuple[str, ...] | None] = {
+    "users": ("id", "email", "name", "is_active", "created_at", "updated_at"),
+    "user_settings": ("user_id", "theme", "reduced_motion", "country", "language",
+                      "photo_reuse_consent", "photo_retention_consent",
+                      "created_at", "updated_at"),
+    "analyses": ("id", "user_id", "status", "face_analysis", "color_analysis",
+                 "hair_analysis", "body_analysis", "skin_analysis", "quality",
+                 "error_message", "photo_deleted_at", "created_at", "updated_at"),
+    "recommendations": None,
+    "beauty_profiles": None,
+    "onboarding_responses": None,
+    "saved_looks": None,
+    "look_drafts": None,
+    "look_feedback": None,
+    "look_collections": None,
+    "collection_items": None,
+    "beauty_goals": None,
+    "beauty_activities": None,
+    "guide_progress": None,
+    "profile_corrections": None,
+    "plan_actions": None,
+    "action_feedback": None,
+    "chat_sessions": None,
+    "chat_messages": None,
+}
 
-    Column-driven rather than hand-written so a column added later is exported
-    rather than silently missing — with the exception of the drop list, which
-    is what keeps password hashes out.
-    """
+# Substrings that may never appear in an exported column name, whatever the
+# allowlist says. This is the half that holds when someone adds a column to a
+# table marked None.
+FORBIDDEN_FRAGMENTS = ("password", "secret", "token", "credential", "api_key",
+                       "hash", "salt", "private")
+
+# `client_token` is an idempotency key the client generated and already holds.
+# It is not a credential, and dropping it would break a round-trip.
+FORBIDDEN_EXCEPTIONS = {"client_token"}
+
+
+def exportable_columns(table) -> tuple[str, ...]:
+    """Which columns of this table are allowed to leave the server."""
+    allowed = EXPORTABLE.get(table.name)
+    names = tuple(c.name for c in table.columns) if allowed is None else allowed
+    return tuple(
+        name for name in names
+        if name in FORBIDDEN_EXCEPTIONS
+        or not any(bad in name.lower() for bad in FORBIDDEN_FRAGMENTS))
+
+
+def _plain(row, *, drop: tuple[str, ...] = ()) -> dict:
+    """A model row as JSON, restricted to the columns allowed to be exported."""
+    allowed = exportable_columns(row.__table__)
     out = {}
     for column in row.__table__.columns:
-        if column.name in drop:
+        if column.name not in allowed or column.name in drop:
             continue
         value = getattr(row, column.name)
         out[column.name] = _iso(value) if isinstance(value, datetime) else value
     return out
 
 
-# Never leaves the server, whatever else is added to these tables later.
+# Named at the call site for readability; the allowlist is what enforces it.
 NEVER_EXPORT = ("hashed_password",)
 
 
@@ -287,11 +392,16 @@ async def delete_account(db: AsyncSession, user_id: str) -> dict:
     attempted = sum(1 for a in analyses if photo_storage.is_stored(a.image_url))
     removed = 0
     for analysis in analyses:
+        if not photo_storage.is_stored(analysis.image_url):
+            continue
         try:
             if await photo_storage.delete(analysis.image_url):
                 removed += 1
-        except Exception:
+                continue
+            await _queue_orphan(db, analysis.image_url, "delete returned false")
+        except Exception as exc:
             logger.exception("photo delete failed during account deletion")
+            await _queue_orphan(db, analysis.image_url, type(exc).__name__)
 
     # Explicit deletes before the user row: SQLite has no ON DELETE CASCADE
     # unless foreign keys are enabled per connection, and relying on that
@@ -316,5 +426,8 @@ async def delete_account(db: AsyncSession, user_id: str) -> dict:
         "deleted": True,
         "photographsAttempted": attempted,
         "photographsRemoved": removed,
+        # Queued rather than lost. After this request the queue is the only
+        # thing that still knows these objects exist.
+        "photographsQueuedForRetry": attempted - removed,
         "retentionNote": RETENTION_NOTE,
     }
