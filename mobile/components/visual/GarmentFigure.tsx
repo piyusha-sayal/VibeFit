@@ -44,6 +44,40 @@ const SHAPES: Record<string, string> = {
   soft: 'M38 62 Q60 54 82 62 Q88 120 80 170 L40 170 Q32 120 38 62 Z',
 };
 
+// Indian garments had no shapes at all: every saree, lehenga, kurta and
+// anarkali fell through to `straight`, which is a Western shift dress. A
+// fashion library that draws a saree as a shift is not covering both
+// wardrobes, whatever its item list says.
+Object.assign(SHAPES, {
+  // Pleats at the front, pallu falling from the left shoulder.
+  saree: 'M40 60 L80 60 L86 176 L34 176 Z M56 96 L56 176 M62 96 L62 176 '
+    + 'M68 96 L68 176 M40 60 Q24 104 30 168 L44 168 Q36 106 48 66 Z',
+  // Fitted blouse, bare midriff, heavy flared skirt.
+  lehenga: 'M42 58 L78 58 L80 88 L40 88 Z M44 106 L76 106 L104 178 L16 178 Z',
+  // Straight tunic to mid-calf over narrow trousers.
+  kurta: 'M38 58 L82 58 L84 150 L36 150 Z M44 150 L56 150 L54 186 L44 186 Z '
+    + 'M64 150 L76 150 L76 186 L66 186 Z',
+  // Fitted to a high waist, then a full circular flare.
+  anarkali: 'M42 58 L78 58 L76 92 L44 92 Z M44 92 L76 92 L106 180 L14 180 Z',
+  // Wide gathered trousers, each leg full.
+  sharara: 'M40 58 L80 58 L80 102 L40 102 Z M40 102 L58 102 L64 180 L18 180 Z '
+    + 'M62 102 L80 102 L102 180 L56 180 Z',
+  // Draped and wrapped between the legs.
+  dhoti: 'M38 60 L82 60 L84 112 L36 112 Z M36 112 L84 112 Q78 148 66 170 '
+    + 'L54 170 Q42 148 36 112 Z',
+  // Long straight coat over the whole figure.
+  sherwani: 'M36 56 L84 56 L88 168 L32 168 Z M60 56 L60 168',
+  // A jacket that stops at the hip, worn open.
+  blazer: 'M36 58 L56 58 L58 138 L34 138 Z M64 58 L84 58 L86 138 L62 138 Z',
+  // Knee-length, tapering slightly.
+  skirt: 'M40 96 L80 96 L86 156 L34 156 Z',
+  // Bulk and length past the knee.
+  outerwear: 'M32 56 L88 56 L92 176 L28 176 Z M60 56 L60 176',
+  shirt: 'M40 58 L80 58 L82 118 L38 118 Z M60 58 L60 118',
+  trousers: 'M40 96 L80 96 L74 180 L62 180 L60 130 L58 180 L46 180 Z',
+  dress: 'M42 58 L78 58 L74 100 L92 168 L28 168 L46 100 Z',
+});
+
 SHAPES.fitted_waist = SHAPES.a_line;
 SHAPES.fitted_bodice = SHAPES.fit_and_flare;
 SHAPES.varied = SHAPES.straight;

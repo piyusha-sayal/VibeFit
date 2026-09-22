@@ -13,6 +13,10 @@ import React from 'react';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
 import { HAIR_COLOURS, HairTexture, SkinTone, toneFor } from './palette';
+import {
+  BLUSH_ZONES, FRINGES, HAIR_SILHOUETTES, LENGTH_SCALE, LINERS, STROKE_FRINGES,
+  type BlushPlacement, type Fringe, type HairSilhouette, type LinerStyle,
+} from './shapes';
 import { useTheme } from '../../theme/ThemeProvider';
 
 const SIZE = 120;
@@ -41,6 +45,13 @@ function textureEdge(texture: HairTexture, length: string): string | null {
 
 export interface FaceFigureProps {
   hairLength?: 'short' | 'medium' | 'long';
+  /**
+   * The shape of the cut. Length alone put twelve short styles — a buzz cut
+   * and a French bob among them — on the same drawing.
+   */
+  hairSilhouette?: HairSilhouette;
+  /** Drawn over the forehead. Previously the hairline was one fixed path. */
+  fringe?: Fringe;
   hairTexture?: HairTexture;
   hairColour?: keyof typeof HAIR_COLOURS | string;
   /** Deterministic skin tone. Pass the item key so a list shows a spread. */
@@ -49,18 +60,26 @@ export interface FaceFigureProps {
   /** Highlight zones for makeup references. */
   emphasis?: ('eyes' | 'lips' | 'cheeks' | 'brows')[];
   emphasisColour?: string;
+  /** Where blush sits — the question a blush screen exists to answer. */
+  blush?: BlushPlacement;
+  /** The liner shape. A swatch cannot show the difference between these. */
+  liner?: LinerStyle;
   size?: number;
   label?: string;
 }
 
 export function FaceFigure({
   hairLength = 'medium',
+  hairSilhouette,
+  fringe = 'none',
   hairTexture = 'straight',
   hairColour = 'darkBrown',
   seed = 'face',
   tone,
   emphasis = [],
   emphasisColour,
+  blush = 'none',
+  liner = 'none',
   size = 120,
   label,
 }: FaceFigureProps) {
@@ -69,6 +88,15 @@ export function FaceFigure({
   const hair = HAIR_COLOURS[hairColour as string] ?? (hairColour as string);
   const accent = emphasisColour ?? colors.gold;
   const edge = textureEdge(hairTexture, hairLength);
+  // A named silhouette wins; without one, length behaves as it always did.
+  const outline = hairSilhouette
+    ? HAIR_SILHOUETTES[hairSilhouette]
+    : HAIR_SHAPES[hairLength];
+  const reach = LENGTH_SCALE[hairLength] ?? 1;
+  const fringePath = FRINGES[fringe];
+  const fringeIsStroke = STROKE_FRINGES.includes(fringe);
+  const blushZone = blush === 'none' ? null : BLUSH_ZONES[blush];
+  const linerShape = liner === 'none' ? null : LINERS[liner];
 
   const shows = (zone: string) => emphasis.includes(zone as never);
 
@@ -80,15 +108,30 @@ export function FaceFigure({
       accessibilityRole="image"
       accessibilityLabel={label ?? `${hairTexture} ${hairLength} hair`}
     >
-      {/* Hair behind the face. */}
-      <Path d={HAIR_SHAPES[hairLength]} fill={hair} />
+      {/* Hair behind the face. Scaled from the crown so the same silhouette
+          reads as short, medium or long without needing three copies. */}
+      <G transform={`translate(0 ${24 - 24 * reach}) scale(1 ${reach})`}>
+        <Path d={outline} fill={hair} />
+      </G>
 
       {/* Face. */}
       <Ellipse cx={60} cy={62} rx={26} ry={32} fill={skin.hex} />
       <Path d="M60 30 a26 32 0 0 0 0 64 z" fill={skin.shade} opacity={0.25} />
 
-      {/* Hair front, drawn over the forehead. */}
-      <Path d="M34 46 Q60 24 86 46 Q60 36 34 46 Z" fill={hair} />
+      {/* Hair front. Without a fringe this is the plain hairline; with one it
+          is the fringe itself, which is what makes the eight options look
+          like eight options. */}
+      {fringePath === null ? (
+        <Path d="M34 46 Q60 24 86 46 Q60 36 34 46 Z" fill={hair} />
+      ) : fringeIsStroke ? (
+        <>
+          <Path d="M34 46 Q60 24 86 46 Q60 36 34 46 Z" fill={hair} />
+          <Path d={fringePath} stroke={hair} strokeWidth={2.5} fill="none"
+                strokeLinecap="round" />
+        </>
+      ) : (
+        <Path d={fringePath} fill={hair} />
+      )}
       {edge ? <Path d={edge} stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" /> : null}
 
       {/* Brows. */}
@@ -107,11 +150,33 @@ export function FaceFigure({
                  fill={shows('eyes') ? accent : colors.textSubtle} opacity={shows('eyes') ? 0.9 : 0.6} />
       </G>
 
-      {/* Cheeks. */}
-      {shows('cheeks') ? (
+      {/* Cheeks. A named placement moves and reshapes the zone; the plain
+          emphasis keeps the original pair of circles. */}
+      {blushZone ? (
+        <G opacity={0.4}>
+          <Ellipse cx={blushZone.cx} cy={blushZone.cy} rx={blushZone.rx}
+                   ry={blushZone.ry} fill={accent}
+                   transform={`rotate(${blushZone.rotate} ${blushZone.cx} ${blushZone.cy})`} />
+          <Ellipse cx={120 - blushZone.cx} cy={blushZone.cy} rx={blushZone.rx}
+                   ry={blushZone.ry} fill={accent}
+                   transform={`rotate(${-blushZone.rotate} ${120 - blushZone.cx} ${blushZone.cy})`} />
+        </G>
+      ) : shows('cheeks') ? (
         <G opacity={0.45}>
           <Circle cx={42} cy={72} r={7} fill={accent} />
           <Circle cx={78} cy={72} r={7} fill={accent} />
+        </G>
+      ) : null}
+
+      {/* Liner, drawn on the lash line and mirrored. */}
+      {linerShape ? (
+        <G opacity={linerShape.opacity}>
+          <Path d={linerShape.d} stroke={accent} strokeWidth={linerShape.width}
+                fill="none" strokeLinecap="round" />
+          <G transform="translate(120 0) scale(-1 1)">
+            <Path d={linerShape.d} stroke={accent} strokeWidth={linerShape.width}
+                  fill="none" strokeLinecap="round" />
+          </G>
         </G>
       ) : null}
 

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { Card, Chip, EmptyState, ErrorState, LoadingState, Txt } from '../../components/ds';
 import { FaceFigure, INSPIRATION_NOTE } from '../../components/visual';
+import { silhouetteFor } from '../../components/visual/shapes';
 import { SPACE } from '../../constants/theme';
 import { useHairstyles } from '../../hooks/useFace';
 import type { HairFilters } from '../../services/faceService';
@@ -107,12 +108,15 @@ export default function HaircutFinderScreen() {
               <View style={styles.row}>
                 <FaceFigure
                   hairLength={style.length as 'short' | 'medium' | 'long'}
+                  // Without this every short cut was the same drawing: a buzz
+                  // cut and a French bob are both "short".
+                  hairSilhouette={silhouetteFor(style.key, style.length)}
                   hairTexture={
                     (filters.texture ?? style.textures[0]) as 'straight' | 'wavy' | 'curly' | 'coily'
                   }
                   seed={style.key}
                   size={76}
-                  label={`${style.name}, illustration`}
+                  label={`${style.name}, schematic illustration`}
                 />
                 <View style={{ flex: 1, marginLeft: SPACE.md }}>
                   <View style={styles.rowBetween}>

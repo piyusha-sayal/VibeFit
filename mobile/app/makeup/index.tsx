@@ -4,11 +4,44 @@ import { useRouter } from 'expo-router';
 
 import { Card, Chip, ErrorState, LoadingState, SectionHeader, Txt } from '../../components/ds';
 import { FaceFigure, INSPIRATION_NOTE } from '../../components/visual';
+import type { BlushPlacement, LinerStyle } from '../../components/visual/shapes';
 import { SPACE } from '../../constants/theme';
 import { useAesthetics, useFaceProfile } from '../../hooks/useFace';
 import { useTheme } from '../../theme/ThemeProvider';
 
 /** Which zones an aesthetic actually emphasises, for the illustration. */
+/** Where the blush sits, per aesthetic. A swatch shows the colour; it cannot
+    show that a Korean gradient sits on the apples and full glam sits along the
+    bone. */
+const BLUSH: Record<string, BlushPlacement> = {
+  natural: 'apples',
+  clean_girl: 'apples',
+  glass_skin: 'apples',
+  korean_gradient: 'apples',
+  soft_glam: 'cheekbone',
+  full_glam: 'cheekbone',
+  indian_bridal: 'draped',
+  festive_indian: 'draped',
+  monochrome: 'sunburst',
+  editorial: 'draped',
+};
+
+/** The liner shape, which is the difference between smokey and soft glam. */
+const LINER: Record<string, LinerStyle> = {
+  no_makeup: 'none',
+  natural: 'tightline',
+  clean_girl: 'tightline',
+  glass_skin: 'none',
+  korean_gradient: 'tightline',
+  soft_glam: 'winged',
+  full_glam: 'winged',
+  indian_bridal: 'winged',
+  festive_indian: 'winged',
+  smokey: 'smudged',
+  editorial: 'graphic',
+  monochrome: 'smudged',
+};
+
 const EMPHASIS: Record<string, ('eyes' | 'lips' | 'cheeks' | 'brows')[]> = {
   natural: ['cheeks'],
   no_makeup: ['brows'],
@@ -108,7 +141,9 @@ export default function MakeupStudioScreen() {
                   seed={aesthetic.key}
                   size={76}
                   emphasis={EMPHASIS[aesthetic.key] ?? ['lips']}
-                  label={`${aesthetic.name}, illustration`}
+                  blush={BLUSH[aesthetic.key] ?? 'none'}
+                  liner={LINER[aesthetic.key] ?? 'none'}
+                  label={`${aesthetic.name}, schematic illustration`}
                 />
                 <View style={{ flex: 1, marginLeft: SPACE.md }}>
                   <View style={styles.rowBetween}>
