@@ -262,7 +262,7 @@ The behaviour is right and the check is stale.
 | LOCAL VERIFIED | **Yes** — backend 456, mobile 355 / 24 suites, tsc and ESLint clean |
 | STAGING VERIFIED | n/a — no staging environment |
 | PRODUCTION VERIFIED | **Yes** — privacy 29/29, Phase 5 journey 22/22, onboarding 23/24 (one checker bug), `/health` and `/health/db` 200 |
-| ANDROID BUILD VERIFIED | See the build record below |
+| ANDROID BUILD VERIFIED | **Yes** — build `28702cc2-10ef-4e02-b5fa-f65d1faa429f` FINISHED from `cb13c25`. APK: https://expo.dev/artifacts/eas/O5XsgZKH7XkW2dpU9pz4pHjIaBQW0laF3ggMIUJZmWs.apk |
 | ANDROID EMULATOR VERIFIED | **No** |
 | ANDROID PHYSICAL DEVICE VERIFIED | **No** |
 | LEGAL REVIEW COMPLETE | **No** |
