@@ -410,12 +410,16 @@ export default function LookBuilderScreen() {
                       onRetry={() => commit('saved')} />
         ) : null}
 
-        <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.lg }}>
+        {/* Whether the look saved is the question a screen reader user could
+            not answer here: this line was visible and silent. */}
+        <Txt variant="caption" tone="subtle" live="polite" style={{ marginTop: SPACE.lg }}>
           {editing
             ? 'Editing a saved look. Nothing is written until you press save.'
             : draft.dirty ? 'Unsaved changes — kept as a draft.' : 'Draft saved.'}
         </Txt>
-        {busy ? <Txt variant="caption" tone="subtle">Updating the look…</Txt> : null}
+        {busy ? (
+          <Txt variant="caption" tone="subtle" live="polite">Updating the look…</Txt>
+        ) : null}
       </ScrollView>
 
       <ComponentSheet

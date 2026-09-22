@@ -219,3 +219,72 @@ reading the path strings would have caught them — the tests asserted the paths
 - Look composition on a real mobile viewport
 - Makeup diagrams were inspected as data only; the blush zones and liner paths
   are provably distinct, but were not rendered
+
+---
+
+# Per-screen accessibility and Settings — 22 September 2026
+
+## The finding that mattered
+
+`accessibilityLiveRegion` appeared **zero times across 79 screens**.
+
+Every error banner, every loading label and the Look Builder's own
+"Draft saved" line was visible text that a screen reader never spoke. The
+half of the audience that cannot see the change was the half never told about
+it. Part 7's questions "whether the selection changed" and "whether the look
+was saved" had no answer at all for a screen reader user.
+
+Fixed in the shared components, which is the right lever for a defect of this
+shape — one change reaches every screen:
+
+| Component | Change |
+|---|---|
+| `ErrorState` | `accessibilityLiveRegion="assertive"` + `role="alert"` — an error is the one thing worth interrupting for |
+| `LoadingState` | `accessibilityLiveRegion="polite"` and its label attached; `role="progressbar"` alone announced nothing useful |
+| `EmptyState` | title marked as a heading so it can be navigated to |
+| `Txt` | optional `live` prop, `polite` or `assertive` |
+| Look Builder | status line and "Updating the look…" now announce |
+
+`components/ds/announce.test.ts` pins all of it.
+
+## What was already correct
+
+The audit is not all bad news, and it would be dishonest to imply otherwise.
+
+| Screen / component | State |
+|---|---|
+| `ComponentSheet` (Look Builder) | `accessibilityViewIsModal`, `onRequestClose`, labelled close control, header role — **a screen reader user can understand and leave the sheet** |
+| `OptionRow` | `role="button"`, `accessibilityState={{ selected }}`, named label — which alternative is selected is conveyed |
+| `ComponentRow` | Change control labelled with the component it edits ("Change hair") |
+| `Swatch` | name + hex label, tick mark, `MIN_TOUCH` floor, hint — selection is not colour alone |
+| `Chip` | tick as well as tint, selected state |
+| Onboarding | progress bar with "Step 3 of 5", skip hint, labelled select cards |
+
+## Settings — verified against production, not by reading handlers
+
+14/14 with a disposable account that deleted itself:
+
+| Control | Persistence | Verified |
+|---|---|---|
+| Theme (light/dark/system) | `user_settings.theme` | Written, re-read in a fresh request |
+| Reduced motion | `user_settings.reduced_motion` | Written and re-read |
+| Country / region | `user_settings.country` | Written and re-read |
+| Language | `user_settings.language` | Written and re-read |
+| Invalid theme | — | **422, and the stored value is unchanged** |
+| Photograph retention | `/privacy/consent` | **409**, correctly refused |
+| Photograph reuse | via `privacy_service` | Cannot be granted — bypass closed |
+| Photograph deletion | `/privacy/photos` | 200 |
+| Data export | `/privacy/export` | 1243-byte document, `Content-Disposition` present, **no password hash** |
+| Profile | `/auth/me` | Correct account |
+| Account deletion | `/privacy/delete-account` | 200, and access **401** afterwards |
+
+## Still device-dependent, and not claimed
+
+- **TalkBack.** Nothing here was tested with a screen reader. A live region
+  attribute is necessary, not sufficient — whether Android announces it at the
+  right moment needs a real TalkBack session.
+- **Text scaling.** No layout was observed at a large font size.
+- **Touch targets in practice.** `MIN_TOUCH` is applied in shared components;
+  whether every screen honours it at real density is unobserved.
+- **Focus order.** Cannot be established without a device.
+- **Runtime performance.** No measurement of any kind was taken this session.

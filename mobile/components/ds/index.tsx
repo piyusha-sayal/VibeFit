@@ -30,12 +30,19 @@ interface TxtProps {
   style?: TextStyle | TextStyle[];
   numberOfLines?: number;
   accessibilityRole?: 'header' | 'text' | 'link';
+  /**
+   * Announce this text when it changes. 'polite' waits for a pause, which is
+   * right for a status line; 'assertive' interrupts, which is for errors.
+   */
+  live?: 'polite' | 'assertive';
+  accessibilityLabel?: string;
   onPress?: () => void;
 }
 
 export function Txt({
   children, variant = 'body', tone = 'default', serif = false,
-  weight = 'regular', style, numberOfLines, accessibilityRole, onPress,
+  weight = 'regular', style, numberOfLines, accessibilityRole, live,
+  accessibilityLabel, onPress,
 }: TxtProps) {
   const { colors } = useTheme();
   const toneColor = {
@@ -53,6 +60,8 @@ export function Txt({
   return (
     <Text
       accessibilityRole={onPress ? 'link' : accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityLiveRegion={live}
       onPress={onPress}
       numberOfLines={numberOfLines}
       style={[TYPE[variant], { color: toneColor, fontFamily: family }, style]}
@@ -224,7 +233,12 @@ export function SectionHeader({
 export function LoadingState({ label = 'Loading…' }: { label?: string }) {
   const { colors } = useTheme();
   return (
-    <View accessibilityRole="progressbar" style={styles.state}>
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityLiveRegion="polite"
+      style={styles.state}
+    >
       <ActivityIndicator color={colors.gold} />
       <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.md }}>{label}</Txt>
     </View>
@@ -236,7 +250,8 @@ export function EmptyState({
 }: { title: string; body: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <View style={styles.state}>
-      <Txt variant="heading" serif style={{ textAlign: 'center' }}>{title}</Txt>
+      <Txt variant="heading" serif accessibilityRole="header"
+           style={{ textAlign: 'center' }}>{title}</Txt>
       <Txt variant="bodySm" tone="muted" style={{ textAlign: 'center', marginTop: SPACE.sm }}>{body}</Txt>
       {actionLabel && onAction ? (
         <Button label={actionLabel} onPress={onAction} style={{ marginTop: SPACE.lg, alignSelf: 'center' }} />
@@ -250,7 +265,13 @@ export function ErrorState({
 }: { message: string; onRetry?: () => void }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.state, { backgroundColor: colors.dangerSoft, borderRadius: RADIUS.md }]}>
+    <View
+      style={[styles.state, { backgroundColor: colors.dangerSoft, borderRadius: RADIUS.md }]}
+      // Assertive: an error is the one thing worth interrupting for, and
+      // until now it was silent — visible text a screen reader never spoke.
+      accessibilityLiveRegion="assertive"
+      accessibilityRole="alert"
+    >
       <Txt variant="bodySm" tone="danger" style={{ textAlign: 'center' }}>{message}</Txt>
       {onRetry ? (
         <Button label="Try again" variant="secondary" onPress={onRetry} style={{ marginTop: SPACE.md }} />

@@ -367,3 +367,61 @@ the method are in `docs/QUALITY_AUDIT.md`.
 | ANDROID EMULATOR VERIFIED | **No** |
 | ANDROID PHYSICAL DEVICE VERIFIED | **No** |
 | LEGAL REVIEW COMPLETE | **No** |
+
+---
+
+## Release status — 22 September 2026, end of Phase 6 P2
+
+### The release candidate
+
+| | |
+|---|---|
+| Build | `97e60b64-d07e-42a7-8cb8-84690b6353bf` — **FINISHED** |
+| Source commit | **`e36691a`** |
+| APK | https://expo.dev/artifacts/eas/P4B8qUNJ4K8DrHRcoSblkGpij3nZHRCEAI6yIdQzvk8.apk |
+| Package | `com.vibefit.app`, profile `preview` |
+
+Contains the twelve migrated screens, the shared primitives, the hair
+silhouettes and eight fringes, the makeup diagrams, the Indian garments
+**including the corrected saree, sharara and blunt bob**, the updated
+LookComposition and the settings-consent fix.
+
+It does **not** contain the accessibility announcements added after it was
+built. No new build was started, because this one succeeded.
+
+### Verified this session
+
+- Settings-consent bypass closed **in production** — 11/11
+- Settings persistence **in production** — 14/14, including that a rejected
+  theme leaves the stored value untouched and that the export carries no
+  password hash
+- Accessibility: `accessibilityLiveRegion` was used **zero times** in 79
+  screens; errors, loading states and the Look Builder's save status now
+  announce
+
+| | Backend | Mobile |
+|---|---|---|
+| Tests | **461** | **377 / 26 suites** |
+
+### Labels
+
+| Label | State |
+|---|---|
+| LOCAL VERIFIED | **Yes** — 461 backend, 377 mobile, tsc and ESLint clean |
+| STAGING VERIFIED | n/a — no staging environment |
+| PRODUCTION VERIFIED | **Yes** — consent 11/11, settings 14/14, privacy 29/29, Phase 5 journey 22/22 |
+| ANDROID BUILD VERIFIED | **Yes** — `e36691a` |
+| ANDROID EMULATOR VERIFIED | **No** |
+| ANDROID PHYSICAL DEVICE VERIFIED | **No** |
+| LEGAL REVIEW COMPLETE | **No** |
+
+### Blockers
+
+1. **No device or emulator testing, ever.** This phase is the argument for it:
+   three illustration defects survived the type checker and the whole test
+   suite and only appeared once the shapes were rendered.
+2. **No TalkBack session.** The live regions are necessary, not sufficient.
+3. No runtime performance measurement of any kind.
+4. No independent legal review.
+5. S3 deletion unexercised — no bucket is configured.
+6. `GET /passport` transient unresolved.
