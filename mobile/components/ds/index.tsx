@@ -15,6 +15,7 @@ import {
 import { FONTS } from '../../constants/fonts';
 import { AccentKey, HIT_SLOP, MIN_TOUCH, RADIUS, SPACE, TYPE, accentPair } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
+import { inkOn } from '../../utils/contrast';
 
 // ---------------------------------------------------------------- typography
 
@@ -284,25 +285,43 @@ interface SwatchProps {
 
 export function Swatch({ hex, name, size = 56, selected, onPress }: SwatchProps) {
   const { colors } = useTheme();
+  // A swatch below the shared minimum is a dot to aim at.
+  const tile = Math.max(size, MIN_TOUCH);
+  // Drawn in whatever this swatch can carry: a fixed tick vanishes on half a
+  // palette — white on Ivory, black on Espresso.
+  const ink = inkOn(hex);
   return (
     <TouchableOpacity
       accessibilityRole={onPress ? 'button' : 'image'}
+      // Name and hex both: "Coral Pink" alone is no use to someone who cannot
+      // see it, and #ff9e8a alone is no use to anyone.
       accessibilityLabel={name ? `${name}, ${hex}` : hex}
+      accessibilityHint={onPress ? 'Selects this colour' : undefined}
       accessibilityState={{ selected: !!selected }}
       disabled={!onPress}
       onPress={onPress}
-      style={{ alignItems: 'center', width: size + SPACE.md }}
+      style={{ alignItems: 'center', width: tile + SPACE.md }}
     >
       <View
         style={{
-          width: size,
-          height: size,
+          width: tile,
+          height: tile,
           borderRadius: RADIUS.md,
           backgroundColor: hex,
           borderWidth: selected ? 2.5 : StyleSheet.hairlineWidth * 2,
           borderColor: selected ? colors.text : colors.borderStrong,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-      />
+      >
+        {/* Selection is a shape as well as a border, so it survives low vision
+            and a greyscale screenshot alike. */}
+        {selected ? (
+          <Txt variant="body" weight="semibold" style={{ color: ink, lineHeight: 20 }}>
+            {'✓'}
+          </Txt>
+        ) : null}
+      </View>
       {name ? (
         <Txt variant="caption" tone="muted" numberOfLines={2} style={{ textAlign: 'center', marginTop: SPACE.xs }}>
           {name}

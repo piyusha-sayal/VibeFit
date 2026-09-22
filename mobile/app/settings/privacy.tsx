@@ -186,6 +186,12 @@ export default function PrivacyScreen() {
           <Txt variant="caption" tone="subtle">
             {consent?.retentionNote || photos?.retentionNote}
           </Txt>
+          <Button
+            label="Read the privacy policy"
+            variant="ghost"
+            style={{ marginTop: SPACE.sm }}
+            onPress={() => router.push('/settings/legal?doc=privacy' as never)}
+          />
         </Card>
       </View>
 

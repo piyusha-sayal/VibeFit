@@ -185,6 +185,18 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <SectionHeader title="Help" />
         <Button label="Photo guidelines and FAQ" variant="secondary" onPress={() => router.push('/settings/help' as never)} />
+        <Button
+          label="Privacy policy"
+          variant="ghost"
+          style={{ marginTop: SPACE.sm }}
+          onPress={() => router.push('/settings/legal?doc=privacy' as never)}
+        />
+        <Button
+          label="Terms of service"
+          variant="ghost"
+          style={{ marginTop: SPACE.xs }}
+          onPress={() => router.push('/settings/legal?doc=terms' as never)}
+        />
       </View>
 
       {update.isError ? (
