@@ -306,7 +306,7 @@ Full findings in **`docs/QUALITY_AUDIT.md`**. Summary:
 | LOCAL VERIFIED | **Yes** — backend 461, mobile 368, tsc and ESLint clean |
 | STAGING VERIFIED | n/a |
 | PRODUCTION VERIFIED | **Yes** for the API as deployed; the settings-consent fix is **not yet deployed** |
-| ANDROID BUILD VERIFIED | **Not yet** — build `a16b0a05-735e-4d92-89c1-e468d37eef6d` from `a26b5fb` was still IN_QUEUE when this session ended. The last FINISHED APK is `28702cc2` from `f5032ca`, which predates the visual and settings-consent work. |
+| ANDROID BUILD VERIFIED | **Yes** — build `a16b0a05-735e-4d92-89c1-e468d37eef6d` FINISHED from `a26b5fb`. APK: https://expo.dev/artifacts/eas/zt-oul1Ebc7L88cywaoCTJPXWmIYFUSHa9C9LYqJcME.apk — contains the twelve migrated screens, the shared primitives, the hair silhouettes, the eight fringes, the makeup diagrams, the Indian garments and the settings-consent fix. It **predates** the saree/sharara/blunt corrections in `e36691a`. |
 | ANDROID EMULATOR VERIFIED | **No** |
 | ANDROID PHYSICAL DEVICE VERIFIED | **No** |
 | LEGAL REVIEW COMPLETE | **No** |
@@ -322,3 +322,48 @@ Full findings in **`docs/QUALITY_AUDIT.md`**. Summary:
 5. No independent legal review.
 6. S3 deletion unexercised; no bucket configured.
 7. `GET /passport` transient unresolved.
+
+---
+
+## Phase 6 P2 — release candidate verification (22 September 2026)
+
+### The settings-consent fix is live in production
+
+Verified against the live API with disposable accounts, **11/11**:
+
+| Check | Result |
+|---|---|
+| `PATCH /passport/settings` with `photo_reuse_consent: true` | 200, and **records nothing** |
+| `reuseEffective` afterwards | false |
+| `PATCH /privacy/consent` retention | **409** |
+| A refused update leaves other consent untouched | yes |
+| Other settings still save alongside a refused consent | yes (`theme` persisted) |
+| Withdrawal via either route | 200 |
+| Passport and photo listing still answer | 200 |
+
+No route reaches `photo_reuse_consent` without the rule. That was the defect,
+and it is closed in production, not only locally.
+
+### Visual acceptance
+
+Three defects found **by rendering the shapes**, which nothing else caught —
+the type checker was happy and the tests asserted only that paths differed:
+the saree drew as an undifferentiated column, the sharara as an ordinary
+skirt, the blunt bob as a box. All three corrected in `e36691a`. Details and
+the method are in `docs/QUALITY_AUDIT.md`.
+
+| | Backend | Mobile |
+|---|---|---|
+| Tests | **461** | **368 / 25 suites** |
+
+### Labels
+
+| Label | State |
+|---|---|
+| LOCAL VERIFIED | **Yes** |
+| STAGING VERIFIED | n/a |
+| PRODUCTION VERIFIED | **Yes** — including the consent fix, 11/11 |
+| ANDROID BUILD VERIFIED | **Yes** — `a26b5fb`; a further build for `e36691a` was submitted, not yet finished |
+| ANDROID EMULATOR VERIFIED | **No** |
+| ANDROID PHYSICAL DEVICE VERIFIED | **No** |
+| LEGAL REVIEW COMPLETE | **No** |
