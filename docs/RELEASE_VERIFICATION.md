@@ -111,13 +111,59 @@ into a neighbouring pass.
 
 ### Current release
 
+Source: `12e9540` on `main`, which contains `c2497df` and everything before it.
+
 | Label | Status |
 |---|---|
-| LOCAL VERIFIED | **Yes** — backend 407 passed (incl. 8 startup config tests), mobile 117 passed across 15 suites, `tsc --noEmit` clean, ESLint clean |
-| STAGING VERIFIED | **Not verified** — no Docker daemon on this workstation, so the image was never run as a container |
-| PRODUCTION VERIFIED | **Yes**, behaviour consistent with `58c70a7` — see below |
-| ANDROID BUILD VERIFIED | **Yes** — build FINISHED, installs, launches, process survives; API base URL correct; no API-surface change since the build commit |
-| ANDROID DEVICE VERIFIED | **Not verified** — no physical device testing has been performed |
+| LOCAL VERIFIED | **Yes** — backend 461 passed, mobile 377 passed across 26 suites, `tsc --noEmit` clean, ESLint clean |
+| STAGING VERIFIED | **Not verified** — no Docker daemon on this workstation, so the image has never been run as a container |
+| PRODUCTION VERIFIED | **Yes** — the settings-consent guard and the privacy rules were exercised against the live service; latency measured, see below |
+| ANDROID BUILD VERIFIED | **Yes** — see the build record below |
+| ANDROID EMULATOR VERIFIED | **Not verified** — no emulator session has been run |
+| ANDROID PHYSICAL DEVICE VERIFIED | **Not verified** — the application has never been installed on a phone |
+| LEGAL REVIEW COMPLETE | **Not verified** — no independent legal review has taken place, and none is claimed |
+
+**Still open, and not closed by this release**
+
+- `GET /passport` returned a single unexplained transient in an earlier
+  session. It has not recurred and it has not been explained. It stays open.
+- The S3 deletion path has never run against a bucket, because no bucket is
+  configured. The code path is covered by tests with a stubbed client only.
+- No frame rate, device memory, battery or on-device startup figure appears
+  anywhere in this document. None has been measured.
+
+**Measured latency, production, 2026-09-22.** Method: one
+disposable account, the service already awake, eight samples per endpoint from
+a workstation in India, median and worst reported. This is round-trip time
+including the network and Render's free shared CPU. It is not a device
+measurement and it is not a cold start.
+
+| endpoint | median | worst of 8 |
+|---|---|---|
+| `GET /passport` (before the fix below) | 1356 ms | 1798 ms |
+| `GET /looks/saved` | 618 ms | 638 ms |
+| `GET /privacy/consent` | 630 ms | 663 ms |
+| `GET /passport/settings` | 635 ms | 1072 ms |
+| `GET /looks/drafts` | 641 ms | 788 ms |
+| `POST /looks/generate` (3 looks) | 1084 ms | 1468 ms |
+
+`GET /passport/settings` runs one query and `GET /passport` ran fifteen, so the
+722 ms between them is about 52 ms per database round-trip. Eight of those
+fifteen were independent `COUNT(*)` queries; `12e9540` collapses them into one
+`SELECT`, taking the passport from fifteen round-trips to eight.
+
+**After the fix, measured the same way once `12e9540` was live:**
+
+| endpoint | median | worst of 8 |
+|---|---|---|
+| `GET /passport` | **932 ms** | 1162 ms |
+| `GET /passport/settings` (same-session baseline) | 595 ms | — |
+
+The gap above the one-query baseline fell from 722 ms to 338 ms: seven fewer
+round-trips at about 55 ms each, which is what the earlier arithmetic
+predicted. The homepage's first request is 424 ms faster. Nothing about the
+returned payload changed — the same eight counts are computed, and the
+passport test suite passes unchanged.
 
 **PRODUCTION VERIFIED, in detail.** Measured against
 `https://vibefit-api-awx9.onrender.com`:
@@ -275,3 +321,70 @@ Nobody has run MyLookFit on a phone. Until someone does, this is the list.
 Crashes · frozen screens · cut-off text · horizontal scrolling · wrong colours
 for the chosen theme · buttons that do nothing · failed saves · unexpected
 logout · lost drafts.
+
+---
+
+## What to look at hardest on the phone
+
+These are the specific things changed since the last build, and the things a
+test suite cannot judge. Each one wants a screenshot, pass or fail.
+
+**Illustrations that were drawn wrong and redrawn**
+
+22. **Saree** — the pallu must fall diagonally across one shoulder and the
+    pleats must read as separate vertical folds at the front. It previously
+    rendered as a plain column with no pallu and no pleats.
+23. **Sharara** — two clearly separate flared legs below the tunic. It
+    previously rendered as a single skirt with no leg split.
+24. **Blunt bob** — a straight, level cut ending at the jaw. It previously
+    rendered as a rounded helmet with no blunt edge.
+25. **The other Indian garments** — lehenga, kurta, anarkali, dhoti, sherwani:
+    each should be recognisable as itself, not as a generic dress.
+
+**Hairstyles**
+
+26. Open several cuts in the Hair Studio in turn. Different names must not
+    produce the same picture. Short, medium and long must differ in length.
+27. Fringes: blunt, side-swept, curtain and wispy must be distinguishable.
+
+**Makeup**
+
+28. Blush placement diagrams — apples, cheekbone, draped and sunburst must sit
+    in visibly different places on the face.
+29. Liner diagrams — tightline, winged, graphic and smudged must differ.
+
+**Look composition**
+
+30. Generate a complete look. The pieces must sit together as an outfit, at a
+    sensible scale, without overlap or floating parts.
+31. Replace one component. Only that component changes.
+
+**Screen reader — requires a real TalkBack session**
+
+32. Turn TalkBack on. Trigger an error (aeroplane mode, then load a screen).
+    The error must be **spoken**, not merely displayed.
+33. Save a look in the Look Builder. "Draft saved" must be spoken.
+34. A loading state must announce itself rather than going silent.
+35. Headings must be reachable by heading navigation.
+
+    Nothing in this repository has confirmed any of items 32–35. They were
+    fixed at the source level — `accessibilityLiveRegion` was absent from all
+    79 screens and is now set on the shared error, loading and empty states —
+    but whether TalkBack speaks them at the right moment is a device question,
+    and no device has answered it.
+
+**Layout under stress**
+
+36. Every touch target at least 44×44 dp. Small icon buttons are the risk.
+37. System text size at maximum: no clipped, overlapped or cut-off text.
+38. Smallest phone you have: no horizontal scrolling on any screen.
+
+**Known scaling limit, not yet a defect**
+
+39. Save more than about fifty looks, then open the Beauty Passport. The list
+    renders inside a `ScrollView` rather than a `FlatList`, so every card
+    mounts at once, and `GET /looks/saved` has no pagination. Nothing has
+    measured where this becomes slow, and on the small collections tested it
+    is not visible. If the passport feels heavy with a large collection, this
+    is the reason.
+
