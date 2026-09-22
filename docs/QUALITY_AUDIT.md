@@ -150,3 +150,72 @@ saying what they used to claim. Neither was deleted.
   resolve to different path data. Whether the `blunt` outline reads as a blunt
   bob to a person needs eyes on a screen, and stays unverified until someone
   looks.
+
+---
+
+# Visual acceptance — 22 September 2026
+
+## How the shapes were actually looked at
+
+React Native cannot render in this environment and no SVG rasteriser is
+installed. So the path strings were read **out of the TypeScript source** —
+not retyped — parsed (M/L/Q/Z, quadratics flattened) and filled with PIL, then
+printed as text grids at roughly 60×40 so the geometry could be inspected
+directly.
+
+This shows the geometry, not the app: no theme colours, no strokes, no
+layering. It is enough to answer the question the tests cannot — *does a bob
+look like a bob* — and not enough to sign off typography, colour or spacing.
+Those still need a device.
+
+## Hair — accepted, with one correction
+
+| Style | Silhouette | Verdict |
+|---|---|---|
+| Buzz cut, crew cut, pixie | `cropped` | Sits above the ear, nothing below. Reads as short. **All three identical**, as documented |
+| Bob | `rounded` | Curved mass to the jaw. Distinct |
+| Blunt bob | `blunt` | **Was a defect** — see below |
+| Long layers, shag, wolf cut | `layered` | Stepped edges clearly visible |
+| Butterfly cut, curls, coils | `voluminous` | Width well away from the head |
+| Box braids, twists, locs | `braided` | Sections clearly divided |
+| V-cut, face-framing, fade | `tapered` | Narrows to a visible point |
+
+**Defect found and fixed:** `blunt` was square across the crown as well as the
+bottom (`M26 30 L26 96 L94 96 L94 30 ...`). Rendered, it read as a helmet or a
+box rather than a haircut. Now rounded over the crown and hard along the
+bottom, which is what makes a blunt bob blunt.
+
+## Indian garments — two defects found and fixed
+
+| Garment | Verdict |
+|---|---|
+| Lehenga | **Accepted** — cropped blouse, visible midriff gap, full flared skirt |
+| Kurta | **Accepted** — long straight tunic with two narrow legs below; the legs are what stop it reading as a Western shift |
+| Anarkali | **Accepted** — fitted to a high waist then a much wider flare than the kurta |
+| Dhoti | **Accepted** — tapers to a point between the legs |
+| Sherwani | Accepted — long straight coat |
+| **Saree** | **FAILED, now fixed** |
+| **Sharara** | **FAILED, now fixed** |
+
+**Saree.** The pleats were written as zero-width lines (`M56 96 L56 176`)
+inside a fill-only path, so they did not render at all, and the pallu merged
+into the body. Rendered, a saree was an undifferentiated column —
+indistinguishable from a straight dress, which is the exact failure the
+previous fix was supposed to correct. The pleats are now filled wedges and the
+pallu is a separate panel with a visible gap.
+
+**Sharara.** The two legs met again one pixel below the split, so it rendered
+as an ordinary flared skirt. The split now runs the full length.
+
+Both were only visible by rendering. Neither the type checker, the tests, nor
+reading the path strings would have caught them — the tests asserted the paths
+*differed*, and they did.
+
+## What visual acceptance still does not cover
+
+- Colour, contrast and typography in either theme
+- How the figures look at real size on a phone screen
+- Whether the labels sit correctly beside them
+- Look composition on a real mobile viewport
+- Makeup diagrams were inspected as data only; the blush zones and liner paths
+  are provably distinct, but were not rendered

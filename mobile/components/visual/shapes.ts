@@ -28,7 +28,9 @@ export const HAIR_SILHOUETTES: Record<HairSilhouette, string> = {
   // Ear-length with weight at the jaw: pixie grown out, French bob.
   rounded: 'M26 74 Q22 28 60 24 Q98 28 94 74 Q84 50 60 46 Q36 50 26 74 Z',
   // A hard horizontal edge: blunt bob, blunt cut, U-cut.
-  blunt: 'M26 30 L26 96 L94 96 L94 30 Q60 18 26 30 Z',
+  // Rounded over the crown, hard along the bottom. The first version was
+  // square at the top as well, which read as a helmet rather than a cut.
+  blunt: 'M26 96 L26 56 Q26 24 60 22 Q94 24 94 56 L94 96 Z',
   // Stepped outline: shag, wolf cut, butterfly, long layers.
   layered: 'M24 104 Q18 30 60 24 Q102 30 96 104 L86 78 L90 96 L76 62 '
     + 'Q60 50 44 62 L30 96 L34 78 Z',

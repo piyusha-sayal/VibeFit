@@ -50,8 +50,13 @@ const SHAPES: Record<string, string> = {
 // wardrobes, whatever its item list says.
 Object.assign(SHAPES, {
   // Pleats at the front, pallu falling from the left shoulder.
-  saree: 'M40 60 L80 60 L86 176 L34 176 Z M56 96 L56 176 M62 96 L62 176 '
-    + 'M68 96 L68 176 M40 60 Q24 104 30 168 L44 168 Q36 106 48 66 Z',
+  // Pleats as filled wedges rather than hairlines — as lines they were
+  // invisible at the size this renders, so a saree read as a plain column.
+  saree: 'M44 60 L78 60 L84 176 L38 176 Z '
+    + 'M54 104 L58 104 L57 176 L52 176 Z '
+    + 'M62 104 L66 104 L66 176 L61 176 Z '
+    + 'M70 104 L74 104 L75 176 L70 176 Z '
+    + 'M44 60 L58 60 Q34 104 32 172 L18 172 Q22 104 44 60 Z',
   // Fitted blouse, bare midriff, heavy flared skirt.
   lehenga: 'M42 58 L78 58 L80 88 L40 88 Z M44 106 L76 106 L104 178 L16 178 Z',
   // Straight tunic to mid-calf over narrow trousers.
@@ -60,8 +65,10 @@ Object.assign(SHAPES, {
   // Fitted to a high waist, then a full circular flare.
   anarkali: 'M42 58 L78 58 L76 92 L44 92 Z M44 92 L76 92 L106 180 L14 180 Z',
   // Wide gathered trousers, each leg full.
-  sharara: 'M40 58 L80 58 L80 102 L40 102 Z M40 102 L58 102 L64 180 L18 180 Z '
-    + 'M62 102 L80 102 L102 180 L56 180 Z',
+  // The split has to survive being drawn small, or a sharara is a skirt.
+  sharara: 'M40 58 L80 58 L80 100 L40 100 Z '
+    + 'M40 100 L57 100 L56 142 L52 180 L14 180 Z '
+    + 'M63 100 L80 100 L68 142 L64 180 L106 180 Z',
   // Draped and wrapped between the legs.
   dhoti: 'M38 60 L82 60 L84 112 L36 112 Z M36 112 L84 112 Q78 148 66 170 '
     + 'L54 170 Q42 148 36 112 Z',
