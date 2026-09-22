@@ -224,5 +224,10 @@ class UserSettings(Base):
     language: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # Photographs are only reused for a second analysis with this set.
     photo_reuse_consent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Off by default: the analysis keeps its results, the photograph itself is
+    # removed once the scan finishes. Turning it on is what makes a photograph
+    # outlive the request that carried it.
+    photo_retention_consent: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

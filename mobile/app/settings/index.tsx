@@ -75,6 +75,12 @@ export default function SettingsScreen() {
             ])
           }
         />
+        <Button
+          label="Delete account"
+          variant="ghost"
+          style={{ marginTop: SPACE.sm }}
+          onPress={() => router.push('/settings/delete-account' as never)}
+        />
       </View>
 
       {/* --------------------------------------------------------- appearance */}
@@ -163,9 +169,14 @@ export default function SettingsScreen() {
           </Txt>
         </Card>
         <Button
-          label="Manage analyses and photos"
-          variant="secondary"
+          label="Photographs, consent and your data"
           style={{ marginTop: SPACE.md }}
+          onPress={() => router.push('/settings/privacy' as never)}
+        />
+        <Button
+          label="Manage analyses"
+          variant="secondary"
+          style={{ marginTop: SPACE.sm }}
           onPress={() => router.push('/(tabs)/results' as never)}
         />
       </View>

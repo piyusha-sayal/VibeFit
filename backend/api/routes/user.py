@@ -51,9 +51,16 @@ async def change_password(
     await db.flush()
 
 
-@router.delete("/me", status_code=204)
-async def delete_account(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    await db.delete(current_user)
+@router.delete("/me", status_code=410, include_in_schema=False)
+async def delete_account_removed():
+    """Deliberately gone.
+
+    This used to delete an account on a single unauthenticated-in-spirit call:
+    no confirmation, no reauthentication, and no removal of stored
+    photographs. Replaced by POST /privacy/delete-account, which requires
+    both and cleans up object storage.
+    """
+    raise HTTPException(
+        status_code=410,
+        detail="Use POST /privacy/delete-account, which confirms and "
+               "reauthenticates before deleting.")

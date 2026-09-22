@@ -17,6 +17,7 @@ from .cache_service import CacheService
 from rules.engine import build_rule_recommendations, merge_recommendations
 from .progress import build_progress
 from .aggregate import aggregate_analysis
+from . import photo_storage
 
 
 # Analysis runs as an in-process background task, so a server restart mid-run
@@ -84,6 +85,25 @@ class AnalysisService:
         await self._cache.set(img_key, result, ttl=3600)
         return result
 
+    async def _enforce_retention(self, analysis: Analysis, user_id: str) -> None:
+        """Delete the photograph unless the user asked us to keep it.
+
+        Not keeping it is the default. The analysis is finished by this point
+        and its results are on the row, so the image has no further purpose
+        unless retention consent says it does. Without this, `photo_reuse_consent`
+        was a switch on a screen that changed nothing in the bucket.
+        """
+        from models.beauty import UserSettings
+
+        settings_row = await self._db.get(UserSettings, user_id)
+        if settings_row is not None and settings_row.photo_retention_consent:
+            return
+        if not photo_storage.is_stored(analysis.image_url):
+            return
+        await photo_storage.delete(analysis.image_url)
+        analysis.image_url = None
+        analysis.photo_deleted_at = datetime.now(timezone.utc)
+
     async def _finalize(self, analysis: Analysis, ml: dict, user_id: str) -> Analysis:
         """Store ML blocks + derived recommendations on the analysis row."""
         analysis.face_analysis = ml.get("face")
@@ -103,6 +123,8 @@ class AnalysisService:
                 llm_recs = []
         for r in merge_recommendations(rule_recs, llm_recs):
             self._db.add(Recommendation(analysis_id=analysis.id, **r))
+
+        await self._enforce_retention(analysis, user_id)
 
         await self._db.flush()
         # Load the recommendations relationship now (within the async greenlet)

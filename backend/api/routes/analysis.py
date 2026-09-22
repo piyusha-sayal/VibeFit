@@ -1,13 +1,13 @@
 import uuid
 import asyncio
 import logging
-import boto3
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 import io
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db, get_session_factory
 from core.config import settings
+from services import photo_storage
 from models.user import User
 from schemas.analysis import AnalysisOut, AnalysisListItem
 from services.analysis_service import AnalysisService
@@ -26,57 +26,6 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
-_s3_client = None
-
-
-def _get_s3():
-    """Build the boto3 client once and reuse it (clients are thread-safe).
-
-    Works against AWS S3 or any S3-compatible store. For Cloudflare R2, set
-    S3_ENDPOINT_URL to https://<account-id>.r2.cloudflarestorage.com and
-    AWS_REGION=auto.
-    """
-    global _s3_client
-    if _s3_client is None:
-        _s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
-            region_name=settings.aws_region,
-            endpoint_url=settings.s3_endpoint_url or None,
-        )
-    return _s3_client
-
-
-def _public_url(key: str) -> str:
-    """R2's public URL (r2.dev subdomain or custom domain) is unrelated to its
-    API endpoint, so it has to be configured explicitly; fall back to the
-    conventional AWS S3 virtual-host form."""
-    if settings.s3_public_base_url:
-        return f"{settings.s3_public_base_url.rstrip('/')}/{key}"
-    return f"https://{settings.aws_s3_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
-
-
-async def _upload_to_s3(data: bytes, content_type: str) -> str:
-    """Store the image and return its URL.
-
-    Without credentials this is a no-op returning a placeholder: the image is
-    still analyzed in memory, it just is not retained anywhere.
-    """
-    if not settings.aws_access_key_id:
-        return f"local://{uuid.uuid4()}"
-    key = f"uploads/{uuid.uuid4()}"
-    try:
-        await asyncio.to_thread(
-            _get_s3().put_object,
-            Bucket=settings.aws_s3_bucket, Key=key, Body=data, ContentType=content_type,
-        )
-    except Exception:
-        # Storage is not on the critical path — the analysis only needs the
-        # bytes in memory. Losing the stored copy must not fail the scan.
-        logger.exception("image upload failed; continuing without a stored copy")
-        return f"local://{uuid.uuid4()}"
-    return _public_url(key)
 
 
 async def _run_analysis_job(
@@ -127,7 +76,7 @@ async def upload_and_analyze(
     if len(data) > MAX_IMAGE_BYTES:
         raise HTTPException(status_code=413, detail="Image exceeds 10 MB limit")
 
-    image_url = await _upload_to_s3(data, file.content_type or "image/jpeg")
+    image_url = await photo_storage.store(data, file.content_type or "image/jpeg")
     svc = AnalysisService(db, cache, ai)
     analysis = await svc.create_pending(current_user.id, image_url)
     background.add_task(_run_analysis_job, session_factory, cache, ai,
@@ -162,7 +111,7 @@ async def upload_multi_and_analyze(
             raise HTTPException(status_code=413, detail="Image exceeds 10 MB limit")
         images.append(data)
         if not first_url:
-            first_url = await _upload_to_s3(data, f.content_type or "image/jpeg")
+            first_url = await photo_storage.store(data, f.content_type or "image/jpeg")
 
     svc = AnalysisService(db, cache, ai)
     analysis = await svc.create_pending(current_user.id, first_url)
