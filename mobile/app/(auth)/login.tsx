@@ -14,6 +14,7 @@ import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { isGuestLoginEnabled } from '../../constants/flags';
 import { FONTS } from '../../constants/fonts';
 import { Logo } from '../../components/ds/Logo';
+import { WakingBanner } from '../../components/ds/WakingBanner';
 
 export default function LoginScreen() {
   const { C, GRADIENTS } = useLegacyTheme();
@@ -56,6 +57,12 @@ export default function LoginScreen() {
 
           <Text style={styles.headline}>Welcome back</Text>
           <Text style={styles.sub}>Sign in to your style profile</Text>
+
+          {/* A sign-in that takes fifty seconds because the free plan was
+              asleep is indistinguishable from one that has hung. The banner
+              already existed; it was only mounted on the home screen, which
+              is the screen a user stuck at sign-in has not reached. */}
+          <WakingBanner />
 
           {(error || googleError) ? (
             <View style={styles.errorBox}>
