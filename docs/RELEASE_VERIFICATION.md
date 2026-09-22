@@ -123,6 +123,38 @@ Source: `12e9540` on `main`, which contains `c2497df` and everything before it.
 | ANDROID PHYSICAL DEVICE VERIFIED | **Not verified** — the application has never been installed on a phone |
 | LEGAL REVIEW COMPLETE | **Not verified** — no independent legal review has taken place, and none is claimed |
 
+**The styling rules are not a cost.** Method: the rules imported directly, no
+HTTP and no database, the context built with the exact key set
+`build_look_context` produces; 200 iterations after a 20-iteration warm-up.
+This is CPU on a development workstation and says nothing about a phone.
+
+| call | median | worst |
+|---|---|---|
+| `look_composer.generate`, 3 looks (the default) | 2.92 ms | 10.45 ms |
+| `look_composer.generate`, 1 look | 0.56 ms | 1.47 ms |
+| `look_composer.generate`, 10 looks | 5.41 ms | 14.91 ms |
+| `build_color_report` | 0.01 ms | 0.02 ms |
+| `hair_rules`, one face shape | 0.001 ms | 0.001 ms |
+
+`POST /looks/generate` takes 1084 ms end to end and 2.92 ms of it is the
+styling engines. Round trips to Neon are essentially the whole cost of every
+request in this application; nothing is waiting on computation.
+
+**Requests per screen, and the autosave.** Counted by reading the hooks, not
+by instrumenting a device. The homepage issues three queries — passport,
+colour report, drafts. `usePassport` is used by four screens but they share
+one `queryKey`, so React Query fetches once and the other three read the
+cache; there is no duplicate passport fetching. The Look Builder's autosave is
+debounced at 1200 ms, fires only when the draft is dirty, and updates one row
+in place, so a burst of edits produces one write, not one per keystroke.
+
+One inefficiency was found and deliberately left alone: saving a draft calls
+`invalidateQueries(['passport'])`, and because `['passport','goals']` and
+`['passport','settings']` share that prefix, they are invalidated too. No
+request is made while those screens are unmounted, so the cost is two extra
+requests on returning to the passport after saving. Narrowing the key would
+save them at the risk of showing a stale count, which is the worse failure.
+
 **Still open, and not closed by this release**
 
 - `GET /passport` returned a single unexplained transient in an earlier
