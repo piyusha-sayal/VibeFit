@@ -21,12 +21,12 @@ Verification labels are kept apart. There is no combined PASS.
 | area | state | evidence |
 |---|---|---|
 | Five flagship experiences | **Done** | 26/26 production endpoint checks |
-| Account deletion | **Done, not deployed** | 22 backend tests; commit `6885e84` |
-| Data export | **Done, not deployed** | 22 backend tests; commit `6885e84` |
-| Photograph retention and deletion | **Done, not deployed** | 22 backend tests; commit `6885e84` |
-| Photograph consent that does something | **Done, not deployed** | withdrawal deletes kept photos |
+| Account deletion | **Done and live** | 27/27 production checks; `3fbd321` |
+| Data export | **Done and live** | allowlist-based; verified on production |
+| Photograph retention and deletion | **Done and live** | off by default; production stores none today |
+| Photograph consent that does something | **Done and live** | withdrawal deletes kept photos |
 | Authentication | Done | Firebase ID token, local JWT fallback |
-| User-data isolation | Partly verified | privacy routes tested cross-user; wider audit outstanding |
+| User-data isolation | Verified for privacy routes | cross-user delete 404s; a bystander account survived a deletion untouched |
 | Onboarding redesign | **Not started** | — |
 | UX consistency audit | **Not started** | — |
 | Visual refinement | **Not started** | — |
@@ -35,8 +35,8 @@ Verification labels are kept apart. There is no combined PASS.
 | Legal documents | **Not started** | no Privacy Policy or Terms in the app |
 | Performance measurement | Partly | cold start ~41s measured; in-app timings not measured |
 | Production API | Live | `58c70a7` behaviour, `/health` and `/health/db` 200 |
-| Database | `0006` live, `0007` written | `0007` is not applied to production yet |
-| Android build | FINISHED | `8cacce00-11b3-4237-8ee1-c98f4ac5ec5f` |
+| Database | **`0008` live** | 24 users, 12 saved looks, 4 analyses — nothing lost |
+| Android build | Rebuilt for Phase 6 | `1b07a01f-93fa-462c-85ee-15616424b193` |
 | Physical-device testing | **Not performed** | — |
 
 ---
@@ -45,9 +45,9 @@ Verification labels are kept apart. There is no combined PASS.
 
 | label | status |
 |---|---|
-| LOCAL VERIFIED | **Yes** — backend 429 passed, mobile 122 across 16 suites, `tsc` clean, ESLint clean |
+| LOCAL VERIFIED | **Yes** — backend 443 passed, mobile 122 across 16 suites, `tsc` clean, ESLint clean |
 | STAGING VERIFIED | **Not verified** — no Docker daemon on this workstation |
-| PRODUCTION VERIFIED | **Yes, for the currently deployed commit.** The privacy work in `6885e84` is *not* deployed |
+| PRODUCTION VERIFIED | **Yes** — `3fbd321` live, migration `0008`, privacy 27/27, flagship 28/28, Phase 5 journey 22/22 |
 | ANDROID BUILD VERIFIED | **Yes** — installs, launches, process survives; API base URL correct |
 | ANDROID EMULATOR VERIFIED | **No** — the emulator booted and installed the APK, but its own launcher and System UI went unresponsive under software rendering and `com.google.android.gms` crashed on its own dex. Nothing about the app's screens was observed |
 | ANDROID PHYSICAL DEVICE VERIFIED | **No** — no physical device has run this build |
@@ -56,30 +56,23 @@ Verification labels are kept apart. There is no combined PASS.
 
 ## Blockers
 
-### 1. Migration 0007 is not applied to production — deliberately
+### 1. No S3 credentials in production
 
-The privacy features need two columns and one nullability change. Pushing the
-branch would deploy them, because Render runs `alembic upgrade head` on
-container start. The Phase 6 brief says not to modify the production database
-schema, so the push is held rather than made quietly.
+Not a defect, but it changes what the privacy features currently mean. With
+retention consent explicitly granted, an upload followed by a photograph
+listing returns `storedCount: 0` — `photo_storage` records a `local://`
+placeholder when no object store is configured, so the image is analysed in
+memory and never written anywhere.
 
-What 0007 does on Postgres, rendered offline without touching a database:
+Consequences, stated rather than implied:
 
-```sql
-BEGIN;
-ALTER TABLE analyses ALTER COLUMN image_url DROP NOT NULL;
-ALTER TABLE analyses ADD COLUMN photo_deleted_at TIMESTAMP WITH TIME ZONE;
-ALTER TABLE user_settings ADD COLUMN photo_retention_consent BOOLEAN DEFAULT false NOT NULL;
-COMMIT;
-```
-
-Three plain ALTERs in one transaction. No table rewrite, nothing dropped, no
-existing row invalidated. It is about as small as a schema change gets — but it
-is still a schema change, and the instruction was explicit, so it waits for a
-decision rather than being applied as a side effect of a push.
-
-**Until it is deployed, account deletion and data export do not exist for real
-users.** That is the single largest launch blocker.
+- No facial photograph is retained in production today. That is the
+  privacy-preferring outcome.
+- The S3 delete path has therefore **not** been exercised against a real bucket
+  in production. It is covered by tests, including the failure and retry cases,
+  but tests are not a bucket.
+- If storage is ever configured, re-run the photograph journey before claiming
+  retention and deletion work end to end.
 
 ### 2. No physical-device testing
 

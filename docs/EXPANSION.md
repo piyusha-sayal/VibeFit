@@ -693,3 +693,130 @@ status code, and only one of them is the check being claimed.
 **Remaining risks.** The `GET /passport` transient is unresolved. The cold start
 is ~41s on a woken instance and unchanged in character. Which commit Render is
 running cannot be read from here. No physical-device testing has been performed.
+
+## Phase 6 P0: privacy, account lifecycle, and the deployment of 0007–0008
+
+Deployed 2026-09-22, commits `6885e84` … `3fbd321`.
+
+### What was missing
+
+Three capabilities a consumer app handling facial photographs has to have, and
+none of them worked:
+
+- `DELETE /users/me` deleted an account on a **single call** — no confirmation,
+  no reauthentication, and no removal of stored photographs.
+- There was **no photograph delete path at all**. An uploaded image stayed in
+  object storage for ever, with no route, no screen and no cleanup.
+- `photo_reuse_consent` was a switch on a settings screen that **nothing read**.
+
+### What was built
+
+`services/photo_storage.py` is now the one place that knows where a photograph
+lives. Upload and delete were written in different places, which is how only
+one of them ever got written. `key_for()` recovers an object key only from a
+URL this module could have produced, only under the `uploads/` prefix, and
+rejects traversal — anything else returns `None` rather than aiming a delete at
+an object nobody here created.
+
+`services/privacy_service.py` holds deletion, export and photograph removal
+together, because they share one hard problem: the database is not the only
+place the data is. Deleting a user row cascades through every table and reaches
+nothing in object storage.
+
+Retention is **off by default**. When an analysis completes the photograph is
+deleted unless consent says keep it; the results stay. Withdrawing consent
+deletes what was already kept rather than only recording a preference, and
+reuse consent cannot be granted without retention, because there would be
+nothing to reuse.
+
+Deleting an account requires the phrase `DELETE MY ACCOUNT` typed **and** the
+password re-entered. The old route answers 410.
+
+### The pre-deployment security review, and what it found
+
+All three checks found real gaps.
+
+**Export used a denylist.** It excluded `hashed_password` and exported every
+other column. The failure mode is not today's schema — it is the day someone
+adds `refresh_token` or `reset_secret` to a table and it ships to the user's
+device in a file they may then mail to themselves. `EXPORTABLE` is now an
+allowlist, with `FORBIDDEN_FRAGMENTS` as the second half that catches a
+credential-shaped column added to a table marked "every column".
+`client_token` is the one deliberate exception: an idempotency key the client
+generated and already holds is not a credential.
+
+**A failed object delete during account deletion produced a true orphan.** The
+row naming the photograph was deleted regardless — correctly, since nobody
+should be trapped in an account because a bucket is down — but that left the
+file with nothing anywhere that knew it existed. `pending_photo_deletions`
+records the key before the rows go. It deliberately holds **no `user_id` and no
+foreign key**: it has to outlive the account it came from, and the key is a
+random UUID, not personal data. There is no scheduler on this plan, so the
+queue drains opportunistically from the privacy endpoints; a retry that fails
+stays queued with its attempt count raised, which is the difference between a
+backlog and a leak.
+
+**A Firebase account could be deleted on the strength of a valid ID token.**
+Firebase mints a new one hourly whether or not anyone touched the device, so
+"the token verifies" says nothing about who is holding the phone. `auth_time`
+is now carried through verification and deletion requires it within five
+minutes. An account with neither a local password nor a Firebase session is
+refused outright rather than deleted on a bearer token alone.
+
+### Deployment
+
+| step | result |
+|---|---|
+| target | Neon `neondb`, `ep-shiny-cake-…us-east-2.aws.neon.tech` |
+| migration before | `0006_create_my_look`, 24 users |
+| pushed | `a45ba0f..3fbd321` |
+| migration after | **`0008_pending_photo_deletions`** |
+| schema applied | `analyses.image_url` nullable, `analyses.photo_deleted_at`, `user_settings.photo_retention_consent`, `pending_photo_deletions` table |
+| data after | 24 users, 12 saved looks, 4 analyses — nothing lost |
+
+Rendered offline before pushing, so the DDL was known rather than hoped for:
+three `ALTER`s, one `CREATE TABLE`, one index, in a single transaction. No
+table rewrite, nothing dropped.
+
+Recovery mechanism: `downgrade()` is implemented and tested both directions on
+SQLite, and Neon keeps its own branch history. Neither was needed.
+
+### Production verification
+
+| suite | result |
+|---|---|
+| privacy journeys (disposable accounts) | **27 / 27** |
+| five flagship experiences + passport reliability | **28 / 28** |
+| Phase 5 journey | **22 / 22** |
+| passport probe, 30 bounded requests | 30 / 30, avg 1625 ms — **not reproduced** |
+| backend tests | **443 passed** |
+| mobile tests | **122 passed**, 16 suites, tsc and ESLint clean |
+
+Verified against the live host, on disposable accounts, with a second account
+kept alive throughout to prove that deleting the first left it untouched. It
+did: its saved look and its passport were still there afterwards. The deleted
+account's token stopped working on every authenticated route, and it could not
+sign in again.
+
+### One finding worth stating plainly
+
+**Production stores no photographs today.** With retention consent explicitly
+granted, uploading an image and then asking for the photograph list returned
+`storedCount: 0` — which is what `photo_storage` does when no S3 credentials
+are configured on the service: the image is analysed in memory and a `local://`
+placeholder is recorded instead.
+
+So the deletion machinery is correct and fully exercised in tests, but in
+production it is currently running the "there was nothing stored" path. That is
+the privacy-preferring outcome, and it is not a defect — but it does mean the
+S3 delete path has not been exercised against a real bucket in production, and
+it should not be described as though it has.
+
+### A correction to this session's own verification
+
+Two checks in the verification script were wrong, in the same way as the
+`/colors` mistake recorded earlier: `export returns a downloadable document`
+failed because the script looked up `Content-Disposition` case-sensitively in a
+plain dict. The header was present all along. Fixed, and the point generalises
+— a check that fails for a reason belonging to the checker is as misleading as
+one that passes for the wrong reason.
