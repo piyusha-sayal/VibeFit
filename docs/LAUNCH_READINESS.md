@@ -117,3 +117,44 @@ Worth stating precisely, because these are the claims a user will rely on.
 - **Backups are not claimed to be purged.** The wording says deleted data ages
   out of the providers' rolling encrypted backups rather than being removed
   from them individually, because that is what the providers actually do.
+
+---
+
+## Phase 6 P1 §3 — onboarding (22 September 2026)
+
+**Five screens** replace the eight-question form: Welcome (logo, "Find what
+fits you."), Interests, Personal Style, optional Personalisation, and a closing
+screen that recommends a starting experience from what was actually chosen.
+
+- Nothing is mandatory after the welcome. Skipping records the field as skipped
+  rather than storing an invented answer, and "Not sure yet" stays
+  distinguishable from an unanswered question.
+- No photograph and no body classification is requested anywhere in the flow —
+  pinned by tests, not only by intent.
+- Selection is a tick as well as a tint, on both `Chip` and the interest cards.
+- Region orders what is shown first and restricts nothing, in either direction.
+- The home screen orders the five experiences by the chosen interests and
+  **hides none of them**.
+
+**Routing.** `app/index.tsx` now resolves one of four states before rendering:
+signed out, new, partially completed, returning. A returning user never sees
+onboarding again; a new user never sees the home screen flash first.
+
+### What is verified, and what is not
+
+| Label | State |
+|---|---|
+| LOCAL VERIFIED | **Yes** — backend 456 passed, mobile 183 passed across 21 suites, `tsc --noEmit` clean, ESLint clean |
+| STAGING VERIFIED | n/a — no staging environment exists |
+| PRODUCTION VERIFIED | **§2 yes** (17/18, the one failure the checker's own). §3 backend is committed but **not yet deployed or verified in production** |
+| ANDROID BUILD VERIFIED | **No** — the current APK predates both §2 and §3 |
+| ANDROID EMULATOR VERIFIED | **No** |
+| ANDROID PHYSICAL DEVICE VERIFIED | **No** — no device testing has been performed |
+
+### Remaining P1 work
+
+§4 homepage sections A–J, §5 UI consistency audit, §6 premium visual
+refinement, §7 visual content quality, §8 the full accessibility audit across
+each flagship screen, §9 performance measurement, §10 settings and help,
+§12 the eight consumer journeys, §13 a release-candidate APK, §14 device
+testing.

@@ -195,3 +195,28 @@ first; none of this is meaningful otherwise.
     reports the failure; it does not silently duplicate.
 
 Record the device model and Android version with the outcome of each step.
+
+---
+
+## Onboarding: what to check before a release
+
+Six states, and the first four are the ones that break silently.
+
+1. **New account.** Register → the welcome screen appears. It must not be
+   possible to reach the home screen first, even briefly.
+2. **Returning account.** Sign out, sign back in → the home screen, with no
+   onboarding. Force-quit and relaunch → the home screen, immediately.
+3. **Partially completed.** Start onboarding, choose interests, force-quit at
+   screen 3 → relaunching returns to onboarding with those interests still
+   selected.
+4. **Offline launch.** Turn off the network and launch while signed in → the
+   home screen, never onboarding. Classifying a returning user as new is the
+   failure this guards against.
+5. **Skipped everything.** Welcome → Skip → Skip → Skip → Explore. The home
+   screen must still be useful, and all five experiences present.
+6. **Second account on the same device.** Sign out, register a different
+   account → onboarding appears for the new one. The completion flag is per
+   account.
+
+Also check that selection is legible in greyscale: every selected chip and
+interest card carries a tick, not only a tint.

@@ -25,6 +25,10 @@ class OnboardingIn(BaseModel):
     gender_presentation: Optional[str] = None
     modesty_preference: Optional[str] = None
     skipped_fields: Optional[list[str]] = None
+    # Not a column. An explicit statement that the person reached the end of
+    # onboarding, which is what routing needs: inferring completion from "some
+    # answers exist" cannot tell a finished run from an abandoned one.
+    completed: Optional[bool] = None
 
 
 class OnboardingOut(OnboardingIn):

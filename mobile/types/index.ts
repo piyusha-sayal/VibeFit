@@ -297,6 +297,8 @@ export interface OnboardingAnswers {
   genderPresentation?: string | null;
   modestyPreference?: string | null;
   skippedFields?: string[] | null;
+  /** A directive, not a stored column: "this run reached the end". */
+  completed?: boolean;
 }
 
 export interface OnboardingRecord extends OnboardingAnswers {

@@ -3,6 +3,7 @@ import { User, AuthTokens } from '../types';
 import * as authService from '../services/authService';
 import { clearCachedAnalysis } from '../services/localCache';
 import { useAnalysisStore } from './analysisStore';
+import { useOnboardingStore } from './onboardingStore';
 
 interface AuthState {
   user: User | null;
@@ -83,6 +84,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       // The device cache is not per-account; never show it to the next sign-in.
       await clearCachedAnalysis();
       useAnalysisStore.setState({ currentAnalysis: null, analyses: [] });
+      // Forget which account was resolved, not that it finished onboarding:
+      // the completion flag is per account and signing back in must not ask
+      // the same questions again.
+      useOnboardingStore.getState().reset();
     }
   },
 

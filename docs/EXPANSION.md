@@ -820,3 +820,70 @@ failed because the script looked up `Content-Disposition` case-sensitively in a
 plain dict. The header was present all along. Fixed, and the point generalises
 — a check that fails for a reason belonging to the checker is as misleading as
 one that passes for the wrong reason.
+
+---
+
+## Phase 6 P1 §3 — onboarding, and where the old questions went
+
+### Production verification of §2 first
+
+`ba6e43b` reached production before this work started. Verified externally
+against `https://vibefit-api-awx9.onrender.com` with one disposable account
+that deleted itself afterwards: **17/18 checks passed**, and the one failure
+was the checker's, not production's — it asked for `/health` under `/api/v1`,
+where it does not live. `GET /health` at the root returns `200 {"status":"ok"}`.
+
+What production actually reports, with no object storage configured:
+
+- `storageAvailable: false`, `retentionEffective: false`, `reuseEffective: false`
+- a `storageNote` saying the photograph is discarded **and that the analysis
+  results are saved** — the second half matters, or the note reads as "nothing
+  is kept at all"
+- `PATCH /privacy/consent` with retention on → **409**, and nothing recorded
+- withdrawal → **200**, and reuse cannot be switched on behind retention's back
+
+A stored consent flag from before is left exactly as it was. The screen shows
+`retentionEffective`, so it describes what is happening without overwriting
+what the person once asked for.
+
+### The eight questions
+
+The old flow asked eight questions before anyone had seen the app. None were
+deleted; the columns are untouched and previously saved answers are still read
+and preserved. They moved:
+
+| Question | Where it is now | Why |
+|---|---|---|
+| `primary_goal` | Retired from onboarding | The interest picker says the same thing more usefully, and the column still satisfies the legacy completion rule |
+| `areas_of_interest` | **Kept** — screen 2 | Orders the home screen |
+| `style_preferences` | **Kept** — screen 3 | Reuses the shared aesthetic library, same identifiers |
+| `market` | **Kept, optional** — screen 4 | Orders what is shown first; never restricts a category |
+| `budget_range` | Discover My Style | Only means something once there is something to buy |
+| `maintenance_tolerance`, `time_available` | Hair Studio | Upkeep is a question about a specific cut |
+| `hair_texture_reported`, `hair_treatment_history` | Hair Studio | Asked where the answer is used |
+| `skin_sensitivities`, `declared_allergies` | Makeup | Asked before a product suggestion, not before a welcome screen |
+| `climate`, `climate_consent` | Retired from onboarding | A permission request before any value was shown |
+
+### Completion is now stated, not inferred
+
+`onboarding_responses.completed_at` already existed. What was missing was a way
+for the client to say "this run finished" — completion was inferred from
+`primary_goal` being present, which cannot tell a finished run from an
+abandoned one, and the new flow does not ask for a primary goal at all.
+
+`OnboardingIn` gained a `completed` field. It is a directive, not a column:
+the service pops it before writing, and sets `completed_at` when it is true.
+The old rule still stands alongside it, so rows written by the previous client
+keep the meaning they already had. **No migration** — the column was there.
+
+### Four states, resolved before anything renders
+
+`store/onboardingStore.ts` resolves an account to `required`, `partial` or
+`done`, and `app/index.tsx` renders nothing until it has an answer. That is
+what prevents the home screen flashing before bouncing back to onboarding.
+
+The rule worth stating: **when the network cannot answer, the answer is
+`done`.** Someone who already has an account is far more likely to be
+returning than new, and sending a returning user back through onboarding is the
+worse of the two failures. A local per-account flag, written only after the
+server confirmed a completed run, answers instantly on later launches.

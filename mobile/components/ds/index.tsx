@@ -192,6 +192,10 @@ export function Chip({ label, selected, onPress, accent = 'gold' }: ChipProps) {
           { fontFamily: selected ? FONTS.sansSemiBold : FONTS.sans, color: selected ? tint.fg : colors.textMuted },
         ]}
       >
+        {/* A tick as well as a tint, so selection survives greyscale, low
+            vision and colour blindness. The label already carries the state
+            for a screen reader, so this mark is decorative to it. */}
+        {selected ? <Text accessibilityElementsHidden>{'✓ '}</Text> : null}
         {label}
       </Text>
     </TouchableOpacity>

@@ -1,307 +1,383 @@
-import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+/**
+ * Five screens, in the order a consultation would take them.
+ *
+ * Welcome, what you want to explore, what your style feels like, anything else
+ * you want to tell us, and where to start. Nothing here is required: every
+ * screen after the first can be skipped, and skipping stores nothing rather
+ * than storing a guess.
+ *
+ * The older eight-step questionnaire's detailed questions — budget, upkeep,
+ * routine, hair treatments, allergies — are not deleted. They moved to the
+ * experiences that use them, which is where someone can answer them knowing
+ * what the answer is for. Anything already saved is still read and preserved.
+ */
+import React, { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { GoldButton } from '../../components/ui/GoldButton';
-import { Pill } from '../../components/ui/Pill';
-import { C, GRADIENTS } from '../../constants/colors';
-import { FONTS } from '../../constants/fonts';
-import { saveOnboarding } from '../../services/profileService';
-import { OnboardingAnswers } from '../../types';
 
-type Field = keyof OnboardingAnswers;
+import { Button, Card, Chip, Txt } from '../../components/ds';
+import { Logo } from '../../components/ds/Logo';
+import { EXPERIENCES } from '../../constants/experiences';
+import {
+  EVERYTHING, INTERESTS, OCCASIONS, REGIONS, STYLE_CHOICES, UNSURE,
+  applyInterest, applyStyle, isEverythingSelected, recommendedStart,
+} from '../../constants/onboarding';
+import { MIN_TOUCH, SPACE } from '../../constants/theme';
+import { useAuthStore } from '../../store/authStore';
+import { useOnboardingStore } from '../../store/onboardingStore';
+import { useTheme } from '../../theme/ThemeProvider';
 
-type Step =
-  | { key: Field; kind: 'single'; title: string; subtitle?: string; options: { value: string; label: string }[]; required?: boolean }
-  | { key: Field; kind: 'multi'; title: string; subtitle?: string; options: { value: string; label: string }[]; required?: boolean }
-  | { key: Field; kind: 'text'; title: string; subtitle?: string; placeholder: string; required?: boolean }
-  | { key: Field; kind: 'consent'; title: string; subtitle: string; then: { key: Field; options: { value: string; label: string }[] }; required?: boolean };
-
-const STEPS: Step[] = [
-  {
-    key: 'primaryGoal', kind: 'single', required: true,
-    title: 'What brings\nyou here?',
-    subtitle: "We'll prioritize recommendations around this.",
-    options: [
-      { value: 'special_event', label: 'Prepping for an event' },
-      { value: 'everyday_refresh', label: 'Everyday style refresh' },
-      { value: 'new_look', label: 'Trying a new look' },
-      { value: 'routine_help', label: 'Better skin/hair routine' },
-      { value: 'just_curious', label: 'Just curious what suits me' },
-    ],
-  },
-  {
-    key: 'areasOfInterest', kind: 'multi',
-    title: 'What should\nwe focus on?',
-    subtitle: 'Pick as many as you like — skip to cover everything.',
-    options: [
-      { value: 'face', label: 'Face' },
-      { value: 'color', label: 'Color' },
-      { value: 'skin', label: 'Skin' },
-      { value: 'hair', label: 'Hair' },
-      { value: 'body', label: 'Body' },
-    ],
-  },
-  {
-    key: 'budgetRange', kind: 'single',
-    title: 'Budget for\nproducts?',
-    options: [
-      { value: 'low', label: 'Keep it minimal' },
-      { value: 'medium', label: 'Moderate' },
-      { value: 'high', label: 'Open to spend more' },
-    ],
-  },
-  {
-    key: 'maintenanceTolerance', kind: 'single',
-    title: 'How much upkeep\nfeels right?',
-    options: [
-      { value: 'low', label: 'Low — quick and simple' },
-      { value: 'medium', label: 'Some effort is fine' },
-      { value: 'high', label: 'Happy to invest time' },
-    ],
-  },
-  {
-    key: 'timeAvailable', kind: 'single',
-    title: 'Time for a\nroutine?',
-    options: [
-      { value: 'under_5', label: 'Under 5 min' },
-      { value: '5_15', label: '5–15 min' },
-      { value: '15_plus', label: '15+ min' },
-    ],
-  },
-  {
-    key: 'stylePreferences', kind: 'multi',
-    title: 'Any style\npreferences?',
-    options: [
-      { value: 'minimal', label: 'Minimal' },
-      { value: 'classic', label: 'Classic' },
-      { value: 'trendy', label: 'Trendy' },
-      { value: 'bold', label: 'Bold' },
-      { value: 'soft', label: 'Soft/romantic' },
-    ],
-  },
-  {
-    key: 'hairTextureReported', kind: 'single',
-    title: 'Hair texture?',
-    options: [
-      { value: 'straight', label: 'Straight' },
-      { value: 'wavy', label: 'Wavy' },
-      { value: 'curly', label: 'Curly' },
-      { value: 'coily', label: 'Coily' },
-    ],
-  },
-  {
-    key: 'declaredAllergies', kind: 'text',
-    title: 'Any allergies or\nsensitivities we\nshould know?',
-    subtitle: "We ask so we never suggest something that could irritate you. Skip if none.",
-    placeholder: 'e.g. fragrance, retinol, nickel',
-  },
-  {
-    key: 'currentRoutine', kind: 'text',
-    title: "What's your current\nroutine?",
-    subtitle: "So we can build on what already works, not replace it.",
-    placeholder: 'e.g. cleanser + moisturizer daily',
-  },
-  {
-    key: 'climate', kind: 'consent',
-    title: 'Share your\nclimate?',
-    subtitle: 'Helps tailor skin/hair advice to humidity and sun exposure. Optional.',
-    then: {
-      key: 'climate',
-      options: [
-        { value: 'humid', label: 'Humid' },
-        { value: 'dry', label: 'Dry' },
-        { value: 'temperate', label: 'Temperate' },
-        { value: 'cold', label: 'Cold' },
-      ],
-    },
-  },
-];
+const STEPS = ['Welcome', 'Interests', 'Style', 'About you', 'Start'] as const;
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const draft = useOnboardingStore((s) => s.draft);
+  const saveDraft = useOnboardingStore((s) => s.saveDraft);
+  const complete = useOnboardingStore((s) => s.complete);
+
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<OnboardingAnswers>({});
+  const [interests, setInterests] = useState<string[]>([]);
+  const [styles_, setStyles] = useState<string[]>([]);
+  const [region, setRegion] = useState<string | null>(null);
+  const [occasions, setOccasions] = useState<string[]>([]);
   const [skipped, setSkipped] = useState<string[]>([]);
-  const [climateConsent, setClimateConsent] = useState(false);
   const [saving, setSaving] = useState(false);
-  const isLast = step === STEPS.length - 1;
-  const current = STEPS[step];
+  const [error, setError] = useState<string | null>(null);
 
-  const setAnswer = (key: Field, value: unknown) => setAnswers((a) => ({ ...a, [key]: value }));
+  // Someone who left half way through comes back to what they had chosen.
+  useEffect(() => {
+    if (draft.areasOfInterest) setInterests(draft.areasOfInterest);
+    if (draft.stylePreferences) setStyles(draft.stylePreferences);
+    if (draft.market) setRegion(draft.market);
+    if (draft.skippedFields) setSkipped(draft.skippedFields);
+  }, [draft]);
 
-  const finish = async (finalAnswers: OnboardingAnswers, skippedFields: string[]) => {
+  const recommendation = useMemo(() => recommendedStart(interests), [interests]);
+  const firstExperience = EXPERIENCES.find((e) => e.key === recommendation?.experienceKey);
+
+  const remember = (field: string, isSkip: boolean) => {
+    // A skipped field is recorded as skipped, never as an answer.
+    const next = isSkip
+      ? [...new Set([...skipped, field])]
+      : skipped.filter((f) => f !== field);
+    setSkipped(next);
+    return next;
+  };
+
+  const go = (to: number, skippedNow = skipped) => {
+    void saveDraft({
+      areasOfInterest: interests.length ? interests : null,
+      stylePreferences: styles_.length ? styles_ : null,
+      market: region,
+      skippedFields: skippedNow.length ? skippedNow : null,
+    });
+    setStep(to);
+  };
+
+  const finish = async () => {
     setSaving(true);
-    await saveOnboarding({ ...finalAnswers, skippedFields });
+    setError(null);
+    const ok = await complete({
+      areasOfInterest: interests.length ? interests : null,
+      stylePreferences: styles_.length ? styles_ : null,
+      market: region,
+      // Occasions live with the style answers; there is no second store.
+      keepUsingItems: draft.keepUsingItems ?? null,
+      skippedFields: skipped.length ? skipped : null,
+    });
     setSaving(false);
-    router.replace('/plan');
-  };
-
-  const goNext = async (nextAnswers: OnboardingAnswers = answers, nextSkipped = skipped) => {
-    if (isLast) {
-      await finish(nextAnswers, nextSkipped);
-    } else {
-      setStep((s) => s + 1);
+    if (!ok) {
+      setError('We could not save that. You can try again, or explore now and '
+        + 'set your preferences later in Settings.');
+      return;
     }
+    router.replace(firstExperience ? (firstExperience.route as never) : ('/(tabs)' as never));
   };
 
-  const handleSkip = () => {
-    if (current.kind === 'single' && current.required) return; // primary goal can't be skipped
-    const nextSkipped = [...skipped, current.key];
-    setSkipped(nextSkipped);
-    goNext(answers, nextSkipped);
-  };
-
-  const handleContinue = () => goNext();
-
-  const canContinue =
-    current.kind !== 'single' || !current.required || Boolean(answers[current.key]);
+  const exploreAnyway = () => router.replace('/(tabs)' as never);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <LinearGradient colors={GRADIENTS.hero} style={styles.container}>
-        <View style={styles.top}>
-          {step > 0 ? (
-            <TouchableOpacity onPress={() => setStep((s) => s - 1)} activeOpacity={0.7} style={styles.backHit}>
-              <Text style={styles.backText}>‹ Back</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.backHit} />
-          )}
-          <View style={styles.dots}>
-            {STEPS.map((_, i) => (
-              <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
-            ))}
-          </View>
-          {(!current.required) ? (
-            <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.backHit}>
-              <Text style={[styles.skipText, styles.rightAlign]}>Skip</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.backHit} />
-          )}
-        </View>
+    <View style={[stylesheet.root, { backgroundColor: colors.bg }]}>
+      <Progress step={step} />
 
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Animated.View key={step} entering={FadeIn.duration(250)} exiting={FadeOut.duration(150)}>
-            <Text style={styles.title}>{current.title}</Text>
-            {current.subtitle && <Text style={styles.subtitle}>{current.subtitle}</Text>}
-
-            {current.kind === 'single' && (
-              <View style={styles.pillWrap}>
-                {current.options.map((o) => (
-                  <Pill
-                    key={o.value}
-                    active={answers[current.key] === o.value}
-                    onPress={() => setAnswer(current.key, o.value)}
-                    style={styles.pillItem}
-                  >
-                    {o.label}
-                  </Pill>
-                ))}
-              </View>
+      <ScrollView
+        style={stylesheet.body}
+        contentContainerStyle={stylesheet.bodyContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {step === 0 ? (
+          <Welcome name={user?.name} />
+        ) : step === 1 ? (
+          <Interests selected={interests} onToggle={(v) => setInterests(applyInterest(interests, v))} />
+        ) : step === 2 ? (
+          <Style selected={styles_} onToggle={(v) => setStyles(applyStyle(styles_, v))} />
+        ) : step === 3 ? (
+          <About
+            region={region}
+            occasions={occasions}
+            onRegion={(v) => setRegion(region === v ? null : v)}
+            onOccasion={(v) => setOccasions(
+              occasions.includes(v) ? occasions.filter((o) => o !== v) : [...occasions, v],
             )}
-
-            {current.kind === 'multi' && (
-              <View style={styles.pillWrap}>
-                {current.options.map((o) => {
-                  const list = (answers[current.key] as string[] | undefined) ?? [];
-                  const active = list.includes(o.value);
-                  return (
-                    <Pill
-                      key={o.value}
-                      active={active}
-                      onPress={() => setAnswer(
-                        current.key,
-                        active ? list.filter((v) => v !== o.value) : [...list, o.value],
-                      )}
-                      style={styles.pillItem}
-                    >
-                      {o.label}
-                    </Pill>
-                  );
-                })}
-              </View>
-            )}
-
-            {current.kind === 'text' && (
-              <TextInput
-                style={styles.input}
-                placeholder={current.placeholder}
-                placeholderTextColor={C.textSubtle}
-                value={(answers[current.key] as string) ?? ''}
-                onChangeText={(t) => setAnswer(current.key, current.key === 'declaredAllergies' ? t.split(',').map((s) => s.trim()).filter(Boolean) : t)}
-                multiline
-              />
-            )}
-
-            {current.kind === 'consent' && (
-              <View>
-                <GoldButton
-                  label={climateConsent ? 'Sharing climate' : 'Share my climate'}
-                  variant={climateConsent ? 'primary' : 'outline'}
-                  onPress={() => {
-                    setClimateConsent(true);
-                    setAnswer('climateConsent', true);
-                  }}
-                  style={{ marginBottom: 16 }}
-                />
-                {climateConsent && (
-                  <View style={styles.pillWrap}>
-                    {current.then.options.map((o) => (
-                      <Pill
-                        key={o.value}
-                        active={answers.climate === o.value}
-                        onPress={() => setAnswer('climate', o.value)}
-                        style={styles.pillItem}
-                      >
-                        {o.label}
-                      </Pill>
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
-          </Animated.View>
-        </ScrollView>
-
-        <View style={styles.actions}>
-          <GoldButton
-            label={isLast ? "Let's Start" : 'Continue'}
-            onPress={handleContinue}
-            loading={saving}
-            disabled={!canContinue}
-            style={styles.btn}
           />
+        ) : (
+          <Journey recommendation={recommendation} firstTitle={firstExperience?.title} />
+        )}
+      </ScrollView>
+
+      {error ? (
+        <Card variant="outlined" style={{ marginBottom: SPACE.md }}>
+          <Txt variant="bodySm" tone="muted">{error}</Txt>
+          <Button label="Explore anyway" variant="ghost" onPress={exploreAnyway}
+                  style={{ marginTop: SPACE.sm }} />
+        </Card>
+      ) : null}
+
+      <View style={stylesheet.actions}>
+        <Button
+          label={step === 0 ? 'Get Started'
+            : step === STEPS.length - 1 ? 'Explore MyLookFit' : 'Continue'}
+          loading={saving}
+          onPress={() => (step === STEPS.length - 1 ? void finish() : go(step + 1))}
+        />
+        <View style={stylesheet.minor}>
+          {step > 0 ? (
+            <Button label="Back" variant="ghost" onPress={() => go(step - 1)} />
+          ) : <View />}
+          {step > 0 && step < STEPS.length - 1 ? (
+            <Button
+              label="Skip"
+              variant="ghost"
+              accessibilityHint="Moves on without saving an answer for this step"
+              onPress={() => go(step + 1, remember(STEPS[step], true))}
+            />
+          ) : <View />}
         </View>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+      </View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 60, paddingHorizontal: 28 },
-  backHit: { width: 56 },
-  backText: { fontFamily: FONTS.sansMedium, fontSize: 14, color: C.textMuted },
-  skipText: { fontFamily: FONTS.sansMedium, fontSize: 14, color: C.textMuted },
-  rightAlign: { textAlign: 'right' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 28 },
-  title: { fontFamily: FONTS.serif, fontSize: 36, color: C.text, lineHeight: 42, marginBottom: 10 },
-  subtitle: { fontFamily: FONTS.sans, fontSize: 14, color: C.textMuted, lineHeight: 20, marginBottom: 22 },
-  pillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 8 },
-  pillItem: { paddingVertical: 10, paddingHorizontal: 16 },
-  input: {
-    fontFamily: FONTS.sans, fontSize: 15, color: C.text, backgroundColor: C.surface,
-    borderWidth: 0.5, borderColor: C.white08, borderRadius: 14, padding: 16, minHeight: 90,
-    textAlignVertical: 'top', marginTop: 8,
-  },
-  dots: { flexDirection: 'row', gap: 8 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.textSubtle },
-  dotActive: { width: 20, backgroundColor: C.gold },
-  actions: { padding: 28, paddingBottom: 40 },
-  btn: { width: '100%' },
+// ------------------------------------------------------------------ screens
+
+function Welcome({ name }: { name?: string }) {
+  return (
+    <View style={stylesheet.centred}>
+      <Logo variant="horizontal" width={240} showTagline={false} />
+      <Txt variant="display" serif style={{ marginTop: SPACE.xxl, textAlign: 'center' }}>
+        Find what fits you.
+      </Txt>
+      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.md, textAlign: 'center' }}>
+        Discover your colours, explore hairstyles and makeup, and create looks
+        that reflect your personal style.
+      </Txt>
+      {name ? (
+        <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xl }}>
+          Welcome, {name}. This takes about a minute, and you can skip any of it.
+        </Txt>
+      ) : null}
+    </View>
+  );
+}
+
+function Interests({ selected, onToggle }: {
+  selected: string[]; onToggle: (value: string) => void;
+}) {
+  return (
+    <View>
+      <Txt variant="display" serif>What would you like to explore?</Txt>
+      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>
+        Pick as many as you like. This decides what we show you first — never
+        what you can reach.
+      </Txt>
+      <View style={stylesheet.cards}>
+        {INTERESTS.map((interest) => (
+          <SelectCard
+            key={interest.value}
+            label={interest.label}
+            blurb={interest.blurb}
+            selected={selected.includes(interest.value)}
+            onPress={() => onToggle(interest.value)}
+          />
+        ))}
+        <SelectCard
+          label="Everything"
+          blurb="Show me all of it"
+          selected={isEverythingSelected(selected)}
+          onPress={() => onToggle(EVERYTHING)}
+        />
+      </View>
+    </View>
+  );
+}
+
+function Style({ selected, onToggle }: {
+  selected: string[]; onToggle: (value: string) => void;
+}) {
+  return (
+    <View>
+      <Txt variant="display" serif>What feels like your style?</Txt>
+      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>
+        More than one is normal, and you can change this any time.
+      </Txt>
+      <View style={stylesheet.chips}>
+        {STYLE_CHOICES.map((choice) => (
+          <Chip
+            key={choice}
+            label={choice}
+            accent="gold"
+            selected={selected.includes(choice)}
+            onPress={() => onToggle(choice)}
+          />
+        ))}
+        <Chip
+          label={UNSURE}
+          accent="lavender"
+          selected={selected.includes(UNSURE)}
+          onPress={() => onToggle(UNSURE)}
+        />
+      </View>
+    </View>
+  );
+}
+
+function About({ region, occasions, onRegion, onOccasion }: {
+  region: string | null;
+  occasions: string[];
+  onRegion: (value: string) => void;
+  onOccasion: (value: string) => void;
+}) {
+  return (
+    <View>
+      <Txt variant="display" serif>Anything else?</Txt>
+      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>
+        All optional. Every category stays available wherever you are — this
+        only changes what we put first.
+      </Txt>
+
+      <Txt variant="body" style={{ marginTop: SPACE.xl }}>Where are you?</Txt>
+      <View style={stylesheet.chips}>
+        {REGIONS.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            accent="sage"
+            selected={region === option.value}
+            onPress={() => onRegion(option.value)}
+          />
+        ))}
+      </View>
+
+      <Txt variant="body" style={{ marginTop: SPACE.xl }}>What are you dressing for?</Txt>
+      <View style={stylesheet.chips}>
+        {OCCASIONS.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            accent="peach"
+            selected={occasions.includes(option.value)}
+            onPress={() => onOccasion(option.value)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function Journey({ recommendation, firstTitle }: {
+  recommendation: { reason: string } | null; firstTitle?: string;
+}) {
+  return (
+    <View>
+      <Txt variant="display" serif>Your Style Journey Starts Here.</Txt>
+      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>
+        {recommendation && firstTitle
+          ? `${recommendation.reason}, so we will start you with ${firstTitle}.`
+          : 'Five places to begin. Any of them is a good first one.'}
+      </Txt>
+
+      <View style={{ marginTop: SPACE.xl }}>
+        {EXPERIENCES.map((experience) => (
+          <Card key={experience.key} variant="outlined" style={{ marginBottom: SPACE.md }}>
+            <Txt variant="caption" tone="subtle">{experience.eyebrow}</Txt>
+            <Txt variant="body" style={{ marginTop: 2 }}>{experience.title}</Txt>
+            <Txt variant="caption" tone="muted" style={{ marginTop: SPACE.xs }}>
+              {experience.body}
+            </Txt>
+          </Card>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ------------------------------------------------------------------- pieces
+
+function SelectCard({ label, blurb, selected, onPress }: {
+  label: string; blurb: string; selected: boolean; onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Card
+      onPress={onPress}
+      variant={selected ? 'plain' : 'outlined'}
+      accessibilityLabel={`${label}. ${blurb}`}
+      style={{
+        marginBottom: SPACE.md,
+        minHeight: MIN_TOUCH,
+        borderColor: selected ? colors.text : colors.border,
+        borderWidth: selected ? 2 : StyleSheet.hairlineWidth * 2,
+      }}
+    >
+      <View style={stylesheet.cardRow}>
+        <View style={{ flex: 1 }}>
+          <Txt variant="body">{label}</Txt>
+          <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>{blurb}</Txt>
+        </View>
+        {/* A mark, not only a border: selection must not be colour alone. */}
+        <Txt variant="body" style={{ opacity: selected ? 1 : 0.25 }}>
+          {selected ? '✓' : '○'}
+        </Txt>
+      </View>
+    </Card>
+  );
+}
+
+function Progress({ step }: { step: number }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={stylesheet.progress}
+      accessibilityRole="progressbar"
+      accessibilityLabel={`Step ${step + 1} of ${STEPS.length}: ${STEPS[step]}`}
+    >
+      {STEPS.map((name, index) => (
+        <View
+          key={name}
+          style={{
+            flex: 1,
+            height: 3,
+            borderRadius: 2,
+            backgroundColor: index <= step ? colors.gold : colors.border,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+const stylesheet = StyleSheet.create({
+  root: { flex: 1, paddingHorizontal: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xl },
+  progress: { flexDirection: 'row', gap: SPACE.xs, marginBottom: SPACE.xl },
+  body: { flex: 1 },
+  bodyContent: { flexGrow: 1, paddingBottom: SPACE.xl },
+  centred: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  cards: { marginTop: SPACE.xl },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
+  actions: { gap: SPACE.sm },
+  minor: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

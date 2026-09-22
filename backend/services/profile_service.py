@@ -201,10 +201,17 @@ async def upsert_onboarding(db: AsyncSession, user_id: str, data: dict) -> Onboa
         onboarding = OnboardingResponse(user_id=user_id)
         db.add(onboarding)
 
+    # "completed" is a directive, not a column: it says the person reached the
+    # end of the flow. Popping it first keeps it off the model.
+    completed = data.pop("completed", None)
+
     for field, value in data.items():
         setattr(onboarding, field, value)
 
-    if onboarding.primary_goal and onboarding.completed_at is None:
+    # A legacy client that only ever sent primary_goal still counts as finished,
+    # so existing rows and older builds keep the meaning they already had.
+    finished = completed is True or bool(onboarding.primary_goal)
+    if finished and onboarding.completed_at is None:
         onboarding.completed_at = datetime.now(timezone.utc)
 
     await db.flush()

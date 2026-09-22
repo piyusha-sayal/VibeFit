@@ -10,6 +10,8 @@ import { LookSwatches } from '../../components/look';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeProvider';
 import { EXPERIENCES, OCCASIONS, SMALL_TOOLS, tipOfTheDay } from '../../constants/experiences';
+import { orderExperiences } from '../../constants/onboarding';
+import { useOnboardingStore } from '../../store/onboardingStore';
 import { ACADEMY_GUIDES } from '../../constants/academy';
 import { INSPIRATION } from '../../constants/inspiration';
 import { Logo } from '../../components/ds/Logo';
@@ -22,6 +24,12 @@ export default function HomeScreen() {
   const passport = usePassport();
   const report = useColorReport();
   const drafts = useDrafts();
+  // Onboarding interests order this list; nothing is ever removed from it, so
+  // every experience stays one tap away whatever was or was not answered.
+  const interests = useOnboardingStore((s) => s.interests);
+  const experiences = useMemo(
+    () => orderExperiences(EXPERIENCES, interests), [interests],
+  );
   const [occasion, setOccasion] = useState<string | null>(null);
 
   const firstName = (user?.name ?? '').trim().split(' ')[0];
@@ -217,7 +225,7 @@ export default function HomeScreen() {
       {/* ------------------------------------------- C. flagship experiences */}
       <View style={styles.section}>
         <SectionHeader title="Five ways in" />
-        {EXPERIENCES.map((exp, i) => {
+        {experiences.map((exp, i) => {
           // Deliberately not five identical cards: the first is a wide feature
           // card, the rest alternate between split rows and compact tiles.
           const wide = i === 0;
