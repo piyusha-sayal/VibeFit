@@ -15,6 +15,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Txt } from '../ds';
 import { FaceFigure, GarmentFigure } from '../visual';
+import { silhouetteFor } from '../visual/shapes';
 import { RADIUS, SPACE } from '../../constants/theme';
 import type { LookComposition as Composition, LookPiece } from '../../services/lookService';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -120,8 +121,14 @@ export function LookComposition({ composition, compact = false }: Props) {
               seed={composition.hair.style ?? 'hair'}
               size={62}
               hairLength={HAIR_LENGTH[composition.hair.length ?? 'medium'] ?? 'medium'}
+              // The composed look was drawing the generic outline for its own
+              // chosen cut, so two different looks could show the same hair.
+              hairSilhouette={silhouetteFor(
+                composition.hair.style ?? '',
+                HAIR_LENGTH[composition.hair.length ?? 'medium'] ?? 'medium',
+              )}
               hairColour={composition.hairColour.hex ?? undefined}
-              label={`${composition.hair.styleName ?? 'Hair'}, illustration`}
+              label={`${composition.hair.styleName ?? 'Hair'}, schematic illustration`}
             />
           </Tile>
 
@@ -131,7 +138,7 @@ export function LookComposition({ composition, compact = false }: Props) {
               size={62}
               emphasis={MAKEUP_EMPHASIS[composition.makeup.aesthetic ?? ''] ?? ['lips']}
               emphasisColour={composition.lipstick.hex ?? undefined}
-              label={`${composition.makeup.aestheticName ?? 'Makeup'}, illustration`}
+              label={`${composition.makeup.aestheticName ?? 'Makeup'}, schematic illustration`}
             />
           </Tile>
 

@@ -1,5 +1,7 @@
 """Beauty Passport: aggregation, saved looks, goals, settings, timeline."""
 import pytest
+
+from services import photo_storage
 from httpx import AsyncClient
 from sqlalchemy import select
 
@@ -184,17 +186,33 @@ async def test_settings_default_then_persist(client: AsyncClient):
     assert updated.json()["theme"] == "dark"
 
     again = (await client.get("/api/v1/passport/settings", headers=auth)).json()
-    assert again["theme"] == "dark" and again["photo_reuse_consent"] is True
+    assert again["theme"] == "dark"
+    # Reuse consent is NOT granted here, and this assertion is the point: this
+    # route used to write the flag straight onto the row, so the settings
+    # screen could turn reuse on with no retention consent and no object
+    # storage — the state the privacy work exists to prevent. It now goes
+    # through the same rule the privacy screen uses, which refuses.
+    # See tests/test_settings_consent_guard.py for the full contract.
+    assert again["photo_reuse_consent"] is False
 
     bad = await client.patch("/api/v1/passport/settings", headers=auth, json={"theme": "neon"})
     assert bad.status_code == 422
 
 
 @pytest.mark.asyncio
-async def test_photo_reuse_consent_surfaces_on_the_passport(client: AsyncClient):
+async def test_photo_reuse_consent_surfaces_on_the_passport(client: AsyncClient, monkeypatch):
     auth = await _register(client, "passport-consent@test.com")
     assert (await client.get("/api/v1/passport", headers=auth)).json()["photoReuseConsent"] is False
-    await client.patch("/api/v1/passport/settings", headers=auth, json={"photo_reuse_consent": True})
+
+    # Reuse cannot outlive retention, so retention has to be granted first —
+    # and that needs somewhere to store the photograph.
+    monkeypatch.setattr(photo_storage, "configured", lambda: True)
+    granted = await client.patch("/api/v1/privacy/consent", headers=auth,
+                                 json={"photo_retention_consent": True})
+    assert granted.status_code == 200
+
+    await client.patch("/api/v1/passport/settings", headers=auth,
+                       json={"photo_reuse_consent": True})
     assert (await client.get("/api/v1/passport", headers=auth)).json()["photoReuseConsent"] is True
 
 

@@ -11,6 +11,7 @@ from models.beauty import (
     BeautyGoal, BeautyProfile, CollectionItem, LookCollection, SavedLook, UserSettings,
 )
 from models.user import User
+from services import privacy_service
 from services.passport_service import build_passport, record_activity
 
 router = APIRouter(prefix="/passport", tags=["passport"])
@@ -427,8 +428,18 @@ async def update_settings(
     if not settings:
         settings = UserSettings(user_id=current_user.id)
         db.add(settings)
+    # Reuse consent has a rule, and this route used to write straight past it:
+    # it could be set true with no retention consent and no object storage, so
+    # the app would say a photograph was being reused when none was kept. It
+    # goes through the same service the privacy screen uses.
+    reuse = data.pop("photo_reuse_consent", None)
     for key, value in data.items():
         setattr(settings, key, value)
+    if reuse is not None:
+        try:
+            await privacy_service.set_consent(db, current_user.id, reuse=reuse)
+        except privacy_service.RetentionUnavailable as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
     await db.commit()
     await db.refresh(settings)
     return settings

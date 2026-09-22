@@ -7,6 +7,8 @@ import { RADIUS, SPACE } from '../../constants/theme';
 import { useSettings, useUpdateSettings } from '../../hooks/useBeauty';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme, ThemePreference } from '../../theme/ThemeProvider';
+import { getConsent, type PhotoConsent } from '../../services/privacyService';
+import { retentionStatus } from '../../utils/retention';
 
 const THEMES: { key: ThemePreference; label: string }[] = [
   { key: 'system', label: 'System' },
@@ -20,6 +22,16 @@ export default function SettingsScreen() {
   const settings = useSettings();
   const update = useUpdateSettings();
   const user = useAuthStore((s) => s.user);
+
+  // The reuse switch lives on two screens. Both must describe the same thing,
+  // and only the privacy endpoint knows whether storage can honour it.
+  const [consent, setConsent] = useState<PhotoConsent | null>(null);
+  useEffect(() => {
+    void getConsent().then((response) => {
+      if (response.success) setConsent(response.data);
+    });
+  }, []);
+  const retention = retentionStatus(consent, null, update.isPending);
   const logout = useAuthStore((s) => s.logout);
 
   const [country, setCountry] = useState('');
@@ -150,14 +162,23 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Txt variant="body">Reuse my photo for new analyses</Txt>
               <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                Off by default. With it off, every analysis needs a fresh photo, which is never kept
-                beyond the scan itself.
+                {retention.storageAvailable
+                  ? 'Off by default. With it off, every analysis needs a fresh photo, which is '
+                    + 'never kept beyond the scan itself.'
+                  : 'Unavailable on this version: no photograph is kept, so there is nothing to '
+                    + 'reuse. Every analysis uses a fresh photo, which is deleted when it finishes.'}
               </Txt>
             </View>
             <Switch
-              value={!!settings.data?.photoReuseConsent}
+              // What is in effect, not what is stored. The server refuses to
+              // let reuse outlive retention, so a switch reading the raw flag
+              // could show "on" and then silently revert.
+              value={retention.reuseOn}
+              disabled={!retention.reuseEnabled}
               onValueChange={(next) => update.mutate({ photoReuseConsent: next })}
-              accessibilityLabel="Reuse my photo"
+              accessibilityLabel="Reuse my photo for new analyses"
+              accessibilityHint={retention.reuseEnabled ? undefined
+                : 'Unavailable because no photograph is stored'}
               trackColor={{ true: colors.sage, false: colors.surfaceAlt }}
             />
           </View>
