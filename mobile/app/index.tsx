@@ -3,9 +3,11 @@ import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
 
 import { Txt } from '../components/ds';
+import { LockScreen } from '../components/ds/LockScreen';
 import { SPACE } from '../constants/theme';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAuthStore } from '../store/authStore';
+import { useLockStore } from '../store/lockStore';
 import { useOnboardingStore } from '../store/onboardingStore';
 
 /** Below this, a spinner is a flicker rather than reassurance. */
@@ -68,11 +70,17 @@ export default function Index() {
   const userId = useAuthStore((s) => s.user?.id);
   const status = useOnboardingStore((s) => s.status);
   const resolve = useOnboardingStore((s) => s.resolve);
+  const lockState = useLockStore((s) => s.state);
+  const checkLock = useLockStore((s) => s.check);
   const [waited, setWaited] = useState(0);
 
   useEffect(() => {
     if (isAuthenticated && userId) void resolve(userId);
   }, [isAuthenticated, userId, resolve]);
+
+  useEffect(() => {
+    if (isAuthenticated && userId) void checkLock(userId);
+  }, [isAuthenticated, userId, checkLock]);
 
   const settled = !isRestoring
     && (!isAuthenticated || (status !== 'unknown' && status !== 'resolving'));
@@ -92,6 +100,12 @@ export default function Index() {
   }
 
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
+
+  // The lock sits after "is there a session" and before "which screen", so a
+  // locked phone reveals neither the home screen nor how far through
+  // onboarding this account is.
+  if (lockState === 'unknown' || lockState === 'checking') return null;
+  if (lockState === 'locked') return <LockScreen />;
 
   // 'partial' goes back to onboarding, where the draft is waiting and every
   // step can still be skipped.

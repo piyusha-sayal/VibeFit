@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { User, AuthTokens } from '../types';
 import * as authService from '../services/authService';
+import * as biometrics from '../services/biometrics';
 import { clearCachedAnalysis } from '../services/localCache';
 import { useAnalysisStore } from './analysisStore';
+import { useLockStore } from './lockStore';
 import { useOnboardingStore } from './onboardingStore';
 
 interface AuthState {
@@ -22,7 +24,7 @@ interface AuthState {
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   tokens: null,
   isAuthenticated: false,
@@ -77,6 +79,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     set({ isLoading: true });
+    const signingOut = get().user?.id;
     try {
       await authService.logout();
     } finally {
@@ -88,6 +91,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       // the completion flag is per account and signing back in must not ask
       // the same questions again.
       useOnboardingStore.getState().reset();
+      // The lock belongs to the account, not the device: leaving it behind
+      // would make the next person to sign in face a prompt for a fingerprint
+      // that was never theirs.
+      if (signingOut) await biometrics.forget(signingOut);
+      useLockStore.getState().reset();
     }
   },
 
