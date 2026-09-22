@@ -232,3 +232,46 @@ real break, not a style opinion.
 - A layout failing means a screen will change background colour mid-navigation
   in light mode.
 - A route failing means a button somewhere does nothing when pressed.
+
+---
+
+## Android device-testing checklist
+
+Nobody has run MyLookFit on a phone. Until someone does, this is the list.
+
+**Install and launch**
+1. APK installs on Android 10 or later without a Play Protect block.
+2. Cold launch reaches a screen — splash does not hang.
+3. App icon and name read **MyLookFit**.
+
+**Account**
+4. Register a new account; onboarding appears.
+5. Complete onboarding; the home screen appears and does not bounce back.
+6. Force-quit, relaunch: home screen, no onboarding, no logout.
+7. Sign out and back in: home screen, no onboarding.
+
+**The five experiences**
+8. Discover My Colors — run an analysis, open the report, open a palette.
+9. Discover My Face — face shape, then Hair Studio and Makeup Studio.
+10. Discover My Style — decline body categorisation, browse garments.
+11. Create My Look — generate, replace a component, compare, save.
+12. Beauty Passport — attributes, saved looks, collections, goals, timeline.
+
+**Settings and privacy**
+13. Switch light / dark / system. **Every screen above must change with it** —
+    this is what §4 changed, and it is the one thing only a device can confirm.
+14. Turn on reduced motion; transitions stop.
+15. Privacy: the retention switch is disabled with the reason shown.
+16. Export data; the share sheet opens with JSON.
+17. Delete a disposable account; access is revoked.
+
+**Robustness**
+18. Back navigation from every screen; nothing traps the user.
+19. Android system text size at maximum: no clipped or overlapping text.
+20. Aeroplane mode at launch: the home screen appears, not onboarding.
+21. Slow network: loading states appear rather than blank screens.
+
+**Watch for, and record with a screenshot**
+Crashes · frozen screens · cut-off text · horizontal scrolling · wrong colours
+for the chosen theme · buttons that do nothing · failed saves · unexpected
+logout · lost drafts.

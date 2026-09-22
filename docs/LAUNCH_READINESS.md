@@ -212,3 +212,66 @@ The behaviour is right and the check is stale.
    configured. Unchanged, and stated in the app.
 5. The `GET /passport` transient remains **unresolved** — not reproduced in
    bounded testing, and not claimed fixed.
+
+---
+
+## Phase 6 P1 §4 (22 September 2026)
+
+### Done
+
+- **All twelve legacy screens migrated**, plus the nine shared primitives they
+  depend on. No file under `app/` or `components/` imports the fixed palette.
+- **Light and dark mode are now consistent throughout**, including the gradient
+  headers that used to be near-black slabs on ivory.
+- **The stale production assertion is corrected**, not removed, and asserts more
+  than it did. The privacy journey is **29/29**.
+
+### Measurements
+
+| Check | Before | After | Method |
+|---|---|---|---|
+| Mobile tests | 245 / 23 suites | **355 / 24 suites** | `npx jest --watchAll=false --ci` |
+| Backend tests | 456 | **456** | `python -m pytest -q` |
+| Files importing the fixed palette | 21 | **0** | `theme/palette.test.ts`, 108 files checked |
+| Production privacy journey | 26/27 | **29/29** | live API, disposable accounts |
+| Production Phase 5 journey | 22/22 | 22/22 | live API |
+
+### Not done in this session, and not claimed
+
+- **Part 3 premium visual refinement** beyond making both themes correct. No
+  new visual language was designed.
+- **Part 5 illustration audit** — `GarmentFigure`, `FaceFigure`,
+  `ReferenceImage`, `LookComposition` were not reviewed or improved. A bob and
+  a long layered cut may still share an illustration; that remains unverified
+  either way.
+- **Part 6 per-screen accessibility audit** — shared controls (swatches, chips,
+  onboarding selections, progress) carry labels, ticks and states from earlier
+  work. The per-screen walk of Look Builder, Color Studio, the body
+  questionnaire and the passport was **not** done.
+- **Part 7 performance measurement** — the table above is test and API counts,
+  not runtime measurement. **No startup time, frame rate, render count or
+  memory figure was taken**, because no device or profiler was available here.
+  None is reported.
+- **Part 8 settings matrix** — not walked control by control.
+- **Part 14 device testing** — neither emulator nor physical device.
+
+### Labels
+
+| Label | State |
+|---|---|
+| LOCAL VERIFIED | **Yes** — backend 456, mobile 355 / 24 suites, tsc and ESLint clean |
+| STAGING VERIFIED | n/a — no staging environment |
+| PRODUCTION VERIFIED | **Yes** — privacy 29/29, Phase 5 journey 22/22, onboarding 23/24 (one checker bug), `/health` and `/health/db` 200 |
+| ANDROID BUILD VERIFIED | See the build record below |
+| ANDROID EMULATOR VERIFIED | **No** |
+| ANDROID PHYSICAL DEVICE VERIFIED | **No** |
+| LEGAL REVIEW COMPLETE | **No** |
+
+### Launch blockers
+
+1. No device or emulator testing has ever been performed.
+2. No independent legal review.
+3. The illustration quality question is **open** — not audited.
+4. No runtime performance figure exists for this application on any device.
+5. S3 deletion unexercised; no bucket configured.
+6. `GET /passport` transient **unresolved**.
