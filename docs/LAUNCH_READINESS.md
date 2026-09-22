@@ -275,3 +275,50 @@ The behaviour is right and the check is stale.
 4. No runtime performance figure exists for this application on any device.
 5. S3 deletion unexercised; no bucket configured.
 6. `GET /passport` transient **unresolved**.
+
+---
+
+## Phase 6 P1 — quality audit session (22 September 2026)
+
+Full findings in **`docs/QUALITY_AUDIT.md`**. Summary:
+
+- **Hair**: 29 cuts shared 3 drawings; 12 short cuts were one picture. Now 8
+  silhouettes, and only buzz/crew/pixie still share one — asserted by test.
+- **Fringes**: 8 options, drawn not at all; the fringe finder screen had no
+  illustration. Now drawn, each distinct, shown beside its description.
+- **Makeup**: blush was one fixed pair of circles for every placement; liner
+  had no representation. Now 4 placements and 5 liner shapes.
+- **Garments**: no Indian garment had a shape — saree, lehenga, kurta and
+  anarkali all drew as a Western shift. Now 13 outlines added.
+- **Settings**: `PATCH /passport/settings` bypassed the photograph consent
+  rules entirely. Fixed, with the two tests that asserted the bypass corrected
+  rather than removed.
+
+| | Before | After |
+|---|---|---|
+| Backend tests | 456 | **461** |
+| Mobile tests | 355 / 24 suites | **368 / 25 suites** |
+
+### Labels
+
+| Label | State |
+|---|---|
+| LOCAL VERIFIED | **Yes** — backend 461, mobile 368, tsc and ESLint clean |
+| STAGING VERIFIED | n/a |
+| PRODUCTION VERIFIED | **Yes** for the API as deployed; the settings-consent fix is **not yet deployed** |
+| ANDROID BUILD VERIFIED | See build record |
+| ANDROID EMULATOR VERIFIED | **No** |
+| ANDROID PHYSICAL DEVICE VERIFIED | **No** |
+| LEGAL REVIEW COMPLETE | **No** |
+
+### Still open
+
+1. No device or emulator testing, ever. The new illustrations have never been
+   seen on a screen — the tests prove they differ, not that they look right.
+2. No TalkBack verification.
+3. No runtime performance measurement of any kind.
+4. Per-screen accessibility walk of Look Builder, Color Studio and the body
+   questionnaire not done.
+5. No independent legal review.
+6. S3 deletion unexercised; no bucket configured.
+7. `GET /passport` transient unresolved.
