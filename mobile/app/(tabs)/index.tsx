@@ -10,7 +10,7 @@ import { LookSwatches } from '../../components/look';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeProvider';
 import { EXPERIENCES, OCCASIONS, SMALL_TOOLS, tipOfTheDay } from '../../constants/experiences';
-import { orderExperiences } from '../../constants/onboarding';
+import { orderExperiences, recommendedStart } from '../../constants/onboarding';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { ACADEMY_GUIDES } from '../../constants/academy';
 import { INSPIRATION } from '../../constants/inspiration';
@@ -27,10 +27,26 @@ export default function HomeScreen() {
   // Onboarding interests order this list; nothing is ever removed from it, so
   // every experience stays one tap away whatever was or was not answered.
   const interests = useOnboardingStore((s) => s.interests);
+  const provisional = useOnboardingStore((s) => s.provisional);
+  const resolveOnboarding = useOnboardingStore((s) => s.resolve);
+  const userId = user?.id;
+
+  // Home was reached on a fallback because the network could not answer. Ask
+  // once more now that the app is running; the answer may be "you never
+  // finished onboarding", and it should not wait for the next cold start.
+  React.useEffect(() => {
+    if (provisional && userId) void resolveOnboarding(userId);
+  }, [provisional, userId, resolveOnboarding]);
   const experiences = useMemo(
     () => orderExperiences(EXPERIENCES, interests), [interests],
   );
-  const [occasion, setOccasion] = useState<string | null>(null);
+
+  // A first-timer who said they came for fashion should not be sent to a face
+  // scan. The onboarding answer is the only thing we actually know yet.
+  const firstStep = useMemo(() => {
+    const pick = recommendedStart(interests);
+    return EXPERIENCES.find((e) => e.key === pick?.experienceKey) ?? null;
+  }, [interests]);
 
   const firstName = (user?.name ?? '').trim().split(' ')[0];
   const tip = useMemo(tipOfTheDay, []);
@@ -113,9 +129,14 @@ export default function HomeScreen() {
             <Txt variant="display" serif>Discover Your Colors.</Txt>
             <Txt variant="display" serif style={{ marginBottom: SPACE.md }}>Define Your Style.</Txt>
             <Txt variant="body" tone="muted" style={{ marginBottom: SPACE.xl }}>
-              Your personal beauty and styling journey starts here.
+              {firstStep
+                ? `You said you wanted to explore ${firstStep.eyebrow.toLowerCase()}. Start there.`
+                : 'Your personal beauty and styling journey starts here.'}
             </Txt>
-            <Button label="Start Exploring" onPress={() => router.push('/(tabs)/scan' as never)} />
+            <Button
+              label={firstStep ? firstStep.title : 'Start Exploring'}
+              onPress={() => router.push((firstStep?.route ?? '/(tabs)/scan') as never)}
+            />
           </>
         ) : (
           <>
@@ -276,33 +297,6 @@ export default function HomeScreen() {
             <Chip key={tool.label} label={tool.label} accent={tool.accent} onPress={() => router.push(tool.route as never)} />
           ))}
         </View>
-      </View>
-
-      {/* ------------------------------------------ F. create your next look */}
-      <View style={styles.section}>
-        <SectionHeader title="Create your next look" />
-        <Card variant="tinted" accent="lavender">
-          <Txt variant="bodySm" tone="muted" style={{ marginBottom: SPACE.md }}>
-            Pick an occasion and we will build from your passport.
-          </Txt>
-          <View style={styles.wrap}>
-            {OCCASIONS.map((o) => (
-              <Chip
-                key={o.key}
-                label={o.label}
-                accent="lavender"
-                selected={occasion === o.key}
-                onPress={() => setOccasion(o.key)}
-              />
-            ))}
-          </View>
-          <Button
-            label={occasion ? `Continue with ${OCCASIONS.find((o) => o.key === occasion)?.label}` : 'Choose an occasion'}
-            disabled={!occasion}
-            style={{ marginTop: SPACE.lg }}
-            onPress={() => router.push(`/(tabs)/create?occasion=${occasion}` as never)}
-          />
-        </Card>
       </View>
 
       {/* --------------------------------------------- G. your beauty journey */}

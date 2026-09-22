@@ -67,6 +67,37 @@ describe('resolve', () => {
     expect(await useOnboardingStore.getState().resolve(USER)).toBe('done');
   });
 
+  it('marks an offline answer as provisional and writes nothing', async () => {
+    mockGet.mockResolvedValue({ success: false, data: null, error: 'offline' } as never);
+
+    await useOnboardingStore.getState().resolve(USER);
+
+    expect(useOnboardingStore.getState().provisional).toBe(true);
+    // No server said this account finished, so nothing may claim it did.
+    expect(await AsyncStorage.getItem(`mylookfit.onboarding.done.${USER}`)).toBeNull();
+  });
+
+  it('asks again once connectivity returns', async () => {
+    mockGet.mockResolvedValue({ success: false, data: null, error: 'offline' } as never);
+    await useOnboardingStore.getState().resolve(USER);
+
+    mockGet.mockResolvedValue({ success: false, data: null, status: 404 } as never);
+
+    // A provisional answer must not be served for the rest of the session.
+    expect(await useOnboardingStore.getState().resolve(USER)).toBe('required');
+    expect(useOnboardingStore.getState().provisional).toBe(false);
+  });
+
+  it('does not ask again once the server has answered', async () => {
+    mockGet.mockResolvedValue(record({ completedAt: '2026-09-01T00:00:00Z' }));
+    await useOnboardingStore.getState().resolve(USER);
+    mockGet.mockClear();
+
+    await useOnboardingStore.getState().resolve(USER);
+
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+
   it('answers from the local flag without a network call', async () => {
     mockGet.mockResolvedValue(record({ completedAt: '2026-09-01T00:00:00Z' }));
     await useOnboardingStore.getState().resolve(USER);

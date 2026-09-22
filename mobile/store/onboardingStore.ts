@@ -32,6 +32,12 @@ interface OnboardingState {
   draft: Partial<OnboardingAnswers>;
   /** Survives completion, unlike the draft: the home screen reads it. */
   interests: string[];
+  /**
+   * True when `done` is a fallback after the network could not answer, rather
+   * than something the server confirmed. Nothing is written to disk in that
+   * state, and the next resolve asks again.
+   */
+  provisional: boolean;
   /** Decide where this account belongs. Safe to call repeatedly. */
   resolve: (userId: string) => Promise<OnboardingStatus>;
   /** Keep a local draft so a killed app does not lose a half-finished run. */
@@ -55,11 +61,15 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   userId: null,
   draft: {},
   interests: [],
+  provisional: false,
 
   resolve: async (userId: string) => {
     const already = get();
-    if (already.userId === userId && (already.status === 'done'
-      || already.status === 'required' || already.status === 'partial')) {
+    // A provisional answer is not an answer: ask again rather than serving the
+    // fallback for the rest of the session.
+    if (already.userId === userId && !already.provisional
+      && (already.status === 'done' || already.status === 'required'
+        || already.status === 'partial')) {
       return already.status;
     }
     set({ status: 'resolving', userId });
@@ -67,12 +77,13 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     // The local flag answers instantly and is only ever written after the
     // server confirmed a completed run, so it cannot invent a completion.
     if (await readFlag(userId)) {
-      set({ status: 'done', interests: await readInterests(userId) });
+      set({ status: 'done', provisional: false, interests: await readInterests(userId) });
       return 'done';
     }
 
     const response = await getOnboarding();
     let status: OnboardingStatus;
+    let provisional = false;
     if (response.success && response.data) {
       if (response.data.completedAt) {
         status = 'done';
@@ -84,8 +95,10 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     } else if (response.status === 404) {
       status = 'required';
     } else {
-      // Ambiguous. Never classify an existing account as new on a failure.
+      // Ambiguous. Never classify an existing account as new on a failure —
+      // but never write the completion flag either, because no server said so.
       status = 'done';
+      provisional = true;
     }
 
     let draft: Partial<OnboardingAnswers> = {};
@@ -103,7 +116,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     const interests = fromServer ?? await readInterests(userId);
     if (fromServer) await writeInterests(userId, fromServer);
 
-    set({ status, draft, interests });
+    set({ status, draft, interests, provisional });
     return status;
   },
 
@@ -123,7 +136,10 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     // that sleeps, and a round trip between screens would be felt.
     const response = await saveOnboarding({ ...answers, completed: true });
     if (!response.success) return false;
-    set({ status: 'done', draft: {}, interests: answers.areasOfInterest ?? [] });
+    set({
+      status: 'done', provisional: false, draft: {},
+      interests: answers.areasOfInterest ?? [],
+    });
     if (userId) {
       try {
         await AsyncStorage.setItem(doneKey(userId), '1');
@@ -134,7 +150,9 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     return true;
   },
 
-  reset: () => set({ status: 'unknown', userId: null, draft: {}, interests: [] }),
+  reset: () => set({
+    status: 'unknown', userId: null, draft: {}, interests: [], provisional: false,
+  }),
 }));
 
 async function readInterests(userId: string): Promise<string[]> {
