@@ -170,7 +170,7 @@ testing.
 | LOCAL VERIFIED | **Yes** | Backend 456 passed; mobile 245 passed across 23 suites; `tsc --noEmit` clean; ESLint clean |
 | STAGING VERIFIED | **n/a** | No staging environment exists |
 | PRODUCTION VERIFIED | **Yes** | Onboarding 23/24 (one checker bug, not a defect); Phase 5 journey 22/22; privacy 26/27 (one stale assertion, see below); `/health` and `/health/db` both 200 |
-| ANDROID BUILD VERIFIED | See below | Build `190d360f-28a4-438e-9dda-2c943225bb69` from commit `f5032ca` |
+| ANDROID BUILD VERIFIED | **Yes** | Build `190d360f-28a4-438e-9dda-2c943225bb69` FINISHED from commit `f5032ca`. APK: https://expo.dev/artifacts/eas/FMhH3_CKTHJeYapnZGg5lgtjyBfzkIIcChrdbzLepN8.apk |
 | ANDROID EMULATOR VERIFIED | **No** | Not attempted this session |
 | ANDROID PHYSICAL DEVICE VERIFIED | **No** | No device has run this application at any point |
 | LEGAL REVIEW COMPLETE | **No** | No lawyer has read the documents. The app says so on the screen itself |
