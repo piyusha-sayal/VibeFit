@@ -50,6 +50,10 @@ export const PRIVACY_POLICY: LegalDocument = {
         'If you turn that setting off later, the photographs already kept are ' +
           'deleted at that moment. Withdrawing consent is an instruction, not ' +
           'a preference we record for next time.',
+        'Keeping a photograph also requires storage the release you are using ' +
+          'may not have. Where it is unavailable the setting is shown as ' +
+          'unavailable, and no photograph is kept at all. Settings → Privacy ' +
+          'states which applies to you.',
       ],
     },
     {

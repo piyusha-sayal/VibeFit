@@ -43,6 +43,16 @@ RETENTION_NOTE = (
     "rather than being removed from them individually."
 )
 
+STORAGE_UNAVAILABLE_NOTE = (
+    "Photograph storage is not configured on this deployment, so no original "
+    "photograph is kept. Your analysis results are saved to your account; the "
+    "image itself is discarded as soon as the analysis finishes."
+)
+
+
+class RetentionUnavailable(RuntimeError):
+    """Raised when retention is requested and there is nowhere to retain to."""
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -77,10 +87,13 @@ def photo_out(analysis: Analysis) -> dict:
 async def list_photos(db: AsyncSession, user_id: str) -> dict:
     analyses = await _analyses_for(db, user_id)
     photos = [photo_out(a) for a in analyses]
+    available = photo_storage.configured()
     return {
         "photos": photos,
         "storedCount": sum(1 for p in photos if p["stored"]),
+        "storageAvailable": available,
         "retentionNote": RETENTION_NOTE,
+        "storageNote": None if available else STORAGE_UNAVAILABLE_NOTE,
     }
 
 
@@ -185,10 +198,23 @@ async def _settings_for(db: AsyncSession, user_id: str) -> UserSettings:
 
 
 def consent_out(row: UserSettings) -> dict:
+    """Consent and capability are different things, and the screen needs both.
+
+    A stored flag says what someone asked for. `storageAvailable` says whether
+    this deployment can honour it. `retentionEffective` is the only one that
+    describes what is actually happening to their photographs, and it is the
+    one the screen should lead with.
+    """
+    available = photo_storage.configured()
+    consented = bool(row.photo_retention_consent)
     return {
-        "photoRetentionConsent": row.photo_retention_consent,
-        "photoReuseConsent": row.photo_reuse_consent,
+        "photoRetentionConsent": consented,
+        "photoReuseConsent": bool(row.photo_reuse_consent),
+        "storageAvailable": available,
+        "retentionEffective": consented and available,
+        "reuseEffective": bool(row.photo_reuse_consent) and available,
         "retentionNote": RETENTION_NOTE,
+        "storageNote": None if available else STORAGE_UNAVAILABLE_NOTE,
     }
 
 
@@ -206,6 +232,11 @@ async def set_consent(db: AsyncSession, user_id: str, *,
     files in place would be the kind of consent control that is true on the
     screen and false in the bucket.
     """
+    if retention is True and not photo_storage.configured():
+        # Recording this would put a switch on the screen that is on and does
+        # nothing. Withdrawal stays allowed in every case: stopping is never
+        # blocked by the thing that makes starting impossible.
+        raise RetentionUnavailable(STORAGE_UNAVAILABLE_NOTE)
     row = await _settings_for(db, user_id)
     withdrew_retention = retention is False and row.photo_retention_consent
     if retention is not None:

@@ -76,10 +76,15 @@ async def get_consent(db: AsyncSession = Depends(get_db),
 async def set_consent(body: ConsentIn,
                       db: AsyncSession = Depends(get_db),
                       current_user: User = Depends(get_current_user)):
-    return await privacy_service.set_consent(
-        db, current_user.id,
-        retention=body.photo_retention_consent,
-        reuse=body.photo_reuse_consent)
+    try:
+        return await privacy_service.set_consent(
+            db, current_user.id,
+            retention=body.photo_retention_consent,
+            reuse=body.photo_reuse_consent)
+    except privacy_service.RetentionUnavailable as exc:
+        # 409 rather than 400: the request is well formed and would be
+        # honoured on a deployment that had storage configured.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/export")

@@ -14,13 +14,23 @@ export interface StoredPhoto {
 export interface PhotoList {
   photos: StoredPhoto[];
   storedCount: number;
+  /** False when this deployment has no object storage, so nothing can be kept. */
+  storageAvailable: boolean;
   retentionNote: string;
+  /** Present only when storage is unavailable; explains what happens instead. */
+  storageNote: string | null;
 }
 
 export interface PhotoConsent {
+  /** What the person asked for, which can outlive the ability to honour it. */
   photoRetentionConsent: boolean;
   photoReuseConsent: boolean;
+  storageAvailable: boolean;
+  /** Consent AND capability — the only field that describes reality. */
+  retentionEffective: boolean;
+  reuseEffective: boolean;
   retentionNote: string;
+  storageNote: string | null;
 }
 
 export interface DeletionResult {

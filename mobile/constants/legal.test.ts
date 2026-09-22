@@ -76,6 +76,14 @@ describe('the privacy policy matches what the code does', () => {
     );
   });
 
+  it('does not promise retention the deployment may be unable to provide', () => {
+    // backend/services/privacy_service.py refuses to record retention consent
+    // when no object storage is configured. The policy has to allow for that,
+    // or it describes a build nobody is running.
+    expect(text).toContain('the setting is shown as');
+    expect(text).toContain('no photograph is kept at all');
+  });
+
   it('promises no erasure from backups', () => {
     expect(text).not.toMatch(/removed from (all|every) backup/i);
   });

@@ -11,6 +11,7 @@ import {
   deleteAllPhotos, deletePhoto, exportData, getConsent, listPhotos, setConsent,
   type PhotoConsent, type PhotoList,
 } from '../../services/privacyService';
+import { retentionStatus } from '../../utils/retention';
 
 function whenTaken(iso: string | null): string {
   if (!iso) return 'Date unknown';
@@ -125,6 +126,8 @@ export default function PrivacyScreen() {
 
   if (loading) return <LoadingState label="Loading your privacy settings…" />;
 
+  const retention = retentionStatus(consent, photos, busy === 'consent');
+  const { storageAvailable, note: storageNote } = retention;
   const stored = photos?.photos.filter((p) => p.stored) ?? [];
   const removed = photos?.photos.filter((p) => !p.stored && p.deletedAt) ?? [];
 
@@ -137,24 +140,41 @@ export default function PrivacyScreen() {
       <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
         Your photographs, what we keep, and how to take it all back.
       </Txt>
+      <Txt variant="bodySm" style={{ marginTop: SPACE.md }}>{retention.summary}</Txt>
 
       {error ? <ErrorState message={error} onRetry={load} /> : null}
 
       {/* ------------------------------------------------------------ consent */}
       <View style={styles.section}>
         <SectionHeader title="Photograph consent" />
+
+        {/* Said before the switches rather than after them: a disabled control
+            with no reason beside it reads as a bug. */}
+        {!storageAvailable && storageNote ? (
+          <Card variant="outlined" style={{ marginBottom: SPACE.md }}>
+            <Txt variant="body">Photograph storage is unavailable</Txt>
+            <Txt variant="caption" tone="muted" style={{ marginTop: SPACE.xs }}>
+              {storageNote}
+            </Txt>
+          </Card>
+        ) : null}
+
         <Card>
           <View style={styles.rowBetween}>
             <View style={{ flex: 1 }}>
               <Txt variant="body">Keep my photographs after an analysis</Txt>
               <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                Off by default. With it off, your photograph is deleted as soon as the
-                analysis finishes — the results stay, the image does not.
+                {storageAvailable
+                  ? 'Off by default. With it off, your photograph is deleted as soon as '
+                    + 'the analysis finishes — the results stay, the image does not.'
+                  : 'Unavailable on this version. Your photograph is always deleted as '
+                    + 'soon as the analysis finishes.'}
               </Txt>
             </View>
             <Switch
-              value={!!consent?.photoRetentionConsent}
-              disabled={busy === 'consent'}
+              // What is in effect, not what was once asked for.
+              value={retention.retentionOn}
+              disabled={!retention.retentionEnabled}
               onValueChange={(next) => changeConsent({ photoRetentionConsent: next })}
               accessibilityLabel="Keep my photographs after an analysis"
               trackColor={{ true: colors.sage, false: colors.surfaceAlt }}
@@ -167,14 +187,14 @@ export default function PrivacyScreen() {
             <View style={{ flex: 1 }}>
               <Txt variant="body">Reuse a kept photograph for a new analysis</Txt>
               <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                {consent?.photoRetentionConsent
+                {retention.retentionOn
                   ? 'Saves taking a new photograph each time.'
                   : 'Needs the setting above: with nothing kept, there is nothing to reuse.'}
               </Txt>
             </View>
             <Switch
-              value={!!consent?.photoReuseConsent}
-              disabled={busy === 'consent' || !consent?.photoRetentionConsent}
+              value={retention.reuseOn}
+              disabled={!retention.reuseEnabled}
               onValueChange={(next) => changeConsent({ photoReuseConsent: next })}
               accessibilityLabel="Reuse a kept photograph for a new analysis"
               trackColor={{ true: colors.sage, false: colors.surfaceAlt }}
@@ -207,8 +227,11 @@ export default function PrivacyScreen() {
         {stored.length === 0 ? (
           <Card variant="outlined">
             <Txt variant="bodySm" tone="muted">
-              No photograph of yours is being kept. Analyses you have already run keep
-              their results and appear in your passport.
+              {storageAvailable
+                ? 'No photograph of yours is being kept. Analyses you have already run '
+                  + 'keep their results and appear in your passport.'
+                : 'No photograph is kept, and none can be on this version. Analyses you '
+                  + 'have already run keep their results and appear in your passport.'}
             </Txt>
           </Card>
         ) : (
