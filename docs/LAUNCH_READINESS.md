@@ -306,7 +306,7 @@ Full findings in **`docs/QUALITY_AUDIT.md`**. Summary:
 | LOCAL VERIFIED | **Yes** — backend 461, mobile 368, tsc and ESLint clean |
 | STAGING VERIFIED | n/a |
 | PRODUCTION VERIFIED | **Yes** for the API as deployed; the settings-consent fix is **not yet deployed** |
-| ANDROID BUILD VERIFIED | See build record |
+| ANDROID BUILD VERIFIED | **Not yet** — build `a16b0a05-735e-4d92-89c1-e468d37eef6d` from `a26b5fb` was still IN_QUEUE when this session ended. The last FINISHED APK is `28702cc2` from `f5032ca`, which predates the visual and settings-consent work. |
 | ANDROID EMULATOR VERIFIED | **No** |
 | ANDROID PHYSICAL DEVICE VERIFIED | **No** |
 | LEGAL REVIEW COMPLETE | **No** |
