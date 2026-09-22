@@ -1,9 +1,9 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { C } from '../../constants/colors';
-
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 interface Props {
   children: React.ReactNode;
   style?: ViewStyle;
@@ -12,6 +12,8 @@ interface Props {
 }
 
 export function Screen({ children, style, gradient, safeArea = true }: Props) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const content = (
     <View style={[styles.inner, style]}>
       {children}
@@ -35,7 +37,7 @@ export function Screen({ children, style, gradient, safeArea = true }: Props) {
   return wrapper;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,

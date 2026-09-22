@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Lbl } from './Lbl';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function ScreenHeader({ eyebrow, title, right, style }: Props) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
   return (
     <View style={[styles.header, style]}>
@@ -28,7 +31,7 @@ export function ScreenHeader({ eyebrow, title, right, style }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 18 },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: C.white06, marginTop: 4 },
   backArrow: { fontFamily: FONTS.sans, fontSize: 18, color: C.textMuted },

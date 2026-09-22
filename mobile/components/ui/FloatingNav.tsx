@@ -1,10 +1,10 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter, usePathname } from 'expo-router';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { C } from '../../constants/colors';
-
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 const HomeIcon = ({ color }: { color: string }) => (
   <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
     <Path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
@@ -40,6 +40,8 @@ const TABS = [
 ] as const;
 
 export function FloatingNav() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -70,7 +72,7 @@ export function FloatingNav() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   wrapper: {
     position: 'absolute',
     bottom: 44,

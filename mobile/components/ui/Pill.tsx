@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function Pill({ children, active, gold, onPress, style, textStyle }: Props) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const bgColor = active ? C.gold : gold ? C.goldDim : C.surface2;
   const textColor = active ? C.bg : gold ? C.gold : C.textMuted;
   const borderColor = active ? C.gold : gold ? C.goldBorder : C.white06;
@@ -47,7 +50,7 @@ export function Pill({ children, active, gold, onPress, style, textStyle }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (_C: LegacyPalette) => StyleSheet.create({
   pill: {
     borderRadius: 9999,
     paddingHorizontal: 13,

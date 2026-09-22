@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { Screen } from '../components/ui/Screen';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
 import { Lbl } from '../components/ui/Lbl';
 import { Tag } from '../components/ui/Tag';
 import { GoldButton } from '../components/ui/GoldButton';
-import { C } from '../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../theme/legacy';
 import { FONTS } from '../constants/fonts';
 import { getVibeProfile, saveCorrection } from '../services/profileService';
 import { VibeProfile, VibeAttribute } from '../types';
@@ -32,6 +32,8 @@ function valueText(v: unknown): string {
 function AttributeRow({
   attrKey, attr, onCorrect,
 }: { attrKey: string; attr: VibeAttribute; onCorrect: (key: string, value: string) => Promise<void> }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(valueText(attr.value));
   const [saving, setSaving] = useState(false);
@@ -88,6 +90,8 @@ function AttributeRow({
 }
 
 export default function VibeProfileScreen() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const [profile, setProfile] = useState<VibeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -157,7 +161,7 @@ export default function VibeProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { fontFamily: FONTS.sans, fontSize: 14, color: C.textMuted, textAlign: 'center' },
   emptyInline: { fontFamily: FONTS.sans, fontSize: 13, color: C.textMuted, marginTop: 8, lineHeight: 19 },

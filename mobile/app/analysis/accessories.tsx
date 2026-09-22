@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -5,7 +6,7 @@ import { FloatingNav } from '../../components/ui/FloatingNav';
 import { Lbl } from '../../components/ui/Lbl';
 import { Tag } from '../../components/ui/Tag';
 import { EarringIcon, NecklaceIcon, RingIcon, BraceletIcon } from '../../components/illustrations/Accessories';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 const CATEGORIES = [
@@ -57,6 +58,8 @@ const METAL_GUIDE = [
 ];
 
 export default function AccessoriesScreen() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
 
   return (
@@ -133,7 +136,7 @@ export default function AccessoriesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   scroll: { paddingTop: 62 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 20, marginBottom: 20 },

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -6,7 +7,7 @@ import { FloatingNav } from '../../components/ui/FloatingNav';
 import { Lbl } from '../../components/ui/Lbl';
 import { Tag } from '../../components/ui/Tag';
 import { VNeck, WrapNeck, OffShoulder, ScoopNeck, SquareNeck, CowlNeck } from '../../components/illustrations/Necklines';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 const NECKLINES = [
@@ -28,6 +29,8 @@ const PALETTES: { label: string; color: string }[] = [
 ];
 
 export default function WardrobeScreen() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
   const currentAnalysis = useAnalysisStore((s) => s.currentAnalysis);
   const outfits = currentAnalysis?.recommendations?.filter((r) => r.category === 'outfit') ?? [];
@@ -112,7 +115,7 @@ export default function WardrobeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   scroll: { paddingTop: 62 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 20, marginBottom: 20 },

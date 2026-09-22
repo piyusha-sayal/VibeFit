@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, ActivityIndicator, ViewStyle } from 'react-native';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 interface GoogleButtonProps {
@@ -12,6 +13,8 @@ interface GoogleButtonProps {
 }
 
 export function GoogleButton({ onPress, loading, disabled, label = 'Continue with Google', style }: GoogleButtonProps) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   return (
     <TouchableOpacity
       style={[styles.btn, (disabled || loading) && styles.btnDisabled, style]}
@@ -35,7 +38,7 @@ export function GoogleButton({ onPress, loading, disabled, label = 'Continue wit
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   btn: {
     flexDirection: 'row',
     alignItems: 'center',

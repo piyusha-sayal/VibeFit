@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
@@ -10,12 +10,14 @@ import { useGoogleAuth } from '../../hooks/useGoogleAuth';
 import { GoldButton } from '../../components/ui/GoldButton';
 import { GoogleButton } from '../../components/ui/GoogleButton';
 import { PasswordInput } from '../../components/ui/PasswordInput';
-import { C, GRADIENTS } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { isGuestLoginEnabled } from '../../constants/flags';
 import { FONTS } from '../../constants/fonts';
 import { Logo } from '../../components/ds/Logo';
 
 export default function LoginScreen() {
+  const { C, GRADIENTS } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { login, loginAsGuest, isLoading, error, clearError } = useAuth();
   const { signInWithGoogle, loading: googleLoading, error: googleError } = useGoogleAuth();
   const [email, setEmail] = useState('');
@@ -124,7 +126,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scroll: { padding: 28, paddingTop: 80, flexGrow: 1 },

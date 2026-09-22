@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Alert,
 } from 'react-native';
@@ -11,10 +11,11 @@ import { useAnalysis } from '../../hooks/useAnalysis';
 import { FloatingNav } from '../../components/ui/FloatingNav';
 import { GoldButton } from '../../components/ui/GoldButton';
 import { Face } from '../../components/illustrations/Face';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 function Ring({ delay, size }: { delay: number; size: number }) {
+  const { C } = useLegacyTheme();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.55);
 
@@ -38,6 +39,7 @@ function Ring({ delay, size }: { delay: number; size: number }) {
 }
 
 function ScanLine() {
+  const { C } = useLegacyTheme();
   const ty = useSharedValue(-80);
 
   useEffect(() => {
@@ -61,6 +63,8 @@ function ScanLine() {
 }
 
 export default function ScanScreen() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
   const { pickAndAnalyze, cameraAndAnalyze, isUploading, uploadProgress, isAnalyzing, error } = useAnalysis();
 
@@ -145,7 +149,7 @@ export default function ScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: { paddingTop: 70, paddingHorizontal: 24, marginBottom: 32 },
   title: { fontFamily: FONTS.serif, fontSize: 34, color: C.text, marginBottom: 6 },

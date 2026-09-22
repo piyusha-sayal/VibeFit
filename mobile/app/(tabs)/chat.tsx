@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
@@ -10,10 +10,12 @@ import Animated, {
 import { useChat } from '../../hooks/useChat';
 import { FloatingNav } from '../../components/ui/FloatingNav';
 import { Lbl } from '../../components/ui/Lbl';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 function TypingDot({ delay }: { delay: number }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const ty = useSharedValue(0);
 
   useEffect(() => {
@@ -28,6 +30,8 @@ function TypingDot({ delay }: { delay: number }) {
 }
 
 function TypingIndicator() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   return (
     <View style={styles.bubbleAi}>
       <View style={styles.typingRow}>
@@ -40,6 +44,8 @@ function TypingIndicator() {
 }
 
 export default function ChatScreen() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { messages, isSending, send, inputValue, setInputValue } = useChat();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -163,7 +169,7 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: {
     paddingTop: 62, paddingHorizontal: 20, paddingBottom: 14,

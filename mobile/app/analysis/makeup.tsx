@@ -1,14 +1,17 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAnalysisStore } from '../../store/analysisStore';
 import { FloatingNav } from '../../components/ui/FloatingNav';
 import { Lbl } from '../../components/ui/Lbl';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 import type { ColorSwatch } from '../../types';
 
 function Swatch({ swatch, size = 44 }: { swatch: ColorSwatch; size?: number }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   return (
     <View style={styles.swatchWrap}>
       <View style={[styles.swatchCircle, { backgroundColor: swatch.hex, width: size, height: size, borderRadius: size / 2 }]} />
@@ -18,6 +21,8 @@ function Swatch({ swatch, size = 44 }: { swatch: ColorSwatch; size?: number }) {
 }
 
 function SwatchSection({ title, swatches }: { title: string; swatches: ColorSwatch[] }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   if (!swatches?.length) return null;
   return (
     <View style={styles.card}>
@@ -32,6 +37,8 @@ function SwatchSection({ title, swatches }: { title: string; swatches: ColorSwat
 }
 
 export default function MakeupScreen() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
   const makeup = useAnalysisStore((s) => s.currentAnalysis?.colorAnalysis?.makeup);
   const seasonal = useAnalysisStore((s) => s.currentAnalysis?.colorAnalysis?.seasonal);
@@ -81,7 +88,7 @@ export default function MakeupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   scroll: { paddingTop: 62 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 20, marginBottom: 18 },

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../components/ui/Screen';
@@ -6,7 +6,7 @@ import { ScreenHeader } from '../components/ui/ScreenHeader';
 import { Lbl } from '../components/ui/Lbl';
 import { Tag } from '../components/ui/Tag';
 import { GoldButton } from '../components/ui/GoldButton';
-import { C } from '../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../theme/legacy';
 import { FONTS } from '../constants/fonts';
 import { getActionPlan, submitActionFeedback } from '../services/planService';
 import { ActionPlan, PlanAction, ActionFeedbackType } from '../types';
@@ -26,6 +26,8 @@ function formatCheckIn(iso: string): string {
 }
 
 function ActionCard({ action, onFeedback }: { action: PlanAction; onFeedback: (id: string, type: ActionFeedbackType) => void }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const [sending, setSending] = useState<ActionFeedbackType | null>(null);
 
   const send = async (type: ActionFeedbackType) => {
@@ -70,6 +72,8 @@ function ActionCard({ action, onFeedback }: { action: PlanAction; onFeedback: (i
 }
 
 export default function PlanScreen() {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
   const [plan, setPlan] = useState<ActionPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,7 +176,7 @@ export default function PlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyText: { fontFamily: FONTS.sans, fontSize: 14, color: C.textMuted, textAlign: 'center' },
   emptyInline: { fontFamily: FONTS.sans, fontSize: 13, color: C.textMuted, marginTop: 8, lineHeight: 19 },

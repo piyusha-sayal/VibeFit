@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, TextInputProps } from 'react-native';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
@@ -9,6 +9,8 @@ interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
 }
 
 export function PasswordInput({ value, onChangeText, ...rest }: PasswordInputProps) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const [visible, setVisible] = useState(false);
 
   return (
@@ -36,7 +38,7 @@ export function PasswordInput({ value, onChangeText, ...rest }: PasswordInputPro
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   wrap: { position: 'relative', justifyContent: 'center' },
   input: {
     backgroundColor: C.surface2,

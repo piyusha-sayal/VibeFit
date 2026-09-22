@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
-import { C } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function GoldButton({ label, onPress, loading, disabled, variant = 'primary', style }: Props) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const isPrimary = variant === 'primary';
   const isOutline = variant === 'outline';
 
@@ -39,7 +42,7 @@ export function GoldButton({ label, onPress, loading, disabled, variant = 'prima
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   btn: {
     borderRadius: 9999,
     paddingVertical: 14,

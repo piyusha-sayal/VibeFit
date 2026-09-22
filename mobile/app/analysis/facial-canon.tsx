@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,10 +7,12 @@ import { useAnalysisStore } from '../../store/analysisStore';
 import { FloatingNav } from '../../components/ui/FloatingNav';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Lbl } from '../../components/ui/Lbl';
-import { C, GRADIENTS } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 function CanonTile({ label }: { label: string }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   return (
     <View style={styles.canonTile}>
       <View style={styles.canonDot} />
@@ -19,6 +22,7 @@ function CanonTile({ label }: { label: string }) {
 }
 
 function FaceOutline() {
+  const { C } = useLegacyTheme();
   return (
     <Svg width={140} height={170} viewBox="0 0 140 170" fill="none">
       <Path
@@ -48,6 +52,8 @@ const CANON_LABELS: Array<{ key: 'facialThirds' | 'goldenRatio' | 'eyeSpacing' |
 ];
 
 export default function FacialCanonScreen() {
+  const { C, GRADIENTS } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const face = useAnalysisStore((s) => s.currentAnalysis?.faceAnalysis);
 
   const canonEntries = CANON_LABELS.filter((c) => face?.canon?.[c.key] !== undefined);
@@ -100,7 +106,7 @@ export default function FacialCanonScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   scroll: { paddingTop: 62 },
 

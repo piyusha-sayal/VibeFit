@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -11,10 +11,12 @@ import { Tag } from '../../components/ui/Tag';
 import { Lbl } from '../../components/ui/Lbl';
 import { GoldButton } from '../../components/ui/GoldButton';
 import { downloadAndShareReport, downloadAndShareCard, downloadAndShareOverlay } from '../../services/reportService';
-import { C, GRADIENTS } from '../../constants/colors';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 import { FONTS } from '../../constants/fonts';
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   return (
     <View style={styles.scoreRow}>
       <Text style={styles.scoreLabel}>{label}</Text>
@@ -27,6 +29,8 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 }
 
 function SkinStat({ label, value }: { label: string; value: string }) {
+  const { C } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   return (
     <View style={styles.skinStat}>
       <Text style={styles.skinStatLabel}>{label}</Text>
@@ -36,6 +40,8 @@ function SkinStat({ label, value }: { label: string; value: string }) {
 }
 
 export default function ResultsScreen() {
+  const { C, GRADIENTS } = useLegacyTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const router = useRouter();
   const currentAnalysis = useAnalysisStore((s) => s.currentAnalysis);
   const [busy, setBusy] = useState<null | 'report' | 'card' | 'overlay'>(null);
@@ -258,7 +264,7 @@ export default function ResultsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   empty: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyTitle: { fontFamily: FONTS.serif, fontSize: 26, color: C.text, marginTop: 20 },
