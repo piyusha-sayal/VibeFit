@@ -887,3 +887,71 @@ The rule worth stating: **when the network cannot answer, the answer is
 returning than new, and sending a returning user back through onboarding is the
 worse of the two failures. A local per-account flag, written only after the
 server confirmed a completed run, answers instantly on later launches.
+
+---
+
+## Phase 6 P1 — release candidate session
+
+### Onboarding, verified in production
+
+`1b6211e` is live. **23/24 checks passed** against the production API with four
+disposable accounts, all deleted afterwards. The one failure was the checker
+asking for `/looks`, which has never existed — production's own OpenAPI
+document lists `/api/v1/looks/saved` and not `/api/v1/looks`. That is the third
+time in this project a check has failed for a reason belonging to the checker,
+and it is worth repeating: a check that fails for the wrong reason misleads
+exactly as much as one that passes for the wrong reason.
+
+What production actually does: a new account has no record (404); partial
+answers save without a completion stamp; an earlier answer survives a later
+save; a skipped step is recorded as skipped; `completed: true` stamps
+`completed_at`; completion survives signing out and back in; a later edit does
+not move the stamp; a legacy `primary_goal` row still counts as finished; and
+one account cannot see another's onboarding.
+
+`/health` 200 at the root, `/health/db` 200 (`"database":"reachable"`).
+
+### Provisional completion
+
+The offline fallback had a hole this brief named. `done` after a network
+failure was indistinguishable from `done` because the server said so, and was
+cached for the rest of the session — so the app could never reconcile.
+
+It is now marked `provisional`. Nothing is written to disk in that state, the
+next `resolve` asks again rather than serving the fallback, and the home screen
+asks once on mount. A server-confirmed answer still short-circuits, so this
+costs a request only in the case where one was already lost. The routing
+strategy itself is unchanged: an ambiguous answer still means Home.
+
+### Two audits that run instead of two audits that were done once
+
+- `theme/layout.test.ts` — every `_layout.tsx` takes its background from the
+  theme. This found a real defect: `(auth)` and `analysis` both painted `C.bg`,
+  the original fixed near-black, behind their whole stack, so **light mode
+  changed colour between one screen and the next**. Invisible to anyone
+  developing in dark mode, which is why it survived this long.
+- `theme/routes.test.ts` — every literal `router.push`/`replace`/`href` in the
+  app resolves to a screen. **43 targets, all resolve**, so there is no dead
+  navigation anywhere in the 79 screens.
+
+Both live outside `app/` so expo-router cannot mistake a test for a screen.
+
+### The home screen carried two of the same section
+
+Two sections headed "Create your next look": the first with drafts, occasion
+chips and recent looks, the second a select-then-continue copy of the same
+occasion chips, one screen further down. Removed, along with the state that
+existed only for it.
+
+A first-timer who chose Fashion during onboarding was also being sent to a face
+scan. The hero now opens the experience their own answer points at.
+
+### Legacy screens that remain
+
+Twelve screens still import the pre-design-system primitives (`GoldButton`,
+`Pill`, `C`): `(auth)/login`, `(auth)/register`, `(tabs)/chat`,
+`(tabs)/results`, `(tabs)/scan`, `analysis/{accessories,facial-canon,hair,
+makeup,wardrobe}`, `plan`, `vibe-profile`. They are internally consistent and
+none of them is broken — they simply do not follow the theme, so they stay dark
+in light mode. This was not converted in this session, and is stated here
+rather than implied to be done.

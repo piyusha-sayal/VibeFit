@@ -220,3 +220,15 @@ Six states, and the first four are the ones that break silently.
 
 Also check that selection is legible in greyscale: every selected chip and
 interest card carries a tick, not only a tint.
+
+---
+
+## The two audits that run on every suite
+
+`theme/layout.test.ts` and `theme/routes.test.ts` replace two checks that used
+to be done by reading code. Run them before a release; a failure in either is a
+real break, not a style opinion.
+
+- A layout failing means a screen will change background colour mid-navigation
+  in light mode.
+- A route failing means a button somewhere does nothing when pressed.

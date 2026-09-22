@@ -158,3 +158,57 @@ refinement, §7 visual content quality, §8 the full accessibility audit across
 each flagship screen, §9 performance measurement, §10 settings and help,
 §12 the eight consumer journeys, §13 a release-candidate APK, §14 device
 testing.
+
+---
+
+## Phase 6 P1 — release candidate (22 September 2026)
+
+### Verification labels
+
+| Label | State | Evidence |
+|---|---|---|
+| LOCAL VERIFIED | **Yes** | Backend 456 passed; mobile 245 passed across 23 suites; `tsc --noEmit` clean; ESLint clean |
+| STAGING VERIFIED | **n/a** | No staging environment exists |
+| PRODUCTION VERIFIED | **Yes** | Onboarding 23/24 (one checker bug, not a defect); Phase 5 journey 22/22; privacy 26/27 (one stale assertion, see below); `/health` and `/health/db` both 200 |
+| ANDROID BUILD VERIFIED | See below | Build `190d360f-28a4-438e-9dda-2c943225bb69` from commit `f5032ca` |
+| ANDROID EMULATOR VERIFIED | **No** | Not attempted this session |
+| ANDROID PHYSICAL DEVICE VERIFIED | **No** | No device has run this application at any point |
+| LEGAL REVIEW COMPLETE | **No** | No lawyer has read the documents. The app says so on the screen itself |
+
+The privacy script's single failure is `retention and reuse can both be
+granted`. That assertion was written before §2 and is now **wrong on purpose**:
+production has no object storage, so granting retention correctly returns 409.
+The behaviour is right and the check is stale.
+
+### Done this session
+
+- Onboarding production-verified across new, partial, returning and legacy
+  accounts, plus cross-account isolation
+- Provisional completion: an offline answer no longer masquerades as a
+  server-confirmed one, and reconciles when connectivity returns
+- Light mode fixed behind the auth and analysis stacks
+- Duplicate home section removed; newcomer CTA follows the stated interest
+- Navigation audit: 43 routes, all resolve
+- Layout audit: 16 layouts, all theme-driven
+
+### Not done, and not claimed
+
+- **Twelve screens still use the legacy primitives.** Listed by name in
+  `docs/EXPANSION.md`. They work; they do not follow the theme.
+- **Parts 4–7 of the brief were not completed**: premium visual refinement,
+  illustration quality review, the wider accessibility audit beyond swatches,
+  onboarding and layouts, and performance measurement. No before/after numbers
+  were taken, so none are reported.
+- **No device or emulator testing.** The eight product journeys are verified at
+  the API level only — that establishes the backend contract, not that a person
+  can complete them on a phone.
+
+### Launch blockers
+
+1. No physical-device testing has ever been performed.
+2. No independent legal review.
+3. Twelve screens ignore the theme in light mode.
+4. The S3 delete path has never run against a real bucket, because no bucket is
+   configured. Unchanged, and stated in the app.
+5. The `GET /passport` transient remains **unresolved** — not reproduced in
+   bounded testing, and not claimed fixed.
