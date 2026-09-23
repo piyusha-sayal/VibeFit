@@ -76,10 +76,20 @@ export default function OnboardingScreen() {
     setStep(to);
   };
 
+  /**
+   * How long the last step waits for the server before going in anyway.
+   *
+   * The answers are already held locally, so the only thing still pending is
+   * telling the server. Making someone watch a spinner for the better part of
+   * a minute to be told something they cannot act on is worse than letting
+   * them in and finishing the write behind them.
+   */
+  const FINISH_TIMEOUT_MS = 6_000;
+
   const finish = async () => {
     setSaving(true);
     setError(null);
-    const ok = await complete({
+    const saved = complete({
       areasOfInterest: interests.length ? interests : null,
       stylePreferences: styles_.length ? styles_ : null,
       market: region,
@@ -87,12 +97,25 @@ export default function OnboardingScreen() {
       keepUsingItems: draft.keepUsingItems ?? null,
       skippedFields: skipped.length ? skipped : null,
     });
+
+    // Whichever answers first. The request is not cancelled on a timeout: it
+    // carries on and completes behind the user.
+    const timedOut = Symbol('timed out');
+    const outcome = await Promise.race([
+      saved,
+      new Promise<typeof timedOut>((resolve) =>
+        setTimeout(() => resolve(timedOut), FINISH_TIMEOUT_MS)),
+    ]);
     setSaving(false);
-    if (!ok) {
+
+    if (outcome === false) {
       setError('We could not save that. You can try again, or explore now and '
         + 'set your preferences later in Settings.');
       return;
     }
+    // `timedOut` and `true` both go in. If the write does eventually fail, the
+    // next launch asks again, which is the same thing a lost connection has
+    // always done here.
     router.replace(firstExperience ? (firstExperience.route as never) : ('/(tabs)' as never));
   };
 

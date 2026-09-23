@@ -1,60 +1,24 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
 
-import { Txt } from '../components/ds';
 import { LockScreen } from '../components/ds/LockScreen';
-import { SPACE } from '../constants/theme';
-import { useTheme } from '../theme/ThemeProvider';
+import { WakingScreen } from '../components/ds/WakingScreen';
 import { useAuthStore } from '../store/authStore';
 import { useLockStore } from '../store/lockStore';
 import { useOnboardingStore } from '../store/onboardingStore';
 
-/** Below this, a spinner is a flicker rather than reassurance. */
-const PATIENCE_MS = 600;
-/** Past this, say why it is taking so long instead of spinning silently. */
-const COLD_START_MS = 6_000;
-
+/** Below this, anything on screen is a flicker rather than reassurance. */
+const PATIENCE_MS = 400;
 /**
- * A blank screen and a frozen screen look identical.
+ * How long the launch will wait for the server before going ahead without it.
  *
- * This gate used to render `null` while it worked out where to send the
- * launch. On a fresh install the answer needs the network, and the free plan
- * sleeps after fifteen minutes idle, so the first request can take the better
- * part of a minute to wake it. For that whole time the app showed nothing at
- * all — no spinner, no message — which reads as a hang, not as work.
- *
- * The cold-start banner already existed but lives on the home screen, which
- * is precisely the screen nobody stuck here has reached. So this one says so
- * itself.
+ * The free plan takes about forty-five seconds to wake, and blocking the whole
+ * app on that is what "stuck on the first screen" was. Nothing here actually
+ * needs the server: onboarding is skippable, and the home screen fills itself
+ * in as its own queries land. So after this, the launch proceeds on what is
+ * cached and the answer is reconciled when it arrives.
  */
-function Waking({ slow }: { slow: boolean }) {
-  const { colors } = useTheme();
-  return (
-    <View
-      style={{
-        flex: 1, alignItems: 'center', justifyContent: 'center',
-        paddingHorizontal: SPACE.xl, backgroundColor: colors.bg,
-      }}
-      accessibilityLiveRegion="polite"
-      accessibilityRole="progressbar"
-      accessibilityLabel={slow ? 'Waking the service' : 'Loading'}
-    >
-      <ActivityIndicator color={colors.gold} />
-      <Txt variant="bodySm" tone="muted"
-           style={{ marginTop: SPACE.lg, textAlign: 'center' }}>
-        {slow ? 'Waking the service…' : 'Getting things ready…'}
-      </Txt>
-      {slow ? (
-        <Txt variant="caption" tone="subtle"
-             style={{ marginTop: SPACE.sm, textAlign: 'center' }}>
-          The server sleeps when it has not been used for a while. The first
-          start after that takes up to a minute.
-        </Txt>
-      ) : null}
-    </View>
-  );
-}
+const GIVE_UP_MS = 5_000;
 
 /**
  * The one place that decides where an app launch lands.
@@ -82,21 +46,23 @@ export default function Index() {
     if (isAuthenticated && userId) void checkLock(userId);
   }, [isAuthenticated, userId, checkLock]);
 
-  const settled = !isRestoring
-    && (!isAuthenticated || (status !== 'unknown' && status !== 'resolving'));
+  // Reading the stored session is local and quick, so that wait is not
+  // negotiable — redirecting before it lands would bounce a signed-in user
+  // out to login. Waiting on the *server* is a different matter.
+  const answered = !isAuthenticated
+    || (status !== 'unknown' && status !== 'resolving');
+  const settled = !isRestoring && (answered || waited >= GIVE_UP_MS);
 
   useEffect(() => {
-    if (settled) return undefined;
+    if (!isRestoring && answered) return undefined;
     const patience = setTimeout(() => setWaited(PATIENCE_MS), PATIENCE_MS);
-    const cold = setTimeout(() => setWaited(COLD_START_MS), COLD_START_MS);
-    return () => { clearTimeout(patience); clearTimeout(cold); };
-  }, [settled]);
+    const giveUp = setTimeout(() => setWaited(GIVE_UP_MS), GIVE_UP_MS);
+    return () => { clearTimeout(patience); clearTimeout(giveUp); };
+  }, [isRestoring, answered]);
 
-  // Redirecting before the persisted session is read would bounce a signed-in
-  // user to login, so the wait itself is not negotiable — only its silence.
   if (!settled) {
     if (waited === 0) return null;
-    return <Waking slow={waited >= COLD_START_MS} />;
+    return <WakingScreen />;
   }
 
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
@@ -109,7 +75,14 @@ export default function Index() {
 
   // 'partial' goes back to onboarding, where the draft is waiting and every
   // step can still be skipped.
-  if (status === 'required' || status === 'partial') {
+  //
+  // 'unknown' means the server never answered in time. Onboarding is the safe
+  // landing for that: every step after the first can be skipped, it carries an
+  // "Explore anyway" way out, and it writes nothing until the user does. The
+  // alternative — dropping someone into a home screen with no passport — looks
+  // like an empty app rather than a slow one.
+  if (status === 'required' || status === 'partial' || status === 'unknown'
+    || status === 'resolving') {
     return <Redirect href="/(auth)/onboarding" />;
   }
   return <Redirect href="/(tabs)" />;

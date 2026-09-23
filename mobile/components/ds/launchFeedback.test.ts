@@ -18,10 +18,24 @@ import { describe, expect, it } from '@jest/globals';
 const ROOT = join(__dirname, '..', '..');
 const GATE = readFileSync(join(ROOT, 'app', 'index.tsx'), 'utf8');
 const LOGIN = readFileSync(join(ROOT, 'app', '(auth)', 'login.tsx'), 'utf8');
+const WAKING = readFileSync(join(ROOT, 'components', 'ds', 'WakingScreen.tsx'), 'utf8');
+const ONBOARDING = readFileSync(join(ROOT, 'app', '(auth)', 'onboarding.tsx'), 'utf8');
 
 describe('the launch gate', () => {
   it('shows something once the wait stops being momentary', () => {
-    expect(GATE).toContain('<Waking');
+    expect(GATE).toContain('<WakingScreen />');
+  });
+
+  it('stops waiting on the server and goes in anyway', () => {
+    // The whole defect: a forty-five second cold start held the entire app.
+    expect(GATE).toMatch(/GIVE_UP_MS = 5_000/);
+    expect(GATE).toMatch(/waited >= GIVE_UP_MS/);
+  });
+
+  it('lands an unanswered launch somewhere with a way out', () => {
+    // 'unknown' means the server never replied. Onboarding is skippable and
+    // carries "Explore anyway"; a passport-less home screen is a dead end.
+    expect(GATE).toMatch(/status === 'unknown'/);
   });
 
   it('still renders nothing for the first instant, so a fast path does not flicker', () => {
@@ -29,13 +43,31 @@ describe('the launch gate', () => {
   });
 
   it('explains a long wait rather than spinning in silence', () => {
-    expect(GATE).toMatch(/Waking the service/);
-    expect(GATE).toMatch(/sleeps when it has not been used/);
+    expect(WAKING).toMatch(/Waking the service/);
+    expect(WAKING).toMatch(/rests when nobody has used it/);
+  });
+
+  it('says something different as the wait lengthens', () => {
+    // One frozen line for forty-five seconds reads as a hang whatever it says.
+    expect(WAKING).toMatch(/after: 6_000/);
+    expect(WAKING).toMatch(/after: 25_000/);
+  });
+
+  it('honours reduced motion instead of animating regardless', () => {
+    expect(WAKING).toMatch(/if \(reducedMotion\) return undefined;/);
+    // Still deliberate when still: a blank screen is not the fallback.
+    expect(WAKING).toMatch(/Reduced motion gets a still bar/);
   });
 
   it('announces the wait to a screen reader', () => {
     // An unexplained wait is worse, not better, when the screen is unread.
-    expect(GATE).toContain('accessibilityLiveRegion="polite"');
+    expect(WAKING).toContain('accessibilityLiveRegion="polite"');
+    expect(WAKING).toMatch(/accessibilityLabel=\{`\$\{stage\.title\}/);
+  });
+
+  it('does not make the last onboarding step hang on the same cold start', () => {
+    expect(ONBOARDING).toMatch(/FINISH_TIMEOUT_MS = 6_000/);
+    expect(ONBOARDING).toMatch(/Promise\.race/);
   });
 
   it('still refuses to guess where to send the launch', () => {
