@@ -84,3 +84,29 @@ describe('sign in', () => {
     expect(LOGIN).toContain("from '../../components/ds/WakingBanner'");
   });
 });
+
+describe('the splash screen', () => {
+  const LAYOUT = readFileSync(join(ROOT, 'app', '_layout.tsx'), 'utf8');
+
+  it('does not discard the font error', () => {
+    // Discarding it is what trapped the app: a failed face left `fontsLoaded`
+    // false for ever, so the root returned null for ever and the splash was
+    // never hidden. A black screen with a tagline and nothing to press.
+    expect(LAYOUT).toContain('const [fontsLoaded, fontError] = useFonts({');
+  });
+
+  it('starts anyway when the fonts do not arrive', () => {
+    expect(LAYOUT).toMatch(/FONT_TIMEOUT_MS = 3_000/);
+    expect(LAYOUT).toMatch(/fontsLoaded \|\| Boolean\(fontError\) \|\| fontsGaveUp/);
+  });
+
+  it('hides the splash on every path out of the wait, not just the happy one', () => {
+    // The splash covers the whole screen; leaving it up is indistinguishable
+    // from a crash, so every exit has to take it down.
+    expect(LAYOUT).toMatch(/if \(ready\) SplashScreen\.hideAsync\(\)/);
+  });
+
+  it('renders the app rather than nothing once it is ready', () => {
+    expect(LAYOUT).toMatch(/if \(!ready\) return null;/);
+  });
+});

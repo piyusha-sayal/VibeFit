@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,6 +20,14 @@ import { useAuthStore } from '../store/authStore';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
+
+/**
+ * How long to wait for bundled fonts before starting without them.
+ *
+ * They load from the binary, so a second is already generous; anything longer
+ * means a failure that waiting will not fix.
+ */
+const FONT_TIMEOUT_MS = 3_000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,7 +63,12 @@ function ThemedStack() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  // The error half of this was being thrown away. When a face failed to load,
+  // `fontsLoaded` stayed false for ever, the component returned null for ever,
+  // and `hideAsync` was never reached — so the splash stayed on screen with no
+  // buttons on it. Reported as: black screen, "Find what fits you", no skip, no
+  // way forward. There was no way forward; nothing was mounted behind it.
+  const [fontsLoaded, fontError] = useFonts({
     DMSerifDisplay_400Regular,
     DMSerifDisplay_400Regular_Italic,
     PlusJakartaSans_300Light,
@@ -66,16 +79,34 @@ export default function RootLayout() {
   });
 
   const restoreSession = useAuthStore((s) => s.restoreSession);
+  const [fontsGaveUp, setFontsGaveUp] = useState(false);
 
   useEffect(() => {
     restoreSession();
   }, []);
 
+  /**
+   * Fonts are bundled in the binary, so this should be near-instant. When it
+   * is not, something has gone wrong that waiting will not repair.
+   */
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontsLoaded || fontError) return undefined;
+    const giveUp = setTimeout(() => setFontsGaveUp(true), FONT_TIMEOUT_MS);
+    return () => clearTimeout(giveUp);
+  }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) return null;
+  // The app renders once the fonts are ready, or once it is clear they are not
+  // coming. A screen in the wrong typeface is a cosmetic fault; a screen that
+  // never appears is a dead application.
+  const ready = fontsLoaded || Boolean(fontError) || fontsGaveUp;
+
+  useEffect(() => {
+    // Hiding the splash is what hands the screen to the app, so it must happen
+    // on every path out of the wait, not only the happy one.
+    if (ready) SplashScreen.hideAsync().catch(() => { /* already hidden */ });
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
