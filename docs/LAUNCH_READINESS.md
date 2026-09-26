@@ -460,3 +460,21 @@ Full record: `BRAND_PACKAGE_MIGRATION.md`. Device QA matrix: `RELEASE_VERIFICATI
 | ANDROID BUILD VERIFIED | **No** for `com.mylookfit.app`: the build was refused on quota |
 | ANDROID EMULATOR / DEVICE VERIFIED | No |
 | LEGAL REVIEW | No |
+
+### Deployed and production-verified (26 September 2026)
+Pushed `1e4dcc8..278e5d0`. Render applied `0008_pending_photo_deletions` → `0009_age_confirmation` about 1 minute after the push. Neon wasn't reset and no existing rows changed.
+
+| Check | Result |
+|---|---|
+| `/health`, `/health/db` | 200, 200 |
+| Alembic head | `0009_age_confirmation` |
+| Integrity (counts only) | users 32 → 32; users with `age_confirmed_at` set: **0 of 32**; analyses 4, saved_looks 24, user_settings 5, beauty_profiles 9, all unchanged |
+| Auth (internal JWT path) | register 201, login 200, refresh 200, `/auth/me` 200 with `age_confirmed_at: null` for a new account |
+| Beauty Passport | 200 |
+| Create My Look | `/looks/generate` 200 (3 looks); `/looks/saved` 200. Saving a look was not re-run |
+| Consent | defaults false/false; reuse without retention stays false; retention without storage → 409 |
+| Eligibility (disposable account) | POST 200 with timestamp; repeat keeps the first; unauthenticated → 403; new login shows the same timestamp; export includes it; export has no `hashed_password` |
+| Passport probe | 20 requests at concurrency 2: **20/20 × 200**, p50 957 ms, p95 981 ms, max 2186 ms; no failures, so no request IDs to keep |
+| Cleanup | all 3 disposable accounts deleted (200); the token was revoked afterwards (401) |
+
+Not verified: the Firebase ID-token path (it needs a real Firebase sign-in on a device), the Render dashboard deploy log (the deploy is inferred from the migration and the new endpoint answering), and anything on Android.
