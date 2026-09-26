@@ -7,13 +7,18 @@ headers, query values, request or response bodies.
 
 The request id is returned to the client as `X-Request-ID` so a user can report
 "it failed, here is the id" and the line can be found without asking who they are.
+A caller may also supply that header (e.g. the mobile app tagging a retry chain);
+it is honoured as-is when it looks like an id, so one id follows a request
+through client logs, our logs and any proxy in between.
 """
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 
+from sqlalchemy.exc import DBAPIError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -24,6 +29,11 @@ logger = logging.getLogger("vibefit.request")
 # we are chasing showed up as a slow call before it showed up as a failed one.
 SLOW_REQUEST_MS = 3000
 
+# A client-supplied id is trusted only if it is short and plain — long enough
+# to be useless as a correlation id is also long enough to be someone else's
+# data smuggled into the logs.
+_REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
 
 def _route_template(request: Request) -> str:
     """The registered path, e.g. /api/v1/guides/progress/{slug}."""
@@ -31,9 +41,28 @@ def _route_template(request: Request) -> str:
     return getattr(route, "path", None) or "unmatched"
 
 
+def _request_id(request: Request) -> str:
+    """The inbound X-Request-ID if it is sane, else a fresh one."""
+    supplied = request.headers.get("x-request-id")
+    if supplied and _REQUEST_ID_RE.match(supplied):
+        return supplied
+    return uuid.uuid4().hex[:12]
+
+
+def _is_connection_error(exc: BaseException) -> bool:
+    """True when SQLAlchemy marked the underlying DBAPI connection dead.
+
+    `connection_invalidated` is set by SQLAlchemy itself (pool_pre_ping, or a
+    disconnect detected mid-query) rather than guessed from a driver-specific
+    exception name, so it also covers asyncpg errors such as
+    ConnectionDoesNotExistError once they reach us wrapped as a DBAPIError.
+    """
+    return isinstance(exc, DBAPIError) and exc.connection_invalidated
+
+
 class RequestDiagnosticsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = uuid.uuid4().hex[:12]
+        request_id = _request_id(request)
         request.state.request_id = request_id
         started = time.perf_counter()
 
@@ -44,9 +73,9 @@ class RequestDiagnosticsMiddleware(BaseHTTPMiddleware):
             # Class name and module only. The message may contain a query or a
             # connection string, so it is deliberately not logged here.
             logger.error(
-                "request_failed id=%s method=%s route=%s ms=%.0f exc=%s.%s",
+                "request_failed id=%s method=%s route=%s ms=%.0f exc=%s.%s conn_error=%s",
                 request_id, request.method, _route_template(request), elapsed,
-                type(exc).__module__, type(exc).__name__,
+                type(exc).__module__, type(exc).__name__, _is_connection_error(exc),
             )
             logger.exception("request_failed id=%s traceback", request_id)
             return JSONResponse(

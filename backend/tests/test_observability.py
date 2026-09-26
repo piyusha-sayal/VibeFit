@@ -1,6 +1,7 @@
 """Request diagnostics must be useful without being identifying."""
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from core import observability
 
@@ -10,6 +11,35 @@ async def test_every_response_carries_a_request_id(client: AsyncClient):
     res = await client.get("/health")
     assert res.status_code == 200
     assert len(res.headers["x-request-id"]) == 12
+
+
+@pytest.mark.asyncio
+async def test_a_sane_inbound_request_id_is_echoed_back(client: AsyncClient):
+    res = await client.get("/health", headers={"X-Request-ID": "mobile-retry-42"})
+    assert res.headers["x-request-id"] == "mobile-retry-42"
+
+
+@pytest.mark.asyncio
+async def test_an_unreasonable_inbound_request_id_is_replaced(client: AsyncClient):
+    """Too long, or the wrong shape, and it is not trustworthy enough to log."""
+    res = await client.get("/health", headers={"X-Request-ID": "x" * 200})
+    assert res.headers["x-request-id"] != "x" * 200
+    assert len(res.headers["x-request-id"]) == 12
+
+
+def test_connection_invalidated_dbapi_error_is_flagged():
+    exc = DBAPIError("SELECT 1", {}, Exception("server closed the connection"),
+                      connection_invalidated=True)
+    assert observability._is_connection_error(exc) is True
+
+
+def test_ordinary_db_error_is_not_flagged_as_a_connection_error():
+    exc = IntegrityError("INSERT", {}, Exception("unique violation"))
+    assert observability._is_connection_error(exc) is False
+
+
+def test_a_non_db_exception_is_not_flagged_as_a_connection_error():
+    assert observability._is_connection_error(ValueError("nope")) is False
 
 
 @pytest.mark.asyncio
