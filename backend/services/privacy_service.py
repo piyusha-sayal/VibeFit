@@ -272,7 +272,8 @@ async def _rows(db: AsyncSession, model, user_id: str) -> list:
 # content the user created. Those are still filtered by FORBIDDEN_FRAGMENTS
 # below, so a credential column added to one of them does not ride along.
 EXPORTABLE: dict[str, tuple[str, ...] | None] = {
-    "users": ("id", "email", "name", "is_active", "created_at", "updated_at"),
+    "users": ("id", "email", "name", "is_active", "age_confirmed_at",
+              "created_at", "updated_at"),
     "user_settings": ("user_id", "theme", "reduced_motion", "country", "language",
                       "photo_reuse_consent", "photo_retention_consent",
                       "created_at", "updated_at"),
@@ -332,6 +333,14 @@ def _plain(row, *, drop: tuple[str, ...] = ()) -> dict:
 
 # Named at the call site for readability; the allowlist is what enforces it.
 NEVER_EXPORT = ("hashed_password",)
+
+
+async def confirm_age(db: AsyncSession, user: User) -> datetime:
+    """Record the 18+ confirmation. The first timestamp is kept."""
+    if user.age_confirmed_at is None:
+        user.age_confirmed_at = _now()
+        await db.flush()
+    return user.age_confirmed_at
 
 
 async def export_user_data(db: AsyncSession, user_id: str) -> dict:

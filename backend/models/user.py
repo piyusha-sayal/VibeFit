@@ -15,6 +15,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    # When the user first confirmed they are 18 or older. A statement, not proof of age.
+    age_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     analyses: Mapped[list["Analysis"]] = relationship("Analysis", back_populates="user", lazy="selectin")
     chat_sessions: Mapped[list["ChatSession"]] = relationship("ChatSession", back_populates="user", lazy="selectin")

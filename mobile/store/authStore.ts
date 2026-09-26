@@ -4,6 +4,7 @@ import * as authService from '../services/authService';
 import * as biometrics from '../services/biometrics';
 import { clearCachedAnalysis } from '../services/localCache';
 import { useAnalysisStore } from './analysisStore';
+import { useEligibilityStore } from './eligibilityStore';
 import { useLockStore } from './lockStore';
 import { useOnboardingStore } from './onboardingStore';
 
@@ -96,6 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // that was never theirs.
       if (signingOut) await biometrics.forget(signingOut);
       useLockStore.getState().reset();
+      useEligibilityStore.getState().reset();
     }
   },
 

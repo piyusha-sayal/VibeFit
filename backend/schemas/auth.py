@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, field_validator
 import re
 
@@ -44,5 +46,6 @@ class UserResponse(BaseModel):
     email: str
     name: str
     is_active: bool
+    age_confirmed_at: datetime | None = None
 
     model_config = {"from_attributes": True}

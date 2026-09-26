@@ -6,6 +6,7 @@ supply is an analysis id, and that one is checked for ownership before
 anything is touched.
 """
 import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -85,6 +86,17 @@ async def set_consent(body: ConsentIn,
         # 409 rather than 400: the request is well formed and would be
         # honoured on a deployment that had storage configured.
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+class EligibilityOut(BaseModel):
+    age_confirmed_at: datetime
+
+
+@router.post("/eligibility", response_model=EligibilityOut)
+async def confirm_eligibility(db: AsyncSession = Depends(get_db),
+                              current_user: User = Depends(get_current_user)):
+    """Record that the user confirmed they are 18 or older (no birth date kept)."""
+    return {"age_confirmed_at": await privacy_service.confirm_age(db, current_user)}
 
 
 @router.get("/export")

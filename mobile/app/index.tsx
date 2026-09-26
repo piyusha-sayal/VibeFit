@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 
+import { AgeGate } from '../components/ds/AgeGate';
 import { LockScreen } from '../components/ds/LockScreen';
 import { WakingScreen } from '../components/ds/WakingScreen';
 import { useAuthStore } from '../store/authStore';
+import { useEligibilityStore } from '../store/eligibilityStore';
 import { useLockStore } from '../store/lockStore';
 import { useOnboardingStore } from '../store/onboardingStore';
 
@@ -36,6 +38,8 @@ export default function Index() {
   const resolve = useOnboardingStore((s) => s.resolve);
   const lockState = useLockStore((s) => s.state);
   const checkLock = useLockStore((s) => s.check);
+  const eligibility = useEligibilityStore((s) => s.state);
+  const checkEligibility = useEligibilityStore((s) => s.check);
   const [waited, setWaited] = useState(0);
 
   useEffect(() => {
@@ -45,6 +49,10 @@ export default function Index() {
   useEffect(() => {
     if (isAuthenticated && userId) void checkLock(userId);
   }, [isAuthenticated, userId, checkLock]);
+
+  useEffect(() => {
+    if (isAuthenticated && userId) void checkEligibility(userId);
+  }, [isAuthenticated, userId, checkEligibility]);
 
   // Reading the stored session is local and quick, so that wait is not
   // negotiable — redirecting before it lands would bounce a signed-in user
@@ -72,6 +80,12 @@ export default function Index() {
   // onboarding this account is.
   if (lockState === 'unknown' || lockState === 'checking') return null;
   if (lockState === 'locked') return <LockScreen />;
+
+  // 18+ is asked once per account, before anything that handles a photo.
+  // The device remembers the answer, so only a new device waits on the server.
+  if (eligibility === 'unknown' || eligibility === 'reading') return null;
+  if (eligibility === 'asking') return <WakingScreen />;
+  if (eligibility === 'required' || eligibility === 'declined') return <AgeGate />;
 
   // 'partial' goes back to onboarding, where the draft is waiting and every
   // step can still be skipped.
