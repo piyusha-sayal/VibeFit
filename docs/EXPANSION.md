@@ -49,11 +49,13 @@ regresses, and is not wired into any new styling surface.
 |---|---|---|
 | 1 | Shared beauty-profile spine, persistence, navigation, home redesign, design system | landed |
 | 2 | Discover My Colors — 12-season engine, report, explorers | landed |
-| 3 | Discover My Face — eye/brow/lip/cheek, Hair Studio, Makeup Studio, accessories | not started |
-| 4 | Discover My Style — questionnaire, global + Indian fashion library | not started |
-| 5 | Create My Look | not started |
-| 6 | Beauty Passport, collections, journey, goals | not started |
-| 7 | Academy, Settings, privacy, accessibility, polish | not started |
+| 3 | Discover My Face — eye/brow/lip/cheek, Hair Studio, Makeup Studio, accessories | landed |
+| 4 | Discover My Style — questionnaire, global + Indian fashion library | landed |
+| 5 | Create My Look | landed |
+| 6 | Beauty Passport, collections, journey, goals; Academy, Settings, privacy, accessibility, polish | landed (P1 and P2 release candidate) |
+| — | Launch Gate 0: permanent identity (`com.mylookfit.app`), deep links, 18+ gate, Passport diagnostics | release hardening, see `BRAND_PACKAGE_MIGRATION.md` |
+
+> Updated 26 September 2026. When it was written, this table listed phases 3–7 as not started. Phases 1–6 are now implemented, and the project is in release hardening. The phase sections below are the historical record.
 
 ### Phase 1 — persistence spine (backend landed, 2026-09-21)
 - `models/beauty.py` + migration `0003_beauty_passport`: beauty_profiles,

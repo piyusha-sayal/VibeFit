@@ -420,3 +420,46 @@ test suite cannot judge. Each one wants a screenshot, pass or fail.
     is not visible. If the passport feels heavy with a large collection, this
     is the reason.
 
+
+---
+
+## Launch Gate 0 — device QA matrix (prepared 26 September 2026, NOT RUN)
+
+Run this on the first APK built with `com.mylookfit.app`. **Nothing here is verified until someone fills in the Result column from an actual run.** Uninstall any `com.vibefit.app` build first. It's a different app, and keeping both installed only causes confusion.
+
+| Device | Target | Tester | Model / Android / RAM |
+|---|---|---|---|
+| A | Low-end, 2–3 GB RAM, Android 10–11 | | |
+| B | Mid-range, Android 13–14 | | |
+| C | Android 15 emulator (Pixel) or phone | | |
+
+| # | Journey | What passes | A | B | C |
+|---|---|---|---|---|---|
+| 1 | Install | APK installs; launcher shows MyLookFit and the gold icon | | | |
+| 2 | Launch | Splash, then login within 3 s warm; never a blank screen longer than 5 s | | | |
+| 3 | Register | Email and password account created; **18+ screen appears once** | | | |
+| 4 | Google sign-in | Blocked until `BRAND_PACKAGE_MIGRATION.md` §4 steps 1–5 are done; then chooser opens, returns to app, home loads | | | |
+| 5 | Biometric unlock | Enable in Settings; kill the app; relaunch prompts; cancel leaves the Unlock button | | | |
+| 6 | Onboarding | Five screens; skip works; answers kept | | | |
+| 7 | Discover My Colors | Selfie → analysis → season + palette | | | |
+| 8 | Discover My Face | Face shape and features with explanations | | | |
+| 9 | Hair Studio | Cuts, fringes, colour, salon notes | | | |
+| 10 | Makeup Studio | Diagrams render | | | |
+| 11 | Discover My Style | Questionnaire and results | | | |
+| 12 | Indian garments | Saree, sharara and others in the library | | | |
+| 13 | Create My Look | Compose, swap one component, compare | | | |
+| 14 | Save / reopen look | Saved look reopens identically after restart | | | |
+| 15 | Beauty Passport | Loads; note any failure with time (Passport issue OPEN) | | | |
+| 16 | Settings | Every row works | | | |
+| 17 | Privacy | Consent, photographs, delete account screens | | | |
+| 18 | Data export | File produced; contains `age_confirmed_at` | | | |
+| 19 | Light mode | Readable, gold visible on ivory | | | |
+| 20 | Dark mode | Readable | | | |
+| 21 | 200% font scale | No clipped buttons on login, 18+ screen, results | | | |
+| 22 | TalkBack | Login → 18+ → onboarding → scan → result → look completes | | | |
+| 23 | App restart | Session restored; 18+ **not** asked again | | | |
+| 24 | Background / foreground | State kept; lock behaves as configured | | | |
+| 25 | Slow / cold backend | After 20+ min idle: waking screen, then the app proceeds; no hang | | | |
+| + | Deep links | `adb shell am start -a android.intent.action.VIEW -d "mylookfit://settings"` opens Settings; `vibefit://colors` opens Colors; `mylookfit://%E0%A4%A` opens home | | | |
+
+Defects: P0 = blocks a journey or loses data; P1 = wrong result or broken accessibility; P2 = cosmetic. Record each one as `ID · device · journey # · steps · expected · actual · severity`.
