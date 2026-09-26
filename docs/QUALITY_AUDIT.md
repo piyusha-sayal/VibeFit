@@ -288,3 +288,9 @@ The audit is not all bad news, and it would be dishonest to imply otherwise.
   whether every screen honours it at real density is unobserved.
 - **Focus order.** Cannot be established without a device.
 - **Runtime performance.** No measurement of any kind was taken this session.
+
+---
+
+# Launch Gate 0 note — 26 September 2026
+
+Brand copy audit: every user-visible "VibeFit" in reports, share cards, AI-stylist prompts and styling explanations now reads "MyLookFit". Also removed an inaccurate claim: the PDF and card footer said "Generated on-device", but both are rendered on the server. Internal identifiers were left alone on purpose; see `BRAND_PACKAGE_MIGRATION.md` §2.

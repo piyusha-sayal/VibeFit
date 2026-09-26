@@ -80,7 +80,7 @@ worked in a cloud build. The package change doesn't break a working flow.
 **Status: BLOCKED on owner action.** Don't mark Google sign-in done until
 step 6 passes on a device.
 
-1. Build once with the new package (this creates the keystore), then read the fingerprints:
+1. The EAS keystore for `com.mylookfit.app` already exists (created in the cloud on 26 Sep, "Build Credentials ToqVuFPT9b"). Read its fingerprints:
    `cd mobile && npx eas-cli@latest credentials -p android` → profile `preview` → the keystore shows SHA-1 and SHA-256.
 2. Firebase Console → project `vibefit-a897e` → Project settings → *Add app* → Android.
    Package `com.mylookfit.app`, then add both fingerprints. Firebase creates the
@@ -128,4 +128,5 @@ onrender hostname working for installed builds.
 | Render cold start | **No keep-warm cron.** Render gives 750 free instance hours per *workspace* per month, and running out suspends *every* free service until the month ends. A 24/7 ping uses ~744 h, leaving nothing for staging or other projects. The non-blocking launch (5 s give-up, waking screen) stays. Recommended at launch: Render Starter (~$7/month) |
 | Passport | Still **OPEN**. Existing `pool_pre_ping` + `pool_recycle=240` kept. Added: inbound `X-Request-ID` echo, `conn_error` classification on unhandled DB errors, and `backend/scripts/passport_probe.py` (bounded: ≤ 20 concurrent, ≤ 500 requests, no production default). Not run against any server yet |
 | Staging | Feasible at zero cost *only without* a 24/7 keep-warm: Neon branch (free tier includes branches) plus a second free Render service that sleeps. Not created, because it needs dashboard access. When created: set EAS `preview` env `EXPO_PUBLIC_API_URL` to staging. That only affects **new** preview builds; installed APKs keep the URL baked in. Production stays on prod |
+| APK | **Not built.** The submission on 26 Sep was refused with `EAS_BUILD_FREE_TIER_LIMIT_EXCEEDED`: the free plan's Android builds for the month are used up and reset **1 Oct 2026**. Local `eas build --local` doesn't run on Windows (WSL is broken on this machine). Last good APK: `e2812904` at `1e4dcc8`, still `com.vibefit.app` |
 | AAB | `eas.json` `production` profile already has `buildType: app-bundle`, `distribution: store`, the `production` env (prod API) and `autoIncrement`. Release signing uses the EAS-managed keystore for `com.mylookfit.app`. No production build and no upload were made |

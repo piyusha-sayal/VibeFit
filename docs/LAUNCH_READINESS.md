@@ -425,3 +425,38 @@ built. No new build was started, because this one succeeded.
 4. No independent legal review.
 5. S3 deletion unexercised — no bucket is configured.
 6. `GET /passport` transient unresolved.
+
+---
+
+## Launch Gate 0 — identity and infrastructure (26 September 2026)
+
+Full record: `BRAND_PACKAGE_MIGRATION.md`. Device QA matrix: `RELEASE_VERIFICATION.md` (end).
+
+### Done
+- Permanent identity: `com.mylookfit.app` (Android and iOS) and the `mylookfit://` scheme (`vibefit://` still accepted). EAS slug and project kept.
+- User-facing "VibeFit" copy, report and card filenames now say MyLookFit.
+- 18+ eligibility gate (statement only; copy pending counsel). Migration `0009`.
+- Passport diagnostics: request-id correlation, `conn_error` flag, bounded probe script. Root cause **OPEN**.
+- Stray zero-byte files removed.
+- Backend 471 passed; mobile 426 passed across 30 suites; `tsc` and ESLint clean.
+
+### Found
+- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` has never been set in EAS, so **Google sign-in has never worked in an Android cloud build**.
+- `e2812904` (splash fix, `1e4dcc8`) is FINISHED.
+
+### Blocked on the owner
+1. Firebase/Google Android OAuth client for `com.mylookfit.app` (steps in the migration doc §4).
+2. EAS Android builds: free quota exhausted until 1 Oct 2026, or upgrade the plan.
+3. Sentry DSNs (crash reporting); analytics deferred to the legal review.
+4. Push to `main`: this deploys migration `0009` (additive, guarded) and `POST /privacy/eligibility` to Render.
+5. Legal review of the 18+ copy, privacy policy and terms.
+6. Render Starter decision (no keep-warm cron, because of the workspace-wide 750 h limit).
+
+### Labels
+| Label | Status |
+|---|---|
+| LOCAL VERIFIED | Yes (this session) |
+| PRODUCTION VERIFIED | Not re-verified for these changes (not deployed) |
+| ANDROID BUILD VERIFIED | **No** for `com.mylookfit.app`: the build was refused on quota |
+| ANDROID EMULATOR / DEVICE VERIFIED | No |
+| LEGAL REVIEW | No |
