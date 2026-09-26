@@ -13,8 +13,9 @@ Keep context low: Grep before Read, targeted reads only.
 FastAPI + async SQLAlchemy + Alembic on Neon Postgres, deployed to Render (Docker,
 free plan; start.sh runs `alembic upgrade head` then uvicorn). Expo SDK 54 /
 RN 0.81 mobile with expo-router, zustand and React Query; EAS preview profile
-builds the APK. Firebase ID-token auth via google-auth. Brand: MyLookFit, but the
-EAS slug, Android package, URL scheme and API host still read `vibefit`.
+builds the APK. Firebase ID-token auth via google-auth. Brand: MyLookFit; package
+com.mylookfit.app, scheme mylookfit (vibefit:// legacy). EAS slug, Firebase
+project and API host intentionally stay `vibefit` (docs/BRAND_PACKAGE_MIGRATION.md).
 
 Styling is deterministic rules, not AI: colour season, face shape, hair, makeup,
 accessories, fashion and outfit engines under backend/rules, composed by
