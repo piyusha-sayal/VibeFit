@@ -20,7 +20,7 @@ router = APIRouter(prefix="/face", tags=["face"])
 
 # The shape report never ranks or scores a face. This line is rendered with it.
 REPORT_DISCLAIMER = (
-    "Face shape is a styling starting point, not a verdict. VibeFit does not "
+    "Face shape is a styling starting point, not a verdict. MyLookFit does not "
     "rate faces, and no shape is better than another."
 )
 

@@ -24,7 +24,7 @@ from api.routes.privacy import router as privacy_router
 
 
 app = FastAPI(
-    title="VibeFit API",
+    title="MyLookFit API",
     version="1.0.0",
     description="AI-powered personal styling and appearance intelligence API",
 )

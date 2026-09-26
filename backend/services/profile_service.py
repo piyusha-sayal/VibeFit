@@ -164,7 +164,7 @@ async def build_vibe_profile(db: AsyncSession, user_id: str) -> VibeProfileOut:
         explanation="The body type you selected yourself in Discover My Style.",
         limitations=("A body type is a starting point for silhouettes, not a rule."
                      if (beauty and beauty.body_type)
-                     else "Not selected yet. VibeFit never infers this from a photo."),
+                     else "Not selected yet. MyLookFit never infers this from a photo."),
     )
 
     constraints: dict[str, Any] = {}

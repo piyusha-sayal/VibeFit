@@ -204,7 +204,7 @@ async def get_analysis_report(
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     pdf = generate_face_report(analysis, user_name=current_user.name)
-    headers = {"Content-Disposition": f'attachment; filename="vibefit-report-{analysis_id}.pdf"'}
+    headers = {"Content-Disposition": f'attachment; filename="mylookfit-report-{analysis_id}.pdf"'}
     return StreamingResponse(io.BytesIO(pdf), media_type="application/pdf", headers=headers)
 
 
@@ -222,7 +222,7 @@ async def get_summary_card(
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
     png = await asyncio.to_thread(generate_summary_card, analysis, current_user.name)
-    headers = {"Content-Disposition": f'attachment; filename="vibefit-card-{analysis_id}.png"'}
+    headers = {"Content-Disposition": f'attachment; filename="mylookfit-card-{analysis_id}.png"'}
     return StreamingResponse(io.BytesIO(png), media_type="image/png", headers=headers)
 
 

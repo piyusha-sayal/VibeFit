@@ -126,7 +126,7 @@ FACIAL_CONTRAST = [
 FACE_ATTRIBUTES: dict[str, FaceAttribute] = {
     "eye_shape": FaceAttribute(
         key="eye_shape", label="Eye shape", source="self_select",
-        intro="Eye shape drives almost every eye-makeup decision. VibeFit does not "
+        intro="Eye shape drives almost every eye-makeup decision. MyLookFit does not "
               "classify it from a photo, because no reliable landmark rule separates "
               "hooded from deep-set at selfie resolution.",
         method="You choose from the descriptions below, in a mirror.",

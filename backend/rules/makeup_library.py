@@ -1,6 +1,6 @@
 """The makeup aesthetic, technique and occasion library behind Makeup Studio.
 
-Static stylist knowledge. No product SKUs and no shade matching: VibeFit cannot
+Static stylist knowledge. No product SKUs and no shade matching: MyLookFit cannot
 see a foundation bottle or your skin under a store light, so it names undertone
 and depth families and leaves the exact shade to a swatch on your jaw.
 
@@ -168,7 +168,7 @@ def techniques_for(attribute_key: str, option_key: str) -> list[Technique]:
     return [t for t in TECHNIQUES if token in t.applies_to]
 
 
-# Foundation guidance: families, never a shade name. VibeFit does not claim to
+# Foundation guidance: families, never a shade name. MyLookFit does not claim to
 # match a bottle it cannot see.
 FOUNDATION_GUIDE = {
     "howTo": [
@@ -184,7 +184,7 @@ FOUNDATION_GUIDE = {
         "olive": "Look for olive or O shades; many neutral lines run too pink on olive skin.",
     },
     "disclaimer": (
-        "VibeFit names undertone and depth families only. It does not match "
+        "MyLookFit names undertone and depth families only. It does not match "
         "specific products or exact foundation shades — that needs your skin and "
         "real light, not a photograph."
     ),

@@ -47,7 +47,7 @@ async def get_current_user(
             user = User(
                 id=claims["uid"],
                 email=claims.get("email") or f"{claims['uid']}@firebase.local",
-                name=claims.get("name") or "VibeFit User",
+                name=claims.get("name") or "MyLookFit User",
                 hashed_password="",  # external auth; no local password
             )
             db.add(user)

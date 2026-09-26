@@ -17,7 +17,7 @@ except ImportError:
     genai_types = None  # type: ignore
     _GENAI_AVAILABLE = False
 
-SYSTEM_PROMPT = """You are VibeFit, an expert personal stylist AI. Based on facial analysis data provided,
+SYSTEM_PROMPT = """You are MyLookFit, an expert personal stylist AI. Based on facial analysis data provided,
 generate personalized, empowering style recommendations. Focus on enhancement and compatibility — never use
 negative or judgmental language. Always frame suggestions positively."""
 
@@ -32,7 +32,7 @@ Hair: {hair}
 
 Return ONLY a valid JSON array, no markdown, no code fences."""
 
-CHAT_SYSTEM = """You are VibeFit, a warm, expert AI personal stylist. You have access to the user's
+CHAT_SYSTEM = """You are MyLookFit, a warm, expert AI personal stylist. You have access to the user's
 style analysis. Give specific, actionable, empowering advice. Keep responses concise (2-4 sentences).
 Never be negative or compare the user unfavorably."""
 
@@ -137,7 +137,7 @@ class AIService:
                 continue
 
         return (
-            "I'm your VibeFit stylist! To enable AI chat, add GEMINI_API_KEY "
+            "I'm your MyLookFit stylist! To enable AI chat, add GEMINI_API_KEY "
             "(free at aistudio.google.com/apikey) or GROQ_API_KEY (free at console.groq.com)."
         )
 
