@@ -44,10 +44,19 @@ describe('app configuration assets', () => {
     expect(expo.name).toBe('MyLookFit');
   });
 
-  it('keeps the slug and bundle id, which are tied to the existing project', () => {
-    // Changing these breaks the EAS project and every installed build.
+  it('keeps the internal EAS slug, which links the existing project and credentials', () => {
     expect(expo.slug).toBe('vibefit');
-    expect(expo.android.package).toBe('com.vibefit.app');
+    expect(expo.extra.eas.projectId).toBe('8f7c7f5d-b5bf-48f0-974e-60d31b4ffeee');
+  });
+
+  it('publishes under the permanent MyLookFit identifiers', () => {
+    // The Android package cannot change after the first Play Store upload.
+    expect(expo.android.package).toBe('com.mylookfit.app');
+    expect(expo.ios.bundleIdentifier).toBe('com.mylookfit.app');
+  });
+
+  it('opens mylookfit:// first and still accepts legacy vibefit:// links', () => {
+    expect(expo.scheme).toEqual(['mylookfit', 'vibefit']);
   });
 });
 

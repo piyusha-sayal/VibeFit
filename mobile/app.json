@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.vibefit.app",
+      "bundleIdentifier": "com.mylookfit.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "MyLookFit needs access to your photos for style analysis.",
         "NSCameraUsageDescription": "MyLookFit uses your camera for real-time style analysis.",
@@ -30,7 +30,7 @@
         "monochromeImage": "./assets/brand/adaptive-monochrome.png",
         "backgroundColor": "#080808"
       },
-      "package": "com.vibefit.app",
+      "package": "com.mylookfit.app",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
@@ -58,7 +58,7 @@
         }
       ]
     ],
-    "scheme": "vibefit",
+    "scheme": ["mylookfit", "vibefit"],
     "experiments": {
       "typedRoutes": true
     },
