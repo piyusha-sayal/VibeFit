@@ -5,21 +5,29 @@ import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { loginWithGoogleIdToken } from '../services/authService';
+import {
+  GOOGLE_FAILED_MESSAGE, GOOGLE_UNAVAILABLE_MESSAGE, googleClientFor, interpretGoogleResponse,
+} from '../services/googleAuth';
+import { POST_SIGN_IN_ROUTE } from '../constants/routes';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
-
-const platformClientReady =
-  (Platform.OS === 'android' && Boolean(androidClientId)) ||
-  (Platform.OS === 'ios' && Boolean(iosClientId)) ||
-  (Platform.OS === 'web' && Boolean(webClientId));
+// Inlined at build time, so they are constant for the life of the app and the
+// provider hook below is either always called or never called.
+function readClientIds() {
+  return {
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  };
+}
 
 export function useGoogleAuth() {
+  const clientIds = readClientIds();
+  // The provider throws if this platform's client id is missing, so without
+  // one it is never called.
+  const platformClientReady = Boolean(googleClientFor(Platform.OS, clientIds));
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,46 +37,38 @@ export function useGoogleAuth() {
     async () => ({ type: 'cancel' } as never),
   ];
   const [request, response, promptAsync] = platformClientReady
-    ? Google.useAuthRequest({ webClientId, iosClientId, androidClientId })
+    ? Google.useAuthRequest(clientIds)
     : fallback;
 
   useEffect(() => {
-    if (!response) return;
-    if (response.type === 'success') {
-      const idToken = response.authentication?.idToken;
-      if (!idToken) {
-        setError('Google sign-in returned no ID token.');
-        return;
-      }
-      setLoading(true);
-      loginWithGoogleIdToken(idToken)
-        .then((res) => {
-          if (!res.success || !res.data) {
-            setError(res.error ?? 'Google sign-in failed');
-            return;
-          }
-          setUser(res.data.user);
-          useAuthStore.setState({
-            user: res.data.user,
-            tokens: res.data.tokens,
-            isAuthenticated: true,
-          });
-          router.replace('/(tabs)');
-        })
-        .finally(() => setLoading(false));
-    } else if (response.type === 'error') {
-      setError(response.error?.message ?? 'Google sign-in error');
+    const outcome = interpretGoogleResponse(response);
+    if (outcome.kind === 'none') return;
+    if (outcome.kind === 'error') {
+      setError(outcome.message);
+      return;
     }
+    setLoading(true);
+    loginWithGoogleIdToken(outcome.idToken)
+      .then((res) => {
+        if (!res.success || !res.data) {
+          setError(res.error ?? GOOGLE_FAILED_MESSAGE);
+          return;
+        }
+        useAuthStore.setState({
+          user: res.data.user,
+          tokens: res.data.tokens,
+          isAuthenticated: true,
+        });
+        // The launch router decides what comes next: lock, 18+, onboarding or home.
+        router.replace(POST_SIGN_IN_ROUTE);
+      })
+      .finally(() => setLoading(false));
   }, [response]);
 
   const signInWithGoogle = async () => {
     setError(null);
     if (!request) {
-      setError(
-        Platform.OS === 'android'
-          ? 'Google sign-in needs an Android Client ID (EAS build required for Expo Go SDK 54+).'
-          : 'Google sign-in not configured. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env.',
-      );
+      setError(GOOGLE_UNAVAILABLE_MESSAGE);
       return;
     }
     await promptAsync();
