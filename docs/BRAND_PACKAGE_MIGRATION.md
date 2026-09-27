@@ -130,3 +130,7 @@ onrender hostname working for installed builds.
 | Staging | Feasible at zero cost *only without* a 24/7 keep-warm: Neon branch (free tier includes branches) plus a second free Render service that sleeps. Not created, because it needs dashboard access. When created: set EAS `preview` env `EXPO_PUBLIC_API_URL` to staging. That only affects **new** preview builds; installed APKs keep the URL baked in. Production stays on prod |
 | APK | **Not built.** The submission on 26 Sep was refused with `EAS_BUILD_FREE_TIER_LIMIT_EXCEEDED`: the free plan's Android builds for the month are used up and reset **1 Oct 2026**. Local `eas build --local` doesn't run on Windows (WSL is broken on this machine). Last good APK: `e2812904` at `1e4dcc8`, still `com.vibefit.app` |
 | AAB | `eas.json` `production` profile already has `buildType: app-bundle`, `distribution: store`, the `production` env (prod API) and `autoIncrement`. Release signing uses the EAS-managed keystore for `com.mylookfit.app`. No production build and no upload were made |
+
+## Correction — 27 September 2026 (Launch Gate 1)
+
+§6 said the 18+ gate appears "after sign-in". In the Gate 0 code, every sign-in path (email, Google, registration, guest) navigated straight to home or onboarding, so the gate and the biometric lock only appeared on the **next cold launch**. Fixed in `700a62e`: all sign-ins now go through the launch router. Nothing had shipped to users. Only the 26 Sep code was affected, and the server-side record was correct throughout.
