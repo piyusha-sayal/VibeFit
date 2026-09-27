@@ -8,6 +8,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { useAuthStore } from '../../store/authStore';
 import { DELETE_CONFIRMATION, deleteAccount } from '../../services/privacyService';
 import { deleteFirebaseAccount } from '../../services/authService';
+import { deletionOutcome } from '../../utils/deletionOutcome';
 import { getFreshIdToken } from '../../services/authService';
 
 /** Everything that goes. Listed plainly, because "your data" tells nobody anything. */
@@ -66,29 +67,20 @@ export default function DeleteAccountScreen() {
       confirmation: phrase.trim(),
       ...(needsPassword ? { password } : {}),
     });
-    setBusy(false);
-
     if (!response.success) {
+      setBusy(false);
       Alert.alert('Not deleted', response.error || 'Please check your password and try again.');
       return;
     }
 
     // The data is gone; now the sign-in itself, so it cannot recreate an account.
     const signInRemoved = await deleteFirebaseAccount();
+    setBusy(false);
     const { photographsAttempted = 0, photographsRemoved = 0 } = response.data ?? {};
-    const photoNote =
-      photographsAttempted > photographsRemoved
-        ? `\n\n${photographsAttempted - photographsRemoved} stored photograph(s) could not be reached and will be removed by our cleanup. Everything else is gone.`
-        : '';
-    const signInNote = signInRemoved
-      ? ''
-      : '\n\nYour sign-in could not be removed just now. To finish, sign in again and delete once more.';
+    const { title, message } = deletionOutcome({ signInRemoved, photographsAttempted, photographsRemoved });
 
-    Alert.alert(
-      'Your account is deleted',
-      `Thank you for trying MyLookFit.${photoNote}${signInNote}`,
-      [{ text: 'Close', onPress: () => { logout(); router.replace('/' as never); } }],
-    );
+    Alert.alert(title, message,
+      [{ text: 'Close', onPress: () => { logout(); router.replace('/' as never); } }]);
   };
 
   return (
