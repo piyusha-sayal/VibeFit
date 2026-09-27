@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -111,6 +112,21 @@ export async function loginAsGuest(): Promise<ApiResponse<AuthData>> {
 
 export async function logout(): Promise<void> {
   await signOut(auth);
+}
+
+/**
+ * Remove the Firebase sign-in after the server has deleted the account's data,
+ * so the same email cannot sign back in to a freshly provisioned empty account.
+ * False when Firebase refuses, typically because the sign-in is no longer recent.
+ */
+export async function deleteFirebaseAccount(): Promise<boolean> {
+  if (!isFirebaseConfigured || !auth.currentUser) return true;
+  try {
+    await deleteUser(auth.currentUser);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Firebase restores a persisted sign-in asynchronously; `currentUser` is null

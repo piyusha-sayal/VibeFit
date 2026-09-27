@@ -7,6 +7,7 @@ import { RADIUS, SPACE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useAuthStore } from '../../store/authStore';
 import { DELETE_CONFIRMATION, deleteAccount } from '../../services/privacyService';
+import { deleteFirebaseAccount } from '../../services/authService';
 import { getFreshIdToken } from '../../services/authService';
 
 /** Everything that goes. Listed plainly, because "your data" tells nobody anything. */
@@ -72,15 +73,20 @@ export default function DeleteAccountScreen() {
       return;
     }
 
+    // The data is gone; now the sign-in itself, so it cannot recreate an account.
+    const signInRemoved = await deleteFirebaseAccount();
     const { photographsAttempted = 0, photographsRemoved = 0 } = response.data ?? {};
     const photoNote =
       photographsAttempted > photographsRemoved
         ? `\n\n${photographsAttempted - photographsRemoved} stored photograph(s) could not be reached and will be removed by our cleanup. Everything else is gone.`
         : '';
+    const signInNote = signInRemoved
+      ? ''
+      : '\n\nYour sign-in could not be removed just now. To finish, sign in again and delete once more.';
 
     Alert.alert(
       'Your account is deleted',
-      `Thank you for trying MyLookFit.${photoNote}`,
+      `Thank you for trying MyLookFit.${photoNote}${signInNote}`,
       [{ text: 'Close', onPress: () => { logout(); router.replace('/' as never); } }],
     );
   };
