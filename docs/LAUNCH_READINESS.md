@@ -478,3 +478,35 @@ Pushed `1e4dcc8..278e5d0`. Render applied `0008_pending_photo_deletions` → `00
 | Cleanup | all 3 disposable accounts deleted (200); the token was revoked afterwards (401) |
 
 Not verified: the Firebase ID-token path (it needs a real Firebase sign-in on a device), the Render dashboard deploy log (the deploy is inferred from the migration and the new endpoint answering), and anything on Android.
+
+---
+
+## Launch Gate 1 — Google sign-in readiness and release prep (27 September 2026)
+
+Owner checklist, release config, versioning, Sentry and the 1 Oct runbook: `LAUNCH_GATE_1.md`. Data and legal: `DATA_INVENTORY.md`, `LEGAL_REVIEW_PACKET.md`, `PLAY_DATA_SAFETY_DRAFT.md`, `WEB_ACCOUNT_DELETION.md`. QA: `RELEASE_VERIFICATION.md` (end), `TALKBACK_TEST_SCRIPT.md`.
+
+### Defects found and fixed in code (not yet in any build)
+1. **Every sign-in skipped the launch router**, so the 18+ gate and biometric lock appeared only on the next cold launch. All sign-ins now go to `/` (`700a62e`).
+2. **Account deletion left the Firebase user**, so the same email could sign back in and get a new empty account. The app now deletes the Firebase user after the server deletion (`b316ea5`).
+
+### Added
+- Google sign-in logic moved into a pure module with tests; a missing Android client ID now shows a user-facing message.
+- Optional backend Sentry, off without `SENTRY_DSN`, with a scrubber (`d965afc`).
+- Release-config guard tests (`af15540`).
+
+### Production facts checked
+- No Gemini/Groq key in production (chat uses the rule-based fallback); nothing goes to an AI provider.
+- Passport probe, warm service: 50 requests at concurrency 2 = 50×200 (p50 959 ms, p95 1769 ms, max 2382 ms); 100 at concurrency 5 = 100×200 (p50 1010 ms, p95 1376 ms, max 3052 ms). **Not reproduced.** Cold-start probe **not completed**: Claude Code stopped it for low workstation memory.
+- One leftover disposable test account from that interrupted probe (users 33 = 32 + 1; 0 users marked 18+). It holds no data. Removal needs a direct DB delete, pending owner approval.
+
+### Tests
+Backend 480 passed · mobile 464 passed across 35 suites · `tsc` clean · ESLint clean.
+
+### Labels
+| Label | Status |
+|---|---|
+| LOCAL VERIFIED | Yes |
+| PRODUCTION VERIFIED | Gate 0 backend yes; Gate 1 backend change (Sentry, off) not deployed |
+| ANDROID BUILD / DEVICE / TALKBACK | No |
+| GOOGLE SIGN-IN | No: blocked on the owner checklist, then a device run |
+| LEGAL REVIEW | No |
