@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
+from core.error_reporting import init_error_reporting
 from core.observability import RequestDiagnosticsMiddleware, configure_logging
 from api.routes.auth import router as auth_router
 from api.routes.analysis import router as analysis_router
@@ -30,6 +31,7 @@ app = FastAPI(
 )
 
 configure_logging()
+init_error_reporting(settings.sentry_dsn, settings.environment)
 
 # Added first so it wraps everything, CORS included.
 app.add_middleware(RequestDiagnosticsMiddleware)

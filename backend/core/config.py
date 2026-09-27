@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     s3_public_base_url: str = ""
 
     environment: str = "development"
+    sentry_dsn: str = ""  # empty = error reporting off
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:8081"
 
