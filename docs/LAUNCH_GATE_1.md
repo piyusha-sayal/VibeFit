@@ -126,3 +126,20 @@ If step 16 fails:
 ## 7. Money
 
 Nothing here upgrades EAS, Render, Neon or Sentry. Render Starter (~$7/month) is still your decision. The app already handles a sleeping free-tier server, and no keep-warm cron was added.
+
+## 8. Push and production status (27 September 2026)
+
+**Pushed** `deb1853..bc327ba` (9 commits, no force-push): `700a62e`, `b316ea5`, `d965afc`, `af15540`, `e4a9432`, `24bd005`, `9457ca5` (mobile CLAUDE.md cleanup), `80dec46` (launch-router render test), `bc327ba` ("data deleted" wording while the sign-in survives).
+
+| Check | Result |
+|---|---|
+| Local regression before push | backend 480 · mobile 477 / 37 suites · `tsc` clean · ESLint clean |
+| Production after redeploy (disposable account, deleted afterwards) | 19/19: `/health` 200, `/health/db` 200, register/login/refresh/me, Passport 200, `/looks/generate` 200 (3 looks), `/looks/saved` 200, consent defaults off and retention without storage 409, eligibility POST, first timestamp kept, 403 unauthenticated, persists across sign-in, export includes it and has no password hash, deletion 200, token revoked 401 |
+| Migration | `0009_age_confirmation` (no Gate 1 migration) |
+| Integrity | users 32, 0 marked 18+, analyses 4, saved_looks 24, user_settings 5, beauty_profiles 9 |
+| Redeploy | inferred from the push plus a 4-minute wait; the Render deploy log was not read |
+| Sentry | inert: the only `sentry_sdk` import sits behind the DSN check, `render.yaml` defines no `SENTRY_DSN`, no DSN has been created, and the backend starts and serves without one. Covered by tests (no import without a DSN, a bad DSN doesn't stop startup, scrubber) |
+| Leftover test account | `gate1-cold-763b9630@example.com`: internal auth (UUID4 id, local bcrypt password, no Firebase identity), 0 rows in all 15 related tables. Deleted by exact id in a single transaction guarded to 1 row; users 33 → 32, nothing else changed |
+| Passport | warm 50/2 and 100/5 all 200. **Not reproduced**, not fixed. The cold-start probe was stopped for workstation memory and deliberately not rerun; next time use a small bounded profile or an external machine |
+
+**Still open (external):** Firebase Android app + fingerprints, Android OAuth client (custom URI scheme), `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in preview and production, on-device redirect check, Play App Signing fingerprints later, preview APK (EAS quota resets 1 Oct 2026; the old `com.vibefit.app` APK proves nothing about the new package), device QA, TalkBack, legal review, production AAB, Sentry DSN, Render Starter decision. The code being pushed doesn't mean any of this external setup is done.
