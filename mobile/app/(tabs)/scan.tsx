@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, Alert,
+  View, Text, StyleSheet, Alert, Linking,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming,
@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useAnalysis } from '../../hooks/useAnalysis';
+import { PhotoPermissionError, photoPermissionAlert } from '../../utils/photoPermission';
 import { FloatingNav } from '../../components/ui/FloatingNav';
 import { GoldButton } from '../../components/ui/GoldButton';
 import { Face } from '../../components/illustrations/Face';
@@ -62,6 +63,17 @@ function ScanLine() {
   return <Animated.View style={style} />;
 }
 
+function showScanError(err: unknown) {
+  if (err instanceof PhotoPermissionError) {
+    const { title, message, offerSettings } = photoPermissionAlert(err);
+    Alert.alert(title, message, offerSettings
+      ? [{ text: 'Not now', style: 'cancel' }, { text: 'Open Settings', onPress: () => { void Linking.openSettings(); } }]
+      : [{ text: 'OK' }]);
+    return;
+  }
+  Alert.alert('Error', err instanceof Error ? err.message : 'Failed to analyze image');
+}
+
 export default function ScanScreen() {
   const { C } = useLegacyTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
@@ -73,7 +85,7 @@ export default function ScanScreen() {
       const result = await pickAndAnalyze();
       if (result) router.push('/(tabs)/results' as never);
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to analyze image');
+      showScanError(err);
     }
   };
 
@@ -82,7 +94,7 @@ export default function ScanScreen() {
       const result = await cameraAndAnalyze();
       if (result) router.push('/(tabs)/results' as never);
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to analyze image');
+      showScanError(err);
     }
   };
 

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useAnalysisStore } from '../store/analysisStore';
+import { PhotoPermissionError } from '../utils/photoPermission';
 
 export function useAnalysis() {
   const store = useAnalysisStore();
@@ -10,8 +11,8 @@ export function useAnalysis() {
   }, []);
 
   const pickAndAnalyze = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') throw new Error('Photo library permission required');
+    const { status, canAskAgain } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') throw new PhotoPermissionError('library', canAskAgain);
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -28,10 +29,12 @@ export function useAnalysis() {
   };
 
   const cameraAndAnalyze = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') throw new Error('Camera permission required');
+    const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') throw new PhotoPermissionError('camera', canAskAgain);
 
+    // A selfie: open the front camera rather than whatever the phone last used.
     const result = await ImagePicker.launchCameraAsync({
+      cameraType: ImagePicker.CameraType.front,
       allowsEditing: true,
       aspect: [3, 4],
       quality: 0.92,
