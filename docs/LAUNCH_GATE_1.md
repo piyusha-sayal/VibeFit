@@ -3,17 +3,19 @@
 Prepared 27 September 2026. **Nothing here is device-verified.** Google sign-in is
 not verified until §6 step 16 passes on a physical phone.
 
-## 1. How Google sign-in actually works in this app
+## 1. How Google sign-in actually works in this app (native, since 27 Sep)
 
 | Piece | Implementation |
 |---|---|
-| OAuth library | `expo-auth-session/providers/google` → `Google.useAuthRequest({ webClientId, iosClientId, androidClientId })` in `mobile/hooks/useGoogleAuth.ts` |
-| Client used on Android | **The Android OAuth client** (`EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`). The web client ID is passed too but is only used on web |
-| Redirect URI on Android | `com.mylookfit.app:/oauthredirect`. This is expo-auth-session's native default for the Google provider, built from the application ID. It is **not** `mylookfit://`. Prebuild registers the package name as a URL scheme. Read from the library's documented behaviour; `node_modules` could not be read in this session, so treat it as the first thing to check on device |
-| Token handed to Firebase | Google **ID token** → `GoogleAuthProvider.credential(idToken)` → `signInWithCredential` (Firebase JS SDK, project `vibefit-a897e`) → Firebase ID token → backend verifies against project `vibefit-a897e` |
-| `google-services.json` | **Not needed.** The app uses the Firebase JS SDK with the web config from `EXPO_PUBLIC_FIREBASE_*`. Nothing reads `google-services.json`. Don't add it |
-| Missing Android client ID | No provider call and no crash. Tapping Google shows "Google sign-in is not available in this version yet. Please use your email and password." Email/password is unaffected. Covered by tests |
-| After success | Session stored in `authStore`, then `router.replace('/')`. The launch router then runs the lock, 18+ check, onboarding and home (§4) |
+| Library | `@react-native-google-signin/google-signin` 16.1.5 (Original API), installed with `npx expo install` for SDK 54, with its config plugin in `app.json`. `expo-auth-session` removed |
+| Flow | native account picker → Google **ID token** (`services/googleAuth.ts`) → `GoogleAuthProvider.credential` → Firebase `signInWithCredential` → Firebase ID token → existing backend verification (project `vibefit-a897e`) → `router.replace('/')` → lock / 18+ / onboarding / home |
+| Client IDs | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is **required**; it's what makes Google return an ID token. The Android OAuth client is matched by Google from package + signing SHA-1 and isn't passed to the app. The app no longer reads `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`; it can stay set |
+| Redirect URI / custom URI scheme | **None.** The native flow has no redirect, so the Android client's custom URI scheme setting **stays OFF** |
+| `google-services.json` | **Not required.** Checked with a local `expo prebuild --platform android`: no Google Services Gradle plugin, and the prebuild succeeded without `iosUrlScheme` (that option only matters for a future iOS build) |
+| Missing web client ID | Button explains "not available… use email and password"; the native picker is never opened |
+| Cancel / provider error / Play services missing | cancel is silent; errors show a user-facing message; no crash |
+| Firebase or token failure | no session is stored; the Google account is cleared so the next attempt shows the picker again |
+| Expo Go | the native module isn't in Expo Go; test Google sign-in in an EAS build only |
 
 ## 2. Owner checklist — Firebase, Google Cloud, EAS
 
@@ -31,8 +33,8 @@ Do these in order. Don't paste IDs or fingerprints into the repo.
 6. Authentication → Sign-in method → check that **Google** is *Enabled* (it has to be for `signInWithCredential`).
 
 **C. Google Cloud OAuth (same project)**
-7. APIs & Services → Credentials. Registering the Firebase Android app with a SHA-1 normally auto-creates an OAuth client of type **Android** for `com.mylookfit.app`. If none appears, *Create credentials → OAuth client ID → Android* with that package and SHA-1.
-8. Open that Android client → *Advanced settings* → enable **Custom URI scheme** (needed for `com.mylookfit.app:/oauthredirect`; Google turns this off by default for new Android clients).
+7. *(Done by owner, 27 Sep.)* APIs & Services → Credentials. Registering the Firebase Android app with a SHA-1 normally auto-creates an OAuth client of type **Android** for `com.mylookfit.app`. If none appears, *Create credentials → OAuth client ID → Android* with that package and SHA-1.
+8. **Leave the custom URI scheme OFF.** It is not needed since the switch to native sign-in.
 9. Copy its **Client ID** (`…apps.googleusercontent.com`).
 10. OAuth consent screen: app name MyLookFit, support email, and your privacy policy URL once one exists. While the app is in *Testing*, only listed test users can sign in. Add the QA testers, or publish the consent screen.
 
@@ -97,8 +99,8 @@ Run in order. Stop at any failure.
 |---|---|---|---|
 | 1 | Firebase Android app exists | Firebase → Project settings → Your apps shows `com.mylookfit.app` | listed |
 | 2 | Fingerprints match | SHA-1/SHA-256 in Firebase equal those from `eas credentials -p android` | identical |
-| 3 | OAuth Android client | Cloud Console → Credentials: Android client, package `com.mylookfit.app`, same SHA-1, custom URI scheme on | yes |
-| 4 | Client ID in EAS | `npx eas-cli@latest env:list --environment preview` and `--environment production` both list `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | both |
+| 3 | OAuth Android client | Cloud Console → Credentials: Android client, package `com.mylookfit.app`, same SHA-1 (custom URI scheme off) | yes |
+| 4 | Client IDs in EAS | `npx eas-cli@latest env:list --environment preview` and `--environment production` both list `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (required) and `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | both |
 | 5 | Latest main | `git checkout main && git pull` | up to date |
 | 6 | Clean tree | `git status --short` | only your untracked notes |
 | 7 | Backend tests | `cd backend && source .venv/Scripts/activate && python -m pytest -q` | all pass (baseline in RELEASE_VERIFICATION) |
@@ -119,7 +121,7 @@ Run in order. Stop at any failure.
 | 22 | Production AAB | only now: `npx eas-cli@latest build -p android --profile production` | FINISHED; **don't upload** until Play Console is set up |
 
 If step 16 fails:
-- `redirect_uri_mismatch` or "custom scheme" error → step 8.
+- "Google sign-in failed" straight after choosing an account (`DEVELOPER_ERROR`) → the SHA-1 of the signing key doesn't match the Android OAuth client, or the web client ID is from another project.
 - `DEVELOPER_ERROR` or "access blocked" → SHA-1/package mismatch, or the consent screen is in Testing without this tester listed.
 - Back in the app with "did not complete" → capture the time and report it; the token exchange failed.
 
@@ -142,4 +144,4 @@ Nothing here upgrades EAS, Render, Neon or Sentry. Render Starter (~$7/month) is
 | Leftover test account | `gate1-cold-763b9630@example.com`: internal auth (UUID4 id, local bcrypt password, no Firebase identity), 0 rows in all 15 related tables. Deleted by exact id in a single transaction guarded to 1 row; users 33 → 32, nothing else changed |
 | Passport | warm 50/2 and 100/5 all 200. **Not reproduced**, not fixed. The cold-start probe was stopped for workstation memory and deliberately not rerun; next time use a small bounded profile or an external machine |
 
-**Still open (external):** Firebase Android app + fingerprints, Android OAuth client (custom URI scheme), `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in preview and production, on-device redirect check, Play App Signing fingerprints later, preview APK (EAS quota resets 1 Oct 2026; the old `com.vibefit.app` APK proves nothing about the new package), device QA, TalkBack, legal review, production AAB, Sentry DSN, Render Starter decision. The code being pushed doesn't mean any of this external setup is done.
+**Still open (external):** ~~Firebase Android app + fingerprints, Android OAuth client, EAS client IDs~~ (done by owner 27 Sep; custom URI scheme stays off, as native sign-in doesn't use it), on-device Google sign-in check, Play App Signing fingerprints later, preview APK (EAS quota resets 1 Oct 2026; the old `com.vibefit.app` APK proves nothing about the new package), device QA, TalkBack, legal review, production AAB, Sentry DSN, Render Starter decision. The code being pushed doesn't mean any of this external setup is done.
