@@ -1,119 +1,108 @@
 /**
- * The Google sign-in hook: a build without an Android client must stay usable,
- * a cancelled browser must not look like a failure, and a successful sign-in
- * must go through the launch router so the 18+ check and onboarding still run.
- * No real Google or Firebase call is made.
+ * The Google sign-in hook: a build without a web client id stays usable, a
+ * cancelled picker is not a failure, and a successful sign-in goes through
+ * the launch router so the 18+ check and onboarding still run. The native
+ * module, Firebase and the backend are all mocked.
  */
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
-
-jest.mock('expo-web-browser', () => ({ maybeCompleteAuthSession: jest.fn() }));
-jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
-jest.mock('expo-auth-session/providers/google', () => ({ useAuthRequest: jest.fn() }));
-jest.mock('../services/authService', () => ({ loginWithGoogleIdToken: jest.fn() }));
-jest.mock('../store/authStore', () => {
-  const setState = jest.fn();
-  return { useAuthStore: Object.assign(jest.fn(), { setState }) };
-});
-
+import { act, renderHook } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+
+jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
+jest.mock('../services/googleAuth', () => ({
+  ...jest.requireActual<Record<string, unknown>>('../services/googleAuth'),
+  requestGoogleIdToken: jest.fn(),
+  clearGoogleSession: jest.fn(async () => undefined),
+}));
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {}, statusCodes: {},
+  isSuccessResponse: jest.fn(), isCancelledResponse: jest.fn(), isErrorWithCode: jest.fn(),
+}));
+jest.mock('../services/authService', () => ({ loginWithGoogleIdToken: jest.fn() }));
+jest.mock('../store/authStore', () => ({ useAuthStore: Object.assign(jest.fn(), { setState: jest.fn() }) }));
+
 import { useGoogleAuth } from './useGoogleAuth';
 
 const router = { replace: jest.fn() };
-const prompt = jest.fn(async () => ({ type: 'cancel' }));
+const m = () => ({
+  google: jest.requireMock('../services/googleAuth') as { requestGoogleIdToken: jest.Mock; clearGoogleSession: jest.Mock },
+  auth: jest.requireMock('../services/authService') as { loginWithGoogleIdToken: jest.Mock },
+  store: jest.requireMock('../store/authStore') as { useAuthStore: { setState: jest.Mock } },
+});
 
-function mocks() {
-  return {
-    google: jest.requireMock('expo-auth-session/providers/google') as { useAuthRequest: jest.Mock },
-    auth: jest.requireMock('../services/authService') as { loginWithGoogleIdToken: jest.Mock },
-    store: jest.requireMock('../store/authStore') as { useAuthStore: { setState: jest.Mock } },
-    expoRouter: jest.requireMock('expo-router') as { useRouter: jest.Mock },
-  };
+function configure(webClientId: string | undefined) {
+  Platform.OS = 'android';
+  if (webClientId) process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = webClientId;
+  else delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  (jest.requireMock('expo-router') as { useRouter: jest.Mock }).useRouter.mockReturnValue(router);
 }
 
-/** Configure the platform, the Android client id and the provider's response. */
-function load(androidClientId: string | undefined, response: unknown = null) {
-  Platform.OS = 'android';
-  if (androidClientId) process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = androidClientId;
-  else delete process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
-  const m = mocks();
-  m.expoRouter.useRouter.mockReturnValue(router);
-  m.google.useAuthRequest.mockReturnValue([{ url: 'x' }, response, prompt]);
-  return { useGoogleAuth };
+async function tapGoogle() {
+  const hook = renderHook(() => useGoogleAuth());
+  await act(async () => { await hook.result.current.signInWithGoogle(); });
+  return hook.result;
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
+  configure('web-client');
 });
 
-describe('without an Android client id', () => {
-  it('renders without calling the provider and explains itself on tap', async () => {
-    const { useGoogleAuth } = load(undefined);
-    const { result } = renderHook(() => useGoogleAuth());
+describe('missing configuration', () => {
+  it('explains itself and never opens the native picker', async () => {
+    configure(undefined);
+    const result = await tapGoogle();
     expect(result.current.ready).toBe(false);
-    expect(mocks().google.useAuthRequest).not.toHaveBeenCalled();
-
-    await act(async () => { await result.current.signInWithGoogle(); });
     expect(result.current.error).toMatch(/email and password/);
+    expect(m().google.requestGoogleIdToken).not.toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
-    expect(prompt).not.toHaveBeenCalled();
   });
 });
 
-describe('with an Android client id', () => {
-  it('opens the Google prompt', async () => {
-    const { useGoogleAuth } = load('android-client');
-    const { result } = renderHook(() => useGoogleAuth());
-    expect(result.current.ready).toBe(true);
-    await act(async () => { await result.current.signInWithGoogle(); });
-    expect(prompt).toHaveBeenCalledTimes(1);
-    expect(result.current.error).toBeNull();
-  });
+describe('native Google sign-in', () => {
+  it('signs in, stores the session and hands over to the launch router', async () => {
+    const data = { user: { id: 'u1' }, tokens: { accessToken: 'firebase-id-token' } };
+    m().google.requestGoogleIdToken.mockResolvedValue({ kind: 'idToken', idToken: 'google-id-token' } as never);
+    m().auth.loginWithGoogleIdToken.mockResolvedValue({ success: true, data } as never);
 
-  it('stays quiet when the user cancels', () => {
-    const { useGoogleAuth } = load('android-client', { type: 'cancel' });
-    const { result } = renderHook(() => useGoogleAuth());
-    expect(result.current.error).toBeNull();
-    expect(result.current.loading).toBe(false);
-    expect(mocks().auth.loginWithGoogleIdToken).not.toHaveBeenCalled();
-  });
+    const result = await tapGoogle();
 
-  it('shows a provider failure', () => {
-    const { useGoogleAuth } = load('android-client', { type: 'error', error: { message: 'access_denied' } });
-    const { result } = renderHook(() => useGoogleAuth());
-    expect(result.current.error).toBe('access_denied');
-    expect(router.replace).not.toHaveBeenCalled();
-  });
-
-  it('rejects a success callback that carries no token', () => {
-    const { useGoogleAuth } = load('android-client', { type: 'success', authentication: null });
-    const { result } = renderHook(() => useGoogleAuth());
-    expect(result.current.error).toMatch(/did not complete/);
-    expect(mocks().auth.loginWithGoogleIdToken).not.toHaveBeenCalled();
-  });
-
-  it('stores the session and hands over to the launch router on success', async () => {
-    const data = { user: { id: 'u1' }, tokens: { accessToken: 'a' } };
-    const { useGoogleAuth } = load('android-client', { type: 'success', authentication: { idToken: 'id-tok' } });
-    mocks().auth.loginWithGoogleIdToken.mockResolvedValue({ success: true, data } as never);
-    const { result } = renderHook(() => useGoogleAuth());
-
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
-    expect(mocks().auth.loginWithGoogleIdToken).toHaveBeenCalledWith('id-tok');
-    expect(mocks().store.useAuthStore.setState).toHaveBeenCalledWith({
+    expect(m().google.requestGoogleIdToken).toHaveBeenCalledWith(
+      expect.objectContaining({ webClientId: 'web-client' }));
+    expect(m().auth.loginWithGoogleIdToken).toHaveBeenCalledWith('google-id-token');
+    expect(m().store.useAuthStore.setState).toHaveBeenCalledWith({
       user: data.user, tokens: data.tokens, isAuthenticated: true,
     });
+    expect(router.replace).toHaveBeenCalledWith('/');
+    expect(result.current.error).toBeNull();
     expect(result.current.loading).toBe(false);
   });
 
-  it('does not sign in when the backend exchange fails', async () => {
-    const { useGoogleAuth } = load('android-client', { type: 'success', authentication: { idToken: 'id-tok' } });
-    mocks().auth.loginWithGoogleIdToken.mockResolvedValue({ success: false, data: null, error: 'auth/invalid-credential' } as never);
-    const { result } = renderHook(() => useGoogleAuth());
-
-    await waitFor(() => expect(result.current.error).toBe('auth/invalid-credential'));
-    expect(mocks().store.useAuthStore.setState).not.toHaveBeenCalled();
+  it('stays quiet when the user cancels', async () => {
+    m().google.requestGoogleIdToken.mockResolvedValue({ kind: 'cancelled' } as never);
+    const result = await tapGoogle();
+    expect(result.current.error).toBeNull();
+    expect(m().auth.loginWithGoogleIdToken).not.toHaveBeenCalled();
     expect(router.replace).not.toHaveBeenCalled();
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('shows a provider failure', async () => {
+    m().google.requestGoogleIdToken.mockResolvedValue({ kind: 'error', message: 'Google sign-in failed. Please try again.' } as never);
+    const result = await tapGoogle();
+    expect(result.current.error).toBe('Google sign-in failed. Please try again.');
+    expect(m().auth.loginWithGoogleIdToken).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('does not sign in when Firebase or the session exchange fails, and forgets the Google account', async () => {
+    m().google.requestGoogleIdToken.mockResolvedValue({ kind: 'idToken', idToken: 'google-id-token' } as never);
+    m().auth.loginWithGoogleIdToken.mockResolvedValue({ success: false, data: null, error: 'Sign-in failed.' } as never);
+    const result = await tapGoogle();
+    expect(result.current.error).toBe('Sign-in failed.');
+    expect(m().store.useAuthStore.setState).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(m().google.clearGoogleSession).toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
   });
 });

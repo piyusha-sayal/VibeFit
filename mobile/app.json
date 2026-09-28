@@ -56,9 +56,13 @@
         {
           "faceIDPermission": "Allow MyLookFit to unlock with Face ID."
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
-    "scheme": ["mylookfit", "vibefit"],
+    "scheme": [
+      "mylookfit",
+      "vibefit"
+    ],
     "experiments": {
       "typedRoutes": true
     },
