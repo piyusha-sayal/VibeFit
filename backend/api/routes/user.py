@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from core.database import get_db
 from core.security import verify_password, hash_password
 from models.user import User
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 class UpdateProfileRequest(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=60)
 
 
 class ChangePasswordRequest(BaseModel):

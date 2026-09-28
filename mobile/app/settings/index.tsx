@@ -110,9 +110,15 @@ export default function SettingsScreen() {
           ) : null}
         </Card>
         <Button
-          label="Sign out"
+          label="Profile and password"
           variant="secondary"
           style={{ marginTop: SPACE.md }}
+          onPress={() => router.push('/settings/account' as never)}
+        />
+        <Button
+          label="Sign out"
+          variant="secondary"
+          style={{ marginTop: SPACE.sm }}
           onPress={() =>
             Alert.alert('Sign out?', 'Your saved looks and analyses stay on your account.', [
               { text: 'Cancel', style: 'cancel' },
