@@ -31,6 +31,22 @@ describe('app identity', () => {
   });
 });
 
+describe('Android permissions', () => {
+  it('asks only for what the app uses', () => {
+    expect(expo.android.permissions).toEqual(['android.permission.CAMERA']);
+  });
+
+  it('blocks the microphone and other defaults the app never uses', () => {
+    expect(expo.android.blockedPermissions).toEqual(expect.arrayContaining([
+      'android.permission.RECORD_AUDIO',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ]));
+    const picker = expo.plugins.find((p: unknown) => Array.isArray(p) && p[0] === 'expo-image-picker');
+    expect(picker[1].microphonePermission).toBe(false);
+  });
+});
+
 describe('build numbering', () => {
   it('lets EAS own versionCode, so no local value can collide with it', () => {
     expect(eas.cli.appVersionSource).toBe('remote');

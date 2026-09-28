@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.mylookfit.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "MyLookFit needs access to your photos for style analysis.",
-        "NSCameraUsageDescription": "MyLookFit uses your camera for real-time style analysis.",
+        "NSCameraUsageDescription": "MyLookFit uses your camera to take a selfie for style analysis.",
         "NSFaceIDUsageDescription": "Used for secure authentication."
       }
     },
@@ -32,8 +32,12 @@
       },
       "package": "com.mylookfit.app",
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -47,7 +51,8 @@
         "expo-image-picker",
         {
           "photosPermission": "MyLookFit needs access to your photos for style analysis.",
-          "cameraPermission": "MyLookFit uses your camera for real-time style analysis."
+          "cameraPermission": "MyLookFit uses your camera to take a selfie for style analysis.",
+          "microphonePermission": false
         }
       ],
       "expo-web-browser",
