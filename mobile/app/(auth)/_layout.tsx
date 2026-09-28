@@ -13,6 +13,7 @@ export default function AuthLayout() {
     >
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="forgot-password" />
       <Stack.Screen
         name="onboarding"
         options={{ animation: reducedMotion ? 'none' : 'slide_from_right' }}

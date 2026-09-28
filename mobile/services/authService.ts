@@ -1,6 +1,10 @@
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  sendPasswordResetEmail,
+  updatePassword,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -112,6 +116,63 @@ export async function loginAsGuest(): Promise<ApiResponse<AuthData>> {
 
 export async function logout(): Promise<void> {
   await signOut(auth);
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Email a password-reset link. An unknown email gets the same answer as a
+ * known one, so the form cannot be used to discover who has an account.
+ */
+export async function sendPasswordReset(email: string): Promise<ApiResponse<null>> {
+  const address = email.trim().toLowerCase();
+  if (!EMAIL_PATTERN.test(address)) {
+    return { success: false, data: null, error: 'Enter the email address you signed up with.' };
+  }
+  try {
+    await sendPasswordResetEmail(auth, address);
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code !== 'auth/user-not-found') return { success: false, data: null, error: errorMessage(err) };
+  }
+  return { success: true, data: null };
+}
+
+/** Only email-and-password accounts have a password to change. */
+export function canChangePassword(): boolean {
+  const user = isFirebaseConfigured ? auth.currentUser : null;
+  return Boolean(user?.email && user.providerData.some((p) => p.providerId === 'password'));
+}
+
+/** Re-authenticate with the current password, then set the new one. */
+export async function changePassword(current: string, next: string): Promise<ApiResponse<null>> {
+  if (next.length < MIN_PASSWORD_LENGTH) {
+    return { success: false, data: null, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+  }
+  const user = auth.currentUser;
+  if (!canChangePassword() || !user?.email) {
+    return { success: false, data: null, error: 'This account signs in without a password.' };
+  }
+  try {
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, current));
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    const wrong = code === 'auth/invalid-credential' || code === 'auth/wrong-password';
+    return { success: false, data: null, error: wrong ? 'Your current password is incorrect.' : errorMessage(err) };
+  }
+  try {
+    await updatePassword(user, next);
+    return { success: true, data: null };
+  } catch (err) {
+    return { success: false, data: null, error: errorMessage(err) };
+  }
+}
+
+/** Keep the Firebase profile name in step with the account name. */
+export async function setFirebaseDisplayName(name: string): Promise<void> {
+  const user = isFirebaseConfigured ? auth.currentUser : null;
+  if (user) await updateProfile(user, { displayName: name });
 }
 
 /**

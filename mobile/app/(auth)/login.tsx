@@ -92,6 +92,11 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 placeholder="••••••••"
               />
+              <Link href={`/(auth)/forgot-password?email=${encodeURIComponent(email.trim())}` as never} asChild>
+                <TouchableOpacity accessibilityRole="link" style={styles.forgot}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </TouchableOpacity>
+              </Link>
             </View>
 
             <GoldButton
@@ -152,6 +157,8 @@ const makeStyles = (C: LegacyPalette) => StyleSheet.create({
     borderRadius: 12, padding: 14, fontFamily: FONTS.sans, fontSize: 15, color: C.text,
   },
   btn: { marginTop: 8 },
+  forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
+  forgotText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: C.gold },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
   dividerLine: { flex: 1, height: 0.5, backgroundColor: C.white08 },
   dividerText: { fontFamily: FONTS.sansBold, fontSize: 11, color: C.textSubtle, letterSpacing: 1.2 },
