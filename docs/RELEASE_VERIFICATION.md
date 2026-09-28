@@ -483,4 +483,11 @@ Result codes: `P` pass · `F-P0/F-P1/F-P2` fail with defect ID · `NT` not teste
 | 37 | Render cold start | After 20+ min idle: waking screen, then the app proceeds within about 60 s | | | |
 | 38 | Deep links | `adb shell am start -a android.intent.action.VIEW -d "mylookfit://settings"` → Settings; `vibefit://colors` → Colors; `mylookfit://%E0%A4%A` → home | | | |
 
+| 39 | Camera | Scan → Take photo opens the **front** camera; photo crops and uploads | | | |
+| 40 | Camera | Deny camera twice ("don't ask again") → alert offers **Open Settings**, which opens the app's permission page | | | |
+| 41 | Permissions | App info → Permissions lists Camera (and Photos on older Android) only: **no Microphone** | | | |
+| 42 | Forgot password | Login → Forgot password? → email arrives → reset → sign in with the new password | | | |
+| 43 | Profile | Settings → Profile and password → change name → shown after restart | | | |
+| 44 | Password | Email account: change password (wrong current password is refused); Google account shows "no MyLookFit password" | | | |
+
 Defect log format: `ID · device · check # · steps · expected · actual · severity · build`.
