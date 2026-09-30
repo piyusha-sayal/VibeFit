@@ -43,7 +43,8 @@ export function ProcessingStages({
   }, [isAnalyzing]);
 
   const label = isUploading ? `Uploading your photo — ${uploadProgress}%` : STAGES[stage];
-  const ringValue = isUploading ? uploadProgress / 100 : (stage + 1) / STAGES.length;
+  // Never full while waiting: the stages are timed, and only the result means done.
+  const ringValue = isUploading ? uploadProgress / 100 : (stage + 0.5) / STAGES.length;
 
   return (
     <View style={{ alignItems: 'center', paddingVertical: SPACE.xxl }}>
