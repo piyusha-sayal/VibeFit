@@ -6,8 +6,10 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 const mockGetLatest = jest.fn<() => Promise<unknown>>();
+const mockGetAnalysis = jest.fn<(id: string) => Promise<unknown>>();
 jest.mock('../services/analysisService', () => ({
   getLatestAnalysis: () => mockGetLatest(),
+  getAnalysis: (id: string) => mockGetAnalysis(id),
 }));
 jest.mock('../services/authService', () => ({
   logout: async () => undefined,
@@ -56,5 +58,31 @@ describe('cached analysis invalidation', () => {
     expect(useAnalysisStore.getState().currentAnalysis).toBeNull();
     expect(useAnalysisStore.getState().analyses).toEqual([]);
     expect(await readCachedAnalysis()).toBeNull();
+  });
+});
+
+// Closing the app mid-scan used to leave "processing" on screen forever:
+// loadLatest fetched once and never polled.
+describe('resuming an analysis that was still processing', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    useAnalysisStore.setState({ currentAnalysis: null, analyses: [], isAnalyzing: false });
+    mockGetLatest.mockReset();
+    mockGetAnalysis.mockReset();
+  });
+
+  it('polls until the scan resolves, then shows the finished result', async () => {
+    jest.useFakeTimers();
+    mockGetLatest.mockResolvedValue({ success: true, data: { id: 'a1', status: 'processing' } });
+    mockGetAnalysis.mockResolvedValue({ success: true, data: { id: 'a1', status: 'complete' } });
+
+    const pending = useAnalysisStore.getState().loadLatest();
+    await jest.advanceTimersByTimeAsync(2500);
+    await pending;
+    jest.useRealTimers();
+
+    expect(mockGetAnalysis).toHaveBeenCalledWith('a1');
+    expect(useAnalysisStore.getState().currentAnalysis).toMatchObject({ id: 'a1', status: 'complete' });
+    expect(useAnalysisStore.getState().isAnalyzing).toBe(false);
   });
 });

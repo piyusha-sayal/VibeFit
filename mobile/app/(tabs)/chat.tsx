@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
@@ -8,7 +8,7 @@ import Animated, {
   withDelay, Easing,
 } from 'react-native-reanimated';
 
-import { Chip, Txt } from '../../components/ds';
+import { BackBar, Chip, StatusBanner, Txt } from '../../components/ds';
 import { useChat } from '../../hooks/useChat';
 import { useTheme } from '../../theme/ThemeProvider';
 import type { Palette } from '../../constants/theme';
@@ -22,13 +22,15 @@ const SUGGESTIONS = [
 
 function TypingDot({ delay, color }: { delay: number; color: string }) {
   const ty = useSharedValue(0);
+  const { reducedMotion } = useTheme();
 
   useEffect(() => {
+    if (reducedMotion) return;
     ty.value = withDelay(delay, withRepeat(
       withTiming(-5, { duration: 400, easing: Easing.inOut(Easing.sin) }),
       -1, true
     ));
-  }, [delay]);
+  }, [delay, reducedMotion]);
 
   const style = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }));
   return <Animated.View style={[styles.dot, { backgroundColor: color }, style]} />;
@@ -48,7 +50,9 @@ function TypingIndicator({ colors }: { colors: Palette }) {
 
 export default function ChatScreen() {
   const { colors } = useTheme();
-  const { messages, isSending, send, inputValue, setInputValue } = useChat();
+  const { messages, isSending, send, inputValue, setInputValue, error, clearError } = useChat();
+  // Kept so a failed send can be retried: the store drops the unsent bubble.
+  const [lastSent, setLastSent] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -61,7 +65,13 @@ export default function ChatScreen() {
     const text = inputValue.trim();
     if (!text || isSending) return;
     setInputValue('');
+    setLastSent(text);
     await send(text);
+  };
+
+  const retrySend = () => {
+    clearError();
+    if (lastSent) void send(lastSent);
   };
 
   return (
@@ -72,6 +82,7 @@ export default function ChatScreen() {
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.back}><BackBar /></View>
         <View>
           <Txt variant="label" tone="accent" weight="semibold">AI Stylist</Txt>
           <Txt variant="h2" serif accessibilityRole="header" style={{ marginTop: 2 }}>Style Chat</Txt>
@@ -146,6 +157,18 @@ export default function ChatScreen() {
         )}
       </ScrollView>
 
+      {error ? (
+        <View style={styles.errorWrap}>
+          <StatusBanner
+            tone="error"
+            title="Your message didn't send"
+            body="Nothing was lost. Check your connection and try again."
+            actionLabel={lastSent ? 'Try again' : undefined}
+            onAction={lastSent ? retrySend : undefined}
+          />
+        </View>
+      ) : null}
+
       {/* Input */}
       <View style={[styles.inputBar, { borderTopColor: colors.border, backgroundColor: colors.bg }]}>
         <TextInput
@@ -182,6 +205,8 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  back: { position: 'absolute', left: 20, top: 8 },
+  errorWrap: { paddingHorizontal: 20, paddingBottom: 8 },
   header: {
     paddingTop: 62, paddingHorizontal: 20, paddingBottom: 14,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',

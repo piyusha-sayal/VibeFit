@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  Button, Card, Chip, ErrorState, SectionHeader, Txt,
+  Button, Card, Chip, SectionHeader, StatusBanner, Txt,
 } from '../../components/ds';
 import { WakingBanner } from '../../components/ds/WakingBanner';
 import { ProcessingStages } from '../../components/analyze/ProcessingStages';
@@ -99,7 +99,13 @@ export default function ScanScreen() {
 
           {error ? (
             <View style={{ marginTop: SPACE.xl }}>
-              <ErrorState message={error} onRetry={clearError} />
+              <StatusBanner
+                tone="error"
+                title="That scan didn't finish"
+                body={`${error} Your earlier results are unchanged — take or upload a photo below to try again.`}
+                actionLabel="Dismiss"
+                onAction={clearError}
+              />
             </View>
           ) : null}
 

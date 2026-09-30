@@ -74,8 +74,12 @@ export function encodeBody(data: unknown, preserveCase = false): unknown {
 
 // ---- interceptors ----
 
+// Set for one retry after a 401, so the next request carries a newly minted token.
+let forceTokenRefresh = false;
+
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const token = await getFreshIdToken();
+  const token = await getFreshIdToken(forceTokenRefresh);
+  forceTokenRefresh = false;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.data = encodeBody(config.data, config.preserveCase);
   return config;
@@ -86,9 +90,20 @@ function errorMessage(error: unknown): string {
     const detail = (error.response?.data as { detail?: unknown } | undefined)?.detail;
     if (typeof detail === 'string') return detail;
     if (Array.isArray(detail) && detail[0]?.msg) return String(detail[0].msg);
-    return error.message;
+    return friendlyError(error.response?.status);
   }
-  return error instanceof Error ? error.message : 'Request failed';
+  return friendlyError(undefined);
+}
+
+/**
+ * Text for a failure the backend did not explain. Raw axios messages such as
+ * "Request failed with status code 500" used to reach the screen verbatim.
+ */
+export function friendlyError(status: number | undefined): string {
+  if (status === undefined) return "We couldn't reach MyLookFit. Check your connection and try again.";
+  if (status === 401) return 'Your session has ended. Please sign in again.';
+  if (status >= 500) return 'Something went wrong on our side. Please try again in a moment.';
+  return "That didn't work. Please try again.";
 }
 
 // All helpers normalize the raw backend payload into the app's ApiResponse
@@ -118,6 +133,12 @@ async function request<T>(
         const status = axios.isAxiosError(error) ? error.response?.status : undefined;
         const isNetworkError = axios.isAxiosError(error) && !error.response;
 
+        // An expired token is refreshed once and the request repeated; any
+        // method is safe here because the server rejected it before acting.
+        if (status === 401 && attempt === 0) {
+          forceTokenRefresh = true;
+          continue;
+        }
         if (shouldRetry({ method, status, isNetworkError, attempt })) {
           await sleep(retryDelayMs(attempt));
           continue;

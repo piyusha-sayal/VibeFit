@@ -211,10 +211,11 @@ export async function getCurrentUser(): Promise<User | null> {
   return fbUser ? mapUser(fbUser) : null;
 }
 
-export async function getFreshIdToken(): Promise<string | null> {
+/** `force` skips Firebase's cached token, for a retry after the server said 401. */
+export async function getFreshIdToken(force = false): Promise<string | null> {
   const fbUser = await restoredFirebaseUser();
   if (!fbUser) return null;
-  return fbUser.getIdToken(false);
+  return fbUser.getIdToken(force);
 }
 
 export function subscribeToAuth(callback: (user: User | null) => void): () => void {

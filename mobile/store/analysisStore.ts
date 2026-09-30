@@ -75,8 +75,19 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
     try {
       const response = await analysisService.getLatestAnalysis();
       if (response.success && response.data) {
-        writeCachedAnalysis(response.data);
-        set({ currentAnalysis: response.data });
+        let latest = response.data;
+        // Still processing means the app was closed mid-scan: resume waiting
+        // instead of showing a "processing" result that never resolves.
+        if (latest.status === 'processing') {
+          set({ isAnalyzing: true });
+          try {
+            latest = await pollUntilResolved(latest);
+          } finally {
+            set({ isAnalyzing: false });
+          }
+        }
+        writeCachedAnalysis(latest);
+        set({ currentAnalysis: latest });
       } else if (response.status === 404 && completedScans === scansBefore) {
         // The server is authoritative: this account has no analysis, so a
         // cached one belongs to someone else or predates a data reset. Skip if a
