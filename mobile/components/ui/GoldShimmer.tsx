@@ -11,19 +11,22 @@ interface Props {
 }
 
 export function GoldShimmer({ children, style }: Props) {
-  const { C } = useLegacyTheme();
+  const { C, reducedMotion } = useLegacyTheme();
   const styles = makeStyles(C);
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    if (reducedMotion) return undefined;
+    const loop = Animated.loop(
       Animated.timing(shimmer, {
         toValue: 1,
         duration: 4000,
         useNativeDriver: false,
       })
-    ).start();
-  }, [shimmer]);
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [shimmer, reducedMotion]);
 
   const translateX = shimmer.interpolate({
     inputRange: [0, 1],

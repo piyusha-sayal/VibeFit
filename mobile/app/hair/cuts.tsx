@@ -100,7 +100,7 @@ export default function HaircutFinderScreen() {
           <Txt variant="overline" tone="muted" style={{ marginBottom: SPACE.sm }}>
             {query.data!.count} cuts
           </Txt>
-          {query.data!.styles.map((style) => (
+          {query.data!.styles.map((style, index) => (
             <Card
               key={style.key}
               style={{ marginBottom: SPACE.md }}
@@ -128,6 +128,12 @@ export default function HaircutFinderScreen() {
                   <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
                     {style.description}
                   </Txt>
+                  {/* The list is already ordered for the face shape; say which to try first. */}
+                  {index === 0 && query.data!.faceShape ? (
+                    <View style={{ marginTop: SPACE.sm, alignSelf: 'flex-start' }}>
+                      <Chip label="Best match for you" selected />
+                    </View>
+                  ) : null}
                 </View>
               </View>
 

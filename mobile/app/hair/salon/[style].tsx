@@ -1,14 +1,18 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { Card, EmptyState, LoadingState, PageHeader, Screen, SectionHeader, Txt } from '../../../components/ds';
+import {
+  Button, Card, EmptyState, LoadingState, PageHeader, Screen, SectionHeader, StatusBanner, Txt,
+} from '../../../components/ds';
+import { success } from '../../../utils/haptics';
 import { SPACE } from '../../../constants/theme';
 import { useSalonGuide } from '../../../hooks/useFace';
 import { useSaveLook } from '../../../hooks/useBeauty';
 import { useTheme } from '../../../theme/ThemeProvider';
 
 export default function SalonGuideScreen() {
+  const router = useRouter();
   const { style } = useLocalSearchParams<{ style: string }>();
   const { colors } = useTheme();
   const query = useSalonGuide(style ?? null);
@@ -54,20 +58,29 @@ export default function SalonGuideScreen() {
         <Txt variant="caption" tone="muted" style={{ marginTop: SPACE.xs }}>{guide.maintenance}</Txt>
       </Card>
 
-      <Txt
-        variant="body"
-        tone="accent"
-        weight="semibold"
+      <Button
+        label={saveLook.isSuccess ? 'Saved to your Passport' : 'Save to my Passport'}
+        variant="secondary"
+        loading={saveLook.isPending}
+        disabled={saveLook.isSuccess}
         style={{ marginTop: SPACE.xl }}
         onPress={() => saveLook.mutate({
           name: guide.title.replace('Asking for a ', ''),
           kind: 'hair',
           status: 'want_to_try',
           payload: { styleKey: guide.styleKey },
-        })}
-      >
-        {saveLook.isSuccess ? 'Saved to your Passport' : saveLook.isPending ? 'Saving…' : 'Save to my Passport'}
-      </Txt>
+        }, { onSuccess: () => success() })}
+      />
+      {saveLook.isSuccess ? (
+        <View style={{ marginTop: SPACE.md }}>
+          <StatusBanner
+            tone="success"
+            title="Saved to your Beauty Passport"
+            actionLabel="View"
+            onAction={() => router.push('/(tabs)/passport' as never)}
+          />
+        </View>
+      ) : null}
 
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xl }}>{guide.disclaimer}</Txt>
     </Screen>

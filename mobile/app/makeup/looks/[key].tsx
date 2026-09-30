@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Button, Card, EmptyState, LoadingState, PageHeader, Screen, Section, StatusBanner, Swatch, Txt,
 } from '../../../components/ds';
+import { success } from '../../../utils/haptics';
 import { NumberedSteps } from '../../../components/makeup/NumberedSteps';
 import { SPACE } from '../../../constants/theme';
 import { useMakeupLook } from '../../../hooks/useFace';
@@ -149,6 +150,7 @@ export default function MakeupLookScreen() {
         label={saveLabel}
         variant={saveLook.isSuccess ? 'secondary' : 'primary'}
         loading={saveLook.isPending}
+        disabled={saveLook.isSuccess}
         style={{ marginTop: SPACE.xl }}
         onPress={() => saveLook.mutate({
           name: look.aesthetic.name,
@@ -156,8 +158,18 @@ export default function MakeupLookScreen() {
           status: 'want_to_try',
           occasion: look.occasion ?? undefined,
           payload: { aesthetic: look.aesthetic.key, season: palette.season },
-        })}
+        }, { onSuccess: () => success() })}
       />
+      {saveLook.isSuccess ? (
+        <View style={{ marginTop: SPACE.md }}>
+          <StatusBanner
+            tone="success"
+            title="Saved to your Beauty Passport"
+            actionLabel="View"
+            onAction={() => router.push('/(tabs)/passport' as never)}
+          />
+        </View>
+      ) : null}
     </Screen>
   );
 }

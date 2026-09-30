@@ -125,7 +125,7 @@ export default function RegisterScreen() {
             <View style={styles.loginRow}>
               <Text style={styles.loginText}>Already have an account? </Text>
               <Link href="/(auth)/login" asChild>
-                <TouchableOpacity>
+                <TouchableOpacity accessibilityRole="link" accessibilityLabel="Sign in" hitSlop={8}>
                   <Text style={styles.loginLink}>Sign in</Text>
                 </TouchableOpacity>
               </Link>

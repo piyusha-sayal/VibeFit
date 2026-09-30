@@ -147,7 +147,7 @@ export default function HomeScreen() {
       out.push({
         title: `Hairstyles for a ${by.face_shape.value} face`,
         body: 'Cuts, lengths and partings that balance your proportions.',
-        route: '/analysis/hair',
+        route: '/hair/cuts',
         accent: 'lavender',
       });
     }
@@ -193,21 +193,26 @@ export default function HomeScreen() {
           </Txt>
           <Txt variant="bodySm" tone="muted" numberOfLines={1} style={{ marginTop: 2 }}>{supportingLine}</Txt>
         </View>
-        <PressScale
-          onPress={() => router.push('/(tabs)/progress' as never)}
-          accessibilityLabel={`${game.streak.count} day streak. Open progress`}
-          style={[styles.pill, { backgroundColor: colors.peachSoft }]}
-        >
-          <Txt variant="bodySm" weight="bold">🔥 {game.streak.count}</Txt>
-        </PressScale>
-        <PressScale
-          onPress={() => router.push('/(tabs)/progress' as never)}
-          accessibilityLabel={`Level ${level.level}. Open progress`}
-        >
-          <ProgressRing value={level.progress} size={44} stroke={4}>
-            <Txt variant="caption" weight="bold">L{level.level}</Txt>
-          </ProgressRing>
-        </PressScale>
+        {/* Streak and level mean nothing on day one, so they wait for activity. */}
+        {!isNew ? (
+          <>
+            <PressScale
+              onPress={() => router.push('/(tabs)/progress' as never)}
+              accessibilityLabel={`${game.streak.count} day streak. Open progress`}
+              style={[styles.pill, { backgroundColor: colors.peachSoft }]}
+            >
+              <Txt variant="bodySm" weight="bold">🔥 {game.streak.count}</Txt>
+            </PressScale>
+            <PressScale
+              onPress={() => router.push('/(tabs)/progress' as never)}
+              accessibilityLabel={`Level ${level.level}. Open progress`}
+            >
+              <ProgressRing value={level.progress} size={44} stroke={4}>
+                <Txt variant="caption" weight="bold">L{level.level}</Txt>
+              </ProgressRing>
+            </PressScale>
+          </>
+        ) : null}
       </View>
 
       <View style={styles.sectionTight}>
@@ -229,55 +234,21 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* ------------------------------------------- fingerprint offer */}
-      <View style={styles.sectionTight}>
-        <BiometricOffer />
-      </View>
-
+      {/* New users learn what the app does before seeing any catalogue. */}
+      {isNew ? (
+        <View style={styles.section}>
+          <EmptyState
+            title="Nothing here is guessed"
+            body="Every result you see comes from a scan you ran or a preference you set. Until then, sections stay empty on purpose."
+          />
+        </View>
+      ) : null}
       {/* --------------------------------------------- C. passport snapshot */}
       {data ? (
         <View style={styles.sectionTight}>
           <PassportSnapshot attributes={data.attributes} />
         </View>
       ) : null}
-
-      {/* ---------------------------------------------- D. core experiences */}
-      <View style={styles.section}>
-        <SectionHeader title="Your core experiences" />
-        <CoreExperiences />
-      </View>
-
-      {/* --------------------------------------------------- E. more tools */}
-      <View style={styles.section}>
-        <SectionHeader title="More to explore" />
-        <SecondaryTools />
-      </View>
-
-      {/* --------------------------------------------------- F. today */}
-      <View style={styles.section}>
-        <SectionHeader title="Today" />
-        {quizPlayedToday ? (
-          <Card variant="tinted" accent="sage">
-            <Text style={styles.todayEmoji} accessibilityElementsHidden importantForAccessibility="no">💡</Text>
-            <Txt variant="overline" tone="muted">Tip of the day</Txt>
-            <Txt variant="bodySm" style={{ marginTop: SPACE.xs }}>{tip}</Txt>
-          </Card>
-        ) : (
-          <Card
-            variant="tinted"
-            accent="gold"
-            onPress={() => router.push('/(tabs)/progress' as never)}
-            accessibilityLabel="Daily quiz. Open progress to play"
-          >
-            <Text style={styles.todayEmoji} accessibilityElementsHidden importantForAccessibility="no">🧠</Text>
-            <Txt variant="overline" tone="muted">Daily quiz</Txt>
-            <Txt variant="bodySm" weight="semibold" style={{ marginTop: SPACE.xs }}>
-              3 quick questions. Earn points and badges.
-            </Txt>
-            <Txt variant="caption" tone="accent" weight="semibold" style={{ marginTop: SPACE.sm }}>Play →</Txt>
-          </Card>
-        )}
-      </View>
 
       {/* --------------------------------------------- G. recent / continue */}
       {hasRecentWork ? (
@@ -380,6 +351,49 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
+      {/* ---------------------------------------------- D. core experiences */}
+      <View style={styles.section}>
+        <SectionHeader title="Your core experiences" />
+        <CoreExperiences />
+      </View>
+
+      {/* --------------------------------------------------- E. more tools */}
+      <View style={styles.section}>
+        <SectionHeader title="More to explore" />
+        <SecondaryTools />
+      </View>
+
+      {/* ------------------------------------------- fingerprint offer */}
+      <View style={styles.sectionTight}>
+        <BiometricOffer />
+      </View>
+
+      {/* --------------------------------------------------- F. today */}
+      <View style={styles.section}>
+        <SectionHeader title="Today" />
+        {quizPlayedToday ? (
+          <Card variant="tinted" accent="sage">
+            <Text style={styles.todayEmoji} accessibilityElementsHidden importantForAccessibility="no">💡</Text>
+            <Txt variant="overline" tone="muted">Tip of the day</Txt>
+            <Txt variant="bodySm" style={{ marginTop: SPACE.xs }}>{tip}</Txt>
+          </Card>
+        ) : (
+          <Card
+            variant="tinted"
+            accent="gold"
+            onPress={() => router.push('/(tabs)/progress' as never)}
+            accessibilityLabel="Daily quiz. Open progress to play"
+          >
+            <Text style={styles.todayEmoji} accessibilityElementsHidden importantForAccessibility="no">🧠</Text>
+            <Txt variant="overline" tone="muted">Daily quiz</Txt>
+            <Txt variant="bodySm" weight="semibold" style={{ marginTop: SPACE.xs }}>
+              3 quick questions. Earn points and badges.
+            </Txt>
+            <Txt variant="caption" tone="accent" weight="semibold" style={{ marginTop: SPACE.sm }}>Play →</Txt>
+          </Card>
+        )}
+      </View>
+
       {/* --------------------------------------------------- inspiration */}
       <View style={styles.section}>
         <SectionHeader title="Beauty inspiration" />
@@ -410,16 +424,6 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {isNew ? (
-        <View style={styles.section}>
-          <EmptyState
-            title="Nothing here is guessed"
-            body="Every result you see comes from a scan you ran or a preference you set. Until then, sections stay empty on purpose."
-            actionLabel="Run your first analysis"
-            onAction={() => router.push('/(tabs)/scan' as never)}
-          />
-        </View>
-      ) : null}
     </ScrollView>
   );
 }

@@ -192,7 +192,6 @@ export default function PassportScreen() {
         {data.nextAction ? (
           <Button
             label={data.nextAction.label}
-            variant="secondary"
             style={{ marginTop: SPACE.lg }}
             onPress={() => router.push(data.nextAction!.route as never)}
           />
@@ -224,7 +223,7 @@ export default function PassportScreen() {
               {missing ? (
                 <Button
                   label={missing.actionLabel ?? 'Discover'}
-                  variant="secondary"
+                  variant="tertiary"
                   style={{ marginTop: -SPACE.md, marginBottom: SPACE.xl }}
                   onPress={() => router.push(missing.actionRoute as never)}
                 />

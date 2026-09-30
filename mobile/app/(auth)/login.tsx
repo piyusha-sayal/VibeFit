@@ -136,7 +136,7 @@ export default function LoginScreen() {
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>New to MyLookFit? </Text>
               <Link href="/(auth)/register" asChild>
-                <TouchableOpacity>
+                <TouchableOpacity accessibilityRole="link" accessibilityLabel="Create account" hitSlop={8}>
                   <Text style={styles.registerLink}>Create account</Text>
                 </TouchableOpacity>
               </Link>

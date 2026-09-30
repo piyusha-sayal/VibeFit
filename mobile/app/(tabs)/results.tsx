@@ -3,8 +3,9 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import {
-  Button, Card, Chip, EmptyState, FeatureCard, ProgressBar, Section, Swatch, Txt,
+  BackBar, Button, Card, Chip, EmptyState, FeatureCard, Section, Swatch, Txt,
 } from '../../components/ds';
+import { evennessWord } from '../../components/analyze/skinWords';
 import { QualityCheckCard } from '../../components/analyze/QualityCheckCard';
 import { useAnalysisStore } from '../../store/analysisStore';
 import { downloadAndShareReport, downloadAndShareCard, downloadAndShareOverlay } from '../../services/reportService';
@@ -78,6 +79,7 @@ export default function ResultsScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
+      <BackBar />
       <Txt variant="overline" tone="accent" weight="semibold">Your consultation</Txt>
       <Txt variant="display" serif accessibilityRole="header" style={{ marginTop: SPACE.xs }}>
         Your results
@@ -105,6 +107,14 @@ export default function ResultsScreen() {
         </Txt>
       </Card>
 
+      {/* One clear next step: colour shapes every other recommendation. */}
+      <Section title="Start here">
+        <Txt variant="small" tone="muted" style={{ marginBottom: SPACE.md }}>
+          Your colours shape every other recommendation, so they are the best place to begin.
+        </Txt>
+        <Button label="See your colours" onPress={() => router.push('/colors/report' as never)} />
+      </Section>
+
       {/* Explore deeper, without dumping every detail on this one screen. */}
       <Section title="Explore further">
         <View style={styles.grid}>
@@ -124,8 +134,12 @@ export default function ResultsScreen() {
       {skinAnalysis && skinAnalysis.quality?.faceFound ? (
         <Section title="Skin">
           <Card>
-            <Txt variant="bodySm" weight="semibold">Evenness</Txt>
-            <ProgressBar value={skinAnalysis.evenness / 100} label={`Evenness ${skinAnalysis.evenness} out of 100`} />
+            <View style={styles.skinRow}>
+              <View style={[styles.skinStat, { backgroundColor: colors.surfaceAlt }]}>
+                <Txt variant="caption" tone="muted">Tone</Txt>
+                <Txt variant="body" weight="semibold" style={{ marginTop: 2 }}>{evennessWord(skinAnalysis.evenness)}</Txt>
+              </View>
+            </View>
             <View style={styles.skinRow}>
               <View style={[styles.skinStat, { backgroundColor: colors.surfaceAlt }]}>
                 <Txt variant="caption" tone="muted">Texture</Txt>
@@ -188,7 +202,7 @@ export default function ResultsScreen() {
             {avoidColors.length > 0 ? (
               <>
                 <Txt variant="bodySm" weight="semibold" style={{ marginTop: bestColors.length > 0 ? SPACE.lg : 0 }}>
-                  Approach with care
+                  Better worn away from your face
                 </Txt>
                 <View style={[styles.swatchRow, { marginTop: SPACE.sm }]}>
                   {avoidColors.map((c, i) => <Swatch key={`${c.hex}-${i}`} hex={c.hex} name={c.name} size={44} />)}
