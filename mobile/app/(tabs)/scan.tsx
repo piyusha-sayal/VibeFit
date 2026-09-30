@@ -1,67 +1,23 @@
-import React, { useMemo, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, Alert, Linking,
-} from 'react-native';
-import Animated, {
-  useSharedValue, useAnimatedStyle, withRepeat, withTiming,
-  withDelay, Easing, interpolate,
-} from 'react-native-reanimated';
+import React from 'react';
+import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import {
+  Button, Card, Chip, ErrorState, SectionHeader, Txt,
+} from '../../components/ds';
+import { WakingBanner } from '../../components/ds/WakingBanner';
+import { ProcessingStages } from '../../components/analyze/ProcessingStages';
+import { PREP_TIPS } from '../../components/analyze/prepTips';
+import { SPACE } from '../../constants/theme';
 import { useAnalysis } from '../../hooks/useAnalysis';
 import { PhotoPermissionError, photoPermissionAlert } from '../../utils/photoPermission';
-import { FloatingNav } from '../../components/ui/FloatingNav';
-import { GoldButton } from '../../components/ui/GoldButton';
-import { Face } from '../../components/illustrations/Face';
-import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
-import { FONTS } from '../../constants/fonts';
+import { useTheme } from '../../theme/ThemeProvider';
 
-function Ring({ delay, size }: { delay: number; size: number }) {
-  const { C } = useLegacyTheme();
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.55);
-
-  useEffect(() => {
-    scale.value = withDelay(delay, withRepeat(withTiming(1.55, { duration: 2400, easing: Easing.out(Easing.ease) }), -1));
-    opacity.value = withDelay(delay, withRepeat(withTiming(0, { duration: 2400, easing: Easing.out(Easing.ease) }), -1));
-  }, [delay]);
-
-  const style = useAnimatedStyle(() => ({
-    position: 'absolute',
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    borderWidth: 1,
-    borderColor: C.gold,
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return <Animated.View style={style} />;
-}
-
-function ScanLine() {
-  const { C } = useLegacyTheme();
-  const ty = useSharedValue(-80);
-
-  useEffect(() => {
-    ty.value = withRepeat(
-      withTiming(80, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true
-    );
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    position: 'absolute',
-    width: '100%',
-    height: 1,
-    backgroundColor: C.gold,
-    opacity: interpolate(Math.abs(ty.value), [0, 80], [0.8, 0.3]),
-    transform: [{ translateY: ty.value }],
-  }));
-
-  return <Animated.View style={style} />;
-}
+/** Non-judgmental description of the consultation, never a beauty rating. */
+const DETECTS = [
+  'Colour season', 'Undertone', 'Face shape', 'Eyes', 'Brows', 'Lips', 'Cheeks', 'Hair',
+];
 
 function showScanError(err: unknown) {
   if (err instanceof PhotoPermissionError) {
@@ -75,10 +31,13 @@ function showScanError(err: unknown) {
 }
 
 export default function ScanScreen() {
-  const { C } = useLegacyTheme();
-  const styles = useMemo(() => makeStyles(C), [C]);
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { pickAndAnalyze, cameraAndAnalyze, isUploading, uploadProgress, isAnalyzing, error } = useAnalysis();
+  const {
+    pickAndAnalyze, cameraAndAnalyze, isUploading, uploadProgress, isAnalyzing, error, clearError,
+  } = useAnalysis();
+  const busy = isUploading || isAnalyzing;
 
   const handlePick = async () => {
     try {
@@ -99,86 +58,70 @@ export default function ScanScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Scan</Text>
-        <Text style={styles.subtitle}>Upload a clear front-facing photo</Text>
-      </View>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={[styles.scroll, { paddingTop: insets.top + SPACE.xl }]}
+      showsVerticalScrollIndicator={false}
+    >
+      <Txt variant="overline" tone="accent" weight="semibold">Guided consultation</Txt>
+      <Txt variant="display" serif accessibilityRole="header" style={{ marginTop: SPACE.xs }}>
+        See what works for you
+      </Txt>
+      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.sm }}>
+        A short photo consultation reads your colouring and proportions, then builds
+        guidance around them. It is never a rating of how you look.
+      </Txt>
 
-      {/* Scan zone */}
-      <View style={styles.scanZone}>
-        <Ring delay={0} size={200} />
-        <Ring delay={800} size={200} />
-        <Ring delay={1600} size={200} />
-        <View style={styles.scanFrame}>
-          {(isUploading || isAnalyzing) ? null : <ScanLine />}
-          <Face color={C.gold} size={80} />
-        </View>
-        {(isUploading || isAnalyzing) && (
-          <View style={styles.progressRow}>
-            <Text style={styles.progressText}>
-              {isAnalyzing ? 'Analyzing…' : `Uploading ${uploadProgress}%`}
-            </Text>
+      <WakingBanner />
+
+      {busy ? (
+        <ProcessingStages isUploading={isUploading} uploadProgress={uploadProgress} isAnalyzing={isAnalyzing} />
+      ) : (
+        <>
+          <Card variant="tinted" accent="gold" style={{ marginTop: SPACE.lg }}>
+            <Txt variant="heading" serif accessibilityRole="header">What we'll look at</Txt>
+            <View style={styles.chipWrap}>
+              {DETECTS.map((d) => <Chip key={d} label={d} />)}
+            </View>
+          </Card>
+
+          <View style={styles.section}>
+            <SectionHeader title="Before you start" />
+            <Card>
+              {PREP_TIPS.map((tip, i) => (
+                <View key={tip} style={[styles.tipRow, i === PREP_TIPS.length - 1 && { marginBottom: 0 }]}>
+                  <Txt variant="body" tone="accent" weight="bold" style={{ width: 20 }}>✓</Txt>
+                  <Txt variant="bodySm" tone="muted" style={{ flex: 1 }}>{tip}</Txt>
+                </View>
+              ))}
+            </Card>
           </View>
-        )}
-      </View>
 
-      {/* Tips */}
-      <View style={styles.tips}>
-        {['Face forward, good lighting', 'No sunglasses or hat', 'Hair away from face'].map((t) => (
-          <View key={t} style={styles.tip}>
-            <View style={styles.tipDot} />
-            <Text style={styles.tipText}>{t}</Text>
+          {error ? (
+            <View style={{ marginTop: SPACE.xl }}>
+              <ErrorState message={error} onRetry={clearError} />
+            </View>
+          ) : null}
+
+          <View style={styles.actions}>
+            <Button label="Take a selfie" onPress={handleCamera} />
+            <Button label="Upload a photo" variant="secondary" onPress={handlePick} />
           </View>
-        ))}
-      </View>
 
-      {/* Alert.alert is a no-op on web, so the last failure is also shown inline. */}
-      {error && !isUploading && !isAnalyzing ? (
-        <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
-      ) : null}
-
-      {/* Actions */}
-      <View style={styles.actions}>
-        <GoldButton
-          label="Upload Photo"
-          onPress={handlePick}
-          loading={isUploading || isAnalyzing}
-          style={styles.actionBtn}
-        />
-        <GoldButton
-          label="Take Photo"
-          onPress={handleCamera}
-          variant="outline"
-          disabled={isUploading || isAnalyzing}
-          style={styles.actionBtn}
-        />
-      </View>
-
-      <FloatingNav />
-    </View>
+          <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xl, textAlign: 'center' }}>
+            Your photo is deleted once your analysis finishes, unless you choose to keep it
+            in Settings › Privacy.
+          </Txt>
+        </>
+      )}
+    </ScrollView>
   );
 }
 
-const makeStyles = (C: LegacyPalette) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  header: { paddingTop: 70, paddingHorizontal: 24, marginBottom: 32 },
-  title: { fontFamily: FONTS.serif, fontSize: 34, color: C.text, marginBottom: 6 },
-  subtitle: { fontFamily: FONTS.sans, fontSize: 14, color: C.textMuted },
-  scanZone: { alignItems: 'center', justifyContent: 'center', height: 240, marginBottom: 32 },
-  scanFrame: {
-    width: 160, height: 160, borderRadius: 80,
-    backgroundColor: C.surface, borderWidth: 1, borderColor: C.goldBorder,
-    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-  },
-  progressRow: { marginTop: 16 },
-  progressText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: C.gold },
-  tips: { paddingHorizontal: 28, gap: 10, marginBottom: 32 },
-  tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tipDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: C.goldBorder },
-  tipText: { fontFamily: FONTS.sans, fontSize: 13, color: C.textMuted },
-  errorText: { fontFamily: FONTS.sans, fontSize: 13, color: C.red, paddingHorizontal: 28, marginBottom: 16 },
-  actions: { paddingHorizontal: 24, gap: 12 },
-  actionBtn: { width: '100%' },
+const styles = StyleSheet.create({
+  scroll: { paddingHorizontal: SPACE.xl, paddingBottom: SPACE.xxxl },
+  section: { marginTop: SPACE.xxl },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
+  tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm, marginBottom: SPACE.md },
+  actions: { marginTop: SPACE.xxl, gap: SPACE.md },
 });

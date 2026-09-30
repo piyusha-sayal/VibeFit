@@ -1,47 +1,22 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+
+import {
+  Button, Card, Chip, EmptyState, FeatureCard, ProgressBar, Section, Swatch, Txt,
+} from '../../components/ds';
+import { QualityCheckCard } from '../../components/analyze/QualityCheckCard';
 import { useAnalysisStore } from '../../store/analysisStore';
-import { FloatingNav } from '../../components/ui/FloatingNav';
-import { Face } from '../../components/illustrations/Face';
-import { ColorCircles } from '../../components/ui/ColorCircles';
-import { Pill } from '../../components/ui/Pill';
-import { Tag } from '../../components/ui/Tag';
-import { Lbl } from '../../components/ui/Lbl';
-import { GoldButton } from '../../components/ui/GoldButton';
 import { downloadAndShareReport, downloadAndShareCard, downloadAndShareOverlay } from '../../services/reportService';
-import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
-import { FONTS } from '../../constants/fonts';
+import { SPACE } from '../../constants/theme';
+import { useTheme } from '../../theme/ThemeProvider';
 
-function ScoreBar({ label, value }: { label: string; value: number }) {
-  const { C } = useLegacyTheme();
-  const styles = useMemo(() => makeStyles(C), [C]);
-  return (
-    <View style={styles.scoreRow}>
-      <Text style={styles.scoreLabel}>{label}</Text>
-      <View style={styles.scoreTrack}>
-        <View style={[styles.scoreFill, { width: `${value}%` as `${number}%` }]} />
-      </View>
-      <Text style={styles.scoreValue}>{value}</Text>
-    </View>
-  );
-}
-
-function SkinStat({ label, value }: { label: string; value: string }) {
-  const { C } = useLegacyTheme();
-  const styles = useMemo(() => makeStyles(C), [C]);
-  return (
-    <View style={styles.skinStat}>
-      <Text style={styles.skinStatLabel}>{label}</Text>
-      <Text style={styles.skinStatValue}>{value}</Text>
-    </View>
-  );
+function cap(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 export default function ResultsScreen() {
-  const { C, GRADIENTS } = useLegacyTheme();
-  const styles = useMemo(() => makeStyles(C), [C]);
+  const { colors } = useTheme();
   const router = useRouter();
   const currentAnalysis = useAnalysisStore((s) => s.currentAnalysis);
   const [busy, setBusy] = useState<null | 'report' | 'card' | 'overlay'>(null);
@@ -65,235 +40,214 @@ export default function ResultsScreen() {
   const handleOverlay = () =>
     runShare('overlay', () => downloadAndShareOverlay(currentAnalysis!.imageUrl), 'Overlay');
 
-  const canOverlay = !!currentAnalysis?.imageUrl && /^https?:\/\//.test(currentAnalysis.imageUrl);
-
   if (!currentAnalysis) {
     return (
-      <View style={styles.empty}>
-        <Face color={C.textSubtle} size={60} />
-        <Text style={styles.emptyTitle}>No analysis yet</Text>
-        <Text style={styles.emptyText}>Upload a photo to get your personalized style profile.</Text>
-        <GoldButton label="Scan Now" onPress={() => router.push('/(tabs)/scan' as never)} style={{ marginTop: 24 }} />
-        <FloatingNav />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center' }}>
+        <EmptyState
+          title="No analysis yet"
+          body="Take a selfie or upload a photo to get your personalised style profile."
+          actionLabel="Start your consultation"
+          onAction={() => router.push('/(tabs)/scan' as never)}
+        />
       </View>
     );
   }
 
-  const { faceAnalysis, colorAnalysis, recommendations, skinAnalysis, quality } = currentAnalysis;
+  const {
+    faceAnalysis, colorAnalysis, recommendations, skinAnalysis, quality,
+  } = currentAnalysis;
   const palette = colorAnalysis?.palette?.primary ?? [];
   const aesthetics = recommendations?.filter((r) => r.category === 'aesthetic').slice(0, 4).map((r) => r.title) ?? [];
   const seasonal = colorAnalysis?.seasonal;
   const bestColors = colorAnalysis?.bestColors ?? [];
   const avoidColors = colorAnalysis?.avoidColors ?? [];
+  const canOverlay = !!currentAnalysis.imageUrl && /^https?:\/\//.test(currentAnalysis.imageUrl);
+
+  const EXPLORE = [
+    { label: 'Colours', body: 'Your palette, season and undertone in depth.', route: '/colors/report' as const },
+    { label: 'Face', body: 'Shape, proportions and features.', route: '/face' as const },
+    { label: 'Hair', body: 'Cuts, colour and parting for your shape.', route: '/hair' as const },
+    { label: 'Makeup', body: 'Lips, eyes and cheeks for your colouring.', route: '/makeup' as const },
+    { label: 'Accessories', body: 'Metals, shapes and finishing touches.', route: '/accessories' as const },
+    { label: 'Beauty Passport', body: 'Everything saved, in one place.', route: '/(tabs)/passport' as const },
+  ];
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <LinearGradient colors={GRADIENTS.hero} style={styles.heroCard}>
-          <View style={styles.heroInner}>
-            <View>
-              <Lbl>Your Profile</Lbl>
-              <Text style={styles.heroTitle}>
-                {faceAnalysis?.shape ? String(faceAnalysis.shape).charAt(0).toUpperCase() + String(faceAnalysis.shape).slice(1) : 'Face scan unavailable'}{'\n'}
-                <Text style={{ color: C.gold, fontSize: 22 }}>
-                  {colorAnalysis?.skinUndertone
-                    ? String(colorAnalysis.skinUndertone).charAt(0).toUpperCase() + String(colorAnalysis.skinUndertone).slice(1)
-                    : 'Color unavailable'}
-                  {colorAnalysis?.contrastLevel ? ' · ' : ''}
-                  {colorAnalysis?.contrastLevel
-                    ? String(colorAnalysis.contrastLevel).charAt(0).toUpperCase() + String(colorAnalysis.contrastLevel).slice(1)
-                    : ''}
-                </Text>
-              </Text>
-              <View style={styles.tagRow}>
-                {seasonal ? <Tag>{seasonal.label}</Tag> : <Tag>Guidance, not a rating</Tag>}
-              </View>
-            </View>
-            <View style={styles.heroRight}>
-              <Face color={C.gold} size={56} />
-            </View>
-          </View>
-        </LinearGradient>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={styles.scroll}
+      showsVerticalScrollIndicator={false}
+    >
+      <Txt variant="overline" tone="accent" weight="semibold">Your consultation</Txt>
+      <Txt variant="display" serif accessibilityRole="header" style={{ marginTop: SPACE.xs }}>
+        Your results
+      </Txt>
 
-        {/* Quality retake banner */}
-        {quality && (quality.overall !== 'good' || quality.flags.length > 0) && (
-          <View style={styles.qualityBanner}>
-            <Text style={styles.qualityTitle}>
-              Photo quality: {quality.overall}
-            </Text>
-            {quality.flags.length > 0 && (
-              <Text style={styles.qualityText}>
-                For better results, retake — {quality.flags.join(', ')}.
-              </Text>
-            )}
-          </View>
-        )}
+      {quality ? (
+        <View style={{ marginTop: SPACE.xl }}>
+          <QualityCheckCard quality={quality} onRetake={() => router.push('/(tabs)/scan' as never)} />
+        </View>
+      ) : null}
 
-        {/* Measurements inform guidance internally; they are not beauty grades. */}
-        {faceAnalysis?.shape && (
-          <View style={styles.card}>
-            <Lbl style={{ marginBottom: 8 }}>Face Structure</Lbl>
-            <Text style={styles.hint}>
-              Your face-shape and proportion observations are used to personalize hair,
-              makeup, glasses, and neckline guidance. They are not attractiveness scores.
-            </Text>
-          </View>
-        )}
+      {/* Concise summary: season, undertone, face shape as chips — no scores. */}
+      <Card variant="tinted" accent="gold" style={{ marginTop: SPACE.lg }}>
+        <Txt variant="overline" tone="muted">Your profile</Txt>
+        <Txt variant="h1" serif accessibilityRole="header" style={{ marginTop: SPACE.xs }}>
+          {faceAnalysis?.shape ? cap(String(faceAnalysis.shape)) : 'Face scan unavailable'}
+        </Txt>
+        <View style={styles.chipWrap}>
+          {colorAnalysis?.skinUndertone ? <Chip label={`${cap(colorAnalysis.skinUndertone)} undertone`} /> : null}
+          {colorAnalysis?.contrastLevel ? <Chip label={`${cap(colorAnalysis.contrastLevel)} contrast`} /> : null}
+          {seasonal?.label ? <Chip label={seasonal.label} selected /> : null}
+        </View>
+        <Txt variant="caption" tone="muted" style={{ marginTop: SPACE.md }}>
+          These observations personalise the guidance below — they are never a rating of how you look.
+        </Txt>
+      </Card>
 
-        {/* Skin analysis */}
-        {skinAnalysis && skinAnalysis.quality?.faceFound && (
-          <View style={styles.card}>
-            <Lbl style={{ marginBottom: 14 }}>Skin Analysis</Lbl>
-            <ScoreBar label="Evenness" value={skinAnalysis.evenness} />
-            <View style={styles.skinRow}>
-              <SkinStat label="Texture" value={skinAnalysis.texture} />
-              <SkinStat label="Redness" value={skinAnalysis.redness} />
-            </View>
-            <View style={styles.skinRow}>
-              <SkinStat label="Under-eye" value={skinAnalysis.underEye} />
-              <SkinStat label="Oiliness" value={skinAnalysis.oiliness} />
-            </View>
-            {skinAnalysis.concerns.length > 0 && (
-              <View style={styles.pillWrap}>
-                {skinAnalysis.concerns.map((c) => <Pill key={c} gold>{c}</Pill>)}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Color palette */}
-        {palette.length > 0 && (
-          <View style={styles.card}>
-            <Lbl style={{ marginBottom: 14 }}>Color Palette</Lbl>
-            <ColorCircles colors={palette} size={46} />
-            <Text style={[styles.hint, { marginTop: 12 }]}>
-              {colorAnalysis?.skinUndertone === 'warm'
-                ? 'Earth tones, warm neutrals, and golden accents complement your undertone.'
-                : colorAnalysis?.skinUndertone === 'cool'
-                ? 'Jewel tones, cool grays, and navy complement your undertone.'
-                : 'Balanced palette — both warm and cool tones suit you well.'}
-            </Text>
-          </View>
-        )}
-
-        {/* Best / avoid swatches */}
-        {(bestColors.length > 0 || avoidColors.length > 0) && (
-          <View style={styles.card}>
-            {bestColors.length > 0 && (
-              <>
-                <Lbl style={{ marginBottom: 10 }}>Best Colors</Lbl>
-                <ColorCircles colors={bestColors.map((c) => c.hex)} size={38} />
-              </>
-            )}
-            {avoidColors.length > 0 && (
-              <>
-                <Lbl style={{ marginTop: 16, marginBottom: 10 }}>Avoid</Lbl>
-                <ColorCircles colors={avoidColors.map((c) => c.hex)} size={38} />
-              </>
-            )}
-          </View>
-        )}
-
-        {/* Aesthetics */}
-        {aesthetics.length > 0 && (
-          <View style={styles.card}>
-            <Lbl style={{ marginBottom: 12 }}>Matched Aesthetics</Lbl>
-            <View style={styles.pillWrap}>
-              {aesthetics.map((a, i) => <Pill key={a} active={i === 0} gold={i > 0}>{a}</Pill>)}
-            </View>
-          </View>
-        )}
-
-        {/* Deep dives */}
-        <View style={styles.deepDives}>
-          <Lbl style={{ marginBottom: 12 }}>Explore Deeper</Lbl>
-          {[
-            { label: 'Facial Canon', route: '/analysis/facial-canon' as const },
-            { label: 'Makeup Guide', route: '/analysis/makeup' as const },
-            { label: 'Hair Recommendations', route: '/analysis/hair' as const },
-            { label: 'Outfit Styling', route: '/analysis/wardrobe' as const },
-            { label: 'Accessories', route: '/analysis/accessories' as const },
-          ].map((item) => (
-            <TouchableOpacity
+      {/* Explore deeper, without dumping every detail on this one screen. */}
+      <Section title="Explore further">
+        <View style={styles.grid}>
+          {EXPLORE.map((item) => (
+            <FeatureCard
               key={item.label}
-              style={styles.deepCard}
-              onPress={() => router.push(item.route)}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.deepLabel}>{item.label}</Text>
-              <Text style={styles.deepArrow}>→</Text>
-            </TouchableOpacity>
+              title={item.label}
+              subtitle={item.body}
+              onPress={() => router.push(item.route as never)}
+              style={styles.gridItem}
+            />
           ))}
         </View>
+      </Section>
 
-        {/* Share / export */}
-        <View style={styles.reportSection}>
-          <GoldButton
-            label="Download Face Report (PDF)"
+      {/* Skin analysis */}
+      {skinAnalysis && skinAnalysis.quality?.faceFound ? (
+        <Section title="Skin">
+          <Card>
+            <Txt variant="bodySm" weight="semibold">Evenness</Txt>
+            <ProgressBar value={skinAnalysis.evenness / 100} label={`Evenness ${skinAnalysis.evenness} out of 100`} />
+            <View style={styles.skinRow}>
+              <View style={[styles.skinStat, { backgroundColor: colors.surfaceAlt }]}>
+                <Txt variant="caption" tone="muted">Texture</Txt>
+                <Txt variant="body" weight="semibold" style={{ marginTop: 2, textTransform: 'capitalize' }}>{skinAnalysis.texture}</Txt>
+              </View>
+              <View style={[styles.skinStat, { backgroundColor: colors.surfaceAlt }]}>
+                <Txt variant="caption" tone="muted">Redness</Txt>
+                <Txt variant="body" weight="semibold" style={{ marginTop: 2, textTransform: 'capitalize' }}>{skinAnalysis.redness}</Txt>
+              </View>
+            </View>
+            <View style={styles.skinRow}>
+              <View style={[styles.skinStat, { backgroundColor: colors.surfaceAlt }]}>
+                <Txt variant="caption" tone="muted">Under-eye</Txt>
+                <Txt variant="body" weight="semibold" style={{ marginTop: 2, textTransform: 'capitalize' }}>{skinAnalysis.underEye}</Txt>
+              </View>
+              <View style={[styles.skinStat, { backgroundColor: colors.surfaceAlt }]}>
+                <Txt variant="caption" tone="muted">Oiliness</Txt>
+                <Txt variant="body" weight="semibold" style={{ marginTop: 2, textTransform: 'capitalize' }}>{skinAnalysis.oiliness}</Txt>
+              </View>
+            </View>
+            {skinAnalysis.concerns.length > 0 ? (
+              <View style={[styles.chipWrap, { marginTop: SPACE.md }]}>
+                {skinAnalysis.concerns.map((c) => <Chip key={c} label={c} />)}
+              </View>
+            ) : null}
+          </Card>
+        </Section>
+      ) : null}
+
+      {/* Colour palette */}
+      {palette.length > 0 ? (
+        <Section title="Your colour palette">
+          <Card>
+            <View style={styles.swatchRow}>
+              {palette.map((hex, i) => <Swatch key={`${hex}-${i}`} hex={hex} />)}
+            </View>
+            <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.md }}>
+              {colorAnalysis?.skinUndertone === 'warm'
+                ? 'Earth tones, warm neutrals and golden accents complement your undertone.'
+                : colorAnalysis?.skinUndertone === 'cool'
+                ? 'Jewel tones, cool greys and navy complement your undertone.'
+                : 'A balanced palette — both warm and cool tones work well for you.'}
+            </Txt>
+          </Card>
+        </Section>
+      ) : null}
+
+      {/* Best / approach-with-care colours */}
+      {bestColors.length > 0 || avoidColors.length > 0 ? (
+        <Section title="Colours to wear">
+          <Card>
+            {bestColors.length > 0 ? (
+              <>
+                <Txt variant="bodySm" weight="semibold">Work well for you</Txt>
+                <View style={[styles.swatchRow, { marginTop: SPACE.sm }]}>
+                  {bestColors.map((c, i) => <Swatch key={`${c.hex}-${i}`} hex={c.hex} name={c.name} size={44} />)}
+                </View>
+              </>
+            ) : null}
+            {avoidColors.length > 0 ? (
+              <>
+                <Txt variant="bodySm" weight="semibold" style={{ marginTop: bestColors.length > 0 ? SPACE.lg : 0 }}>
+                  Approach with care
+                </Txt>
+                <View style={[styles.swatchRow, { marginTop: SPACE.sm }]}>
+                  {avoidColors.map((c, i) => <Swatch key={`${c.hex}-${i}`} hex={c.hex} name={c.name} size={44} />)}
+                </View>
+              </>
+            ) : null}
+          </Card>
+        </Section>
+      ) : null}
+
+      {/* Matched aesthetics */}
+      {aesthetics.length > 0 ? (
+        <Section title="Matched aesthetics">
+          <View style={styles.chipWrap}>
+            {aesthetics.map((a, i) => <Chip key={a} label={a} selected={i === 0} />)}
+          </View>
+        </Section>
+      ) : null}
+
+      {/* Share / export */}
+      <Section title="Save & share">
+        <View style={{ gap: SPACE.sm }}>
+          <Button
+            label="Download face report (PDF)"
             onPress={handleDownloadReport}
             loading={busy === 'report'}
             disabled={!!busy && busy !== 'report'}
           />
-          <GoldButton
-            label="Share Summary Card"
+          <Button
+            label="Share summary card"
+            variant="secondary"
             onPress={handleDownloadCard}
-            variant="outline"
             loading={busy === 'card'}
             disabled={!!busy && busy !== 'card'}
           />
-          {canOverlay && (
-            <GoldButton
-              label="Facial Overlay Image"
+          {canOverlay ? (
+            <Button
+              label="Facial overlay image"
+              variant="secondary"
               onPress={handleOverlay}
-              variant="outline"
               loading={busy === 'overlay'}
               disabled={!!busy && busy !== 'overlay'}
             />
-          )}
-          <Text style={styles.reportHint}>
-            Export a shareable PDF, social card, or annotated facial-proportion image.
-          </Text>
+          ) : null}
         </View>
-
-        <View style={{ height: 120 }} />
-      </ScrollView>
-
-      <FloatingNav />
-    </View>
+        <Txt variant="caption" tone="subtle" style={{ textAlign: 'center', marginTop: SPACE.md }}>
+          Export a shareable PDF, social card, or annotated facial-proportion image.
+        </Txt>
+      </Section>
+    </ScrollView>
   );
 }
 
-const makeStyles = (C: LegacyPalette) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  empty: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  emptyTitle: { fontFamily: FONTS.serif, fontSize: 26, color: C.text, marginTop: 20 },
-  emptyText: { fontFamily: FONTS.sans, fontSize: 14, color: C.textMuted, textAlign: 'center', marginTop: 8 },
-  scroll: { paddingTop: 62 },
-  heroCard: { marginHorizontal: 20, borderRadius: 22, borderWidth: 0.5, borderColor: C.goldBorder, padding: 20, marginBottom: 16 },
-  heroInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroRight: { alignItems: 'flex-end', gap: 10 },
-  heroTitle: { fontFamily: FONTS.serif, fontSize: 30, color: C.text, lineHeight: 34, marginTop: 8, marginBottom: 12 },
-  tagRow: { flexDirection: 'row', gap: 6 },
-  card: { marginHorizontal: 20, marginBottom: 12, backgroundColor: C.surface, borderRadius: 18, borderWidth: 0.5, borderColor: C.white06, padding: 18 },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  scoreLabel: { fontFamily: FONTS.sansMedium, fontSize: 12, color: C.textMuted, width: 110 },
-  scoreTrack: { flex: 1, height: 4, backgroundColor: C.surface3, borderRadius: 2, overflow: 'hidden' },
-  scoreFill: { height: '100%', backgroundColor: C.gold, borderRadius: 2 },
-  scoreValue: { fontFamily: FONTS.sansBold, fontSize: 12, color: C.gold, width: 28, textAlign: 'right' },
-  hint: { fontFamily: FONTS.sans, fontSize: 12, color: C.textMuted, lineHeight: 18 },
-  pillWrap: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
-  deepDives: { marginHorizontal: 20, marginTop: 4 },
-  deepCard: { backgroundColor: C.surface, borderRadius: 14, borderWidth: 0.5, borderColor: C.white06, padding: 16, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  deepLabel: { fontFamily: FONTS.sansMedium, fontSize: 14, color: C.text },
-  deepArrow: { fontFamily: FONTS.sans, fontSize: 18, color: C.gold },
-  reportSection: { marginHorizontal: 20, marginTop: 20, gap: 8 },
-  reportHint: { fontFamily: FONTS.sans, fontSize: 12, color: C.textSubtle, textAlign: 'center' },
-  qualityBanner: { marginHorizontal: 20, marginBottom: 12, backgroundColor: C.surface2, borderRadius: 14, borderWidth: 0.5, borderColor: C.goldBorder, padding: 14 },
-  qualityTitle: { fontFamily: FONTS.sansBold, fontSize: 13, color: C.gold, textTransform: 'capitalize' },
-  qualityText: { fontFamily: FONTS.sans, fontSize: 12, color: C.textMuted, marginTop: 4, lineHeight: 17 },
-  skinRow: { flexDirection: 'row', gap: 12, marginTop: 6 },
-  skinStat: { flex: 1, backgroundColor: C.surface2, borderRadius: 12, padding: 12 },
-  skinStatLabel: { fontFamily: FONTS.sansMedium, fontSize: 11, color: C.textMuted },
-  skinStatValue: { fontFamily: FONTS.sansBold, fontSize: 15, color: C.text, marginTop: 3, textTransform: 'capitalize' },
+const styles = StyleSheet.create({
+  scroll: { paddingHorizontal: SPACE.xl, paddingTop: SPACE.xxl, paddingBottom: SPACE.xxxl },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md },
+  gridItem: { flexBasis: '47%' },
+  skinRow: { flexDirection: 'row', gap: SPACE.md, marginTop: SPACE.md },
+  skinStat: { flex: 1, borderRadius: 12, padding: SPACE.md },
+  swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md },
 });

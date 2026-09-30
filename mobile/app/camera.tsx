@@ -6,12 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 
 import { Button, Txt } from '../components/ds';
-import { RADIUS, SPACE } from '../constants/theme';
+import { PREP_TIPS } from '../components/analyze/prepTips';
+import { PALETTES, RADIUS, SPACE } from '../constants/theme';
 import { settleCapture, type CapturedPhoto } from '../utils/cameraBridge';
 import { success, tap } from '../utils/haptics';
 
-const TIPS = ['Face a window or soft light', 'Hair off your face', 'No glasses, neutral expression'];
-const GOLD = '#C9A96E';
+// The camera UI is always dark, regardless of the app's light/dark preference
+// (a light-mode gold reads too dark against a black backdrop), so this reads
+// the accent straight from the theme's dark palette rather than a duplicated
+// hex literal.
+const GOLD = PALETTES.dark.gold;
 
 /** Full-screen front camera with an oval face guide, a timer, and a review step. */
 export default function CameraScreen() {
@@ -42,7 +46,7 @@ export default function CameraScreen() {
   }, []);
 
   useEffect(() => {
-    const id = setInterval(() => setTip((t) => (t + 1) % TIPS.length), 2800);
+    const id = setInterval(() => setTip((t) => (t + 1) % PREP_TIPS.length), 2800);
     return () => clearInterval(id);
   }, []);
 
@@ -148,7 +152,7 @@ export default function CameraScreen() {
       {/* Guidance. */}
       <View style={[styles.tip, { top: cy + ovalH / 2 + SPACE.lg }]} pointerEvents="none">
         <Txt variant="bodySm" weight="semibold" style={{ color: '#fff', textAlign: 'center' }} live="polite">
-          Fit your face in the oval · {TIPS[tip]}
+          Fit your face in the oval · {PREP_TIPS[tip]}
         </Txt>
       </View>
 
