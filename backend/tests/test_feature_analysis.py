@@ -2,6 +2,7 @@
 from ml.feature_analysis import (
     _sym, _prop, score_eyes, score_eyebrows, score_nose, score_lips,
     score_jawline, overall_symmetry, facial_canon, eyebrow_map,
+    eye_shape, lip_shape, cheek_contour, feature_shapes,
 )
 
 
@@ -68,3 +69,78 @@ def test_eyebrow_map_shape_and_position():
     assert 0.0 <= eb["currentArchPosition"] <= 1.0
     assert eb["shape"] in {"flat", "soft arch", "high arch", "rounded"}
     assert isinstance(eb["guidance"], str)
+
+
+def _open_face():
+    """Synthetic face with realistic lid space and inner lip points."""
+    pts = _symmetric_face()
+    pts[105], pts[334] = (165, 150), (235, 150)   # brow arch 22px above lid
+    pts[0], pts[17] = (200, 261), (200, 282)      # outer lip line
+    pts[13], pts[14] = (200, 268), (200, 271)     # inner lip line
+    return pts
+
+
+def test_eye_shape_level_open_eye_is_almond():
+    assert eye_shape(_open_face()) == "almond"
+
+
+def test_eye_shape_outer_corners_up_is_upturned():
+    pts = _open_face()
+    pts[33], pts[263] = (140, 172), (260, 172)
+    assert eye_shape(pts) == "upturned"
+
+
+def test_eye_shape_outer_corners_down_is_downturned():
+    pts = _open_face()
+    pts[33], pts[263] = (140, 186), (260, 186)
+    assert eye_shape(pts) == "downturned"
+
+
+def test_eye_shape_little_lid_space_is_hooded():
+    assert eye_shape(_symmetric_face()) == "hooded"
+
+
+def test_eye_shape_tall_eye_is_round():
+    pts = _open_face()
+    pts[159], pts[145] = (160, 170), (160, 190)
+    pts[386], pts[374] = (240, 170), (240, 190)
+    pts[105], pts[334] = (165, 145), (235, 145)
+    assert eye_shape(pts) == "round"
+
+
+def test_lip_shape_balanced_lips_are_full():
+    assert lip_shape(_open_face()) == "full"
+
+
+def test_lip_shape_slim_lips_are_thin():
+    pts = _open_face()
+    pts[0], pts[17] = (200, 265), (200, 276)
+    pts[13], pts[14] = (200, 269), (200, 271)
+    assert lip_shape(pts) == "thin"
+
+
+def test_lip_shape_upper_fuller_is_top_heavy():
+    pts = _open_face()
+    pts[13], pts[14] = (200, 272), (200, 273)
+    assert lip_shape(pts) == "top_heavy"
+
+
+def test_lip_shape_wide_mouth_is_wide():
+    pts = _open_face()
+    pts[61], pts[291] = (160, 270), (240, 270)
+    assert lip_shape(pts) == "wide"
+
+
+def test_cheek_contour_by_jaw_to_cheek_ratio():
+    pts = _open_face()
+    assert cheek_contour(pts) == "high"            # 100 / 140
+    pts[172], pts[397] = (140, 300), (260, 300)
+    assert cheek_contour(pts) == "soft"            # 120 / 140
+    pts[172], pts[397] = (133, 300), (267, 300)
+    assert cheek_contour(pts) == "flat"            # 134 / 140
+
+
+def test_feature_shapes_uses_the_attribute_vocabulary():
+    from rules.face_attributes import is_valid
+    for key, value in feature_shapes(_open_face()).items():
+        assert is_valid(key, value), (key, value)

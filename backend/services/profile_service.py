@@ -71,7 +71,7 @@ CONSTRAINT_FIELDS = [
     "budget_range", "market", "climate", "skin_sensitivities", "declared_allergies",
     "hair_texture_reported", "hair_treatment_history", "current_routine",
     "style_preferences", "maintenance_tolerance", "time_available",
-    "keep_using_items", "gender_presentation", "modesty_preference",
+    "keep_using_items", "gender_presentation", "age_range", "modesty_preference",
 ]
 
 

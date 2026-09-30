@@ -25,6 +25,8 @@ async def _seed_scan(db, email: str, *, shape="square") -> str:
             "shapeMeasurements": {"lengthToWidth": 1.2, "jawToCheek": 0.95,
                                   "foreheadToCheek": 0.96, "chinToJaw": 0.6},
             "eyebrow": {"shape": "arched"},
+            "featureShapes": {"eye_shape": "almond", "lip_shape": "full",
+                              "cheek_contour": "high"},
         },
         hair_analysis={"texture": "wavy", "length": "medium"},
         quality={"acceptable": True},
@@ -63,7 +65,7 @@ async def test_shape_report_404s_instead_of_defaulting_to_oval(client: AsyncClie
 
 
 @pytest.mark.asyncio
-async def test_a_scan_populates_the_measured_attributes_only(client: AsyncClient, db_session):
+async def test_a_scan_populates_every_face_attribute(client: AsyncClient, db_session):
     auth = await _register(client, "face-scan@test.com")
     await _seed_scan(db_session, "face-scan@test.com")
 
@@ -75,10 +77,12 @@ async def test_a_scan_populates_the_measured_attributes_only(client: AsyncClient
     assert by_key["brow_shape"]["source"] == "scan"          # measured
     assert by_key["facial_contrast"]["source"] == "scan"     # derived from colour
     assert by_key["facial_contrast"]["value"] == "defined"
-    # No classifier exists for these, so they stay the user's to set.
-    for key in ("eye_shape", "lip_shape", "cheek_contour"):
-        assert by_key[key]["source"] == "unset", key
-        assert by_key[key]["value"] is None
+    # Estimated from landmarks, so the user never has to set them by hand.
+    expected = {"eye_shape": "almond", "lip_shape": "full", "cheek_contour": "high"}
+    for key, value in expected.items():
+        assert by_key[key]["source"] == "scan", key
+        assert by_key[key]["value"] == value
+    assert body["completion"] == 1.0
 
 
 @pytest.mark.asyncio
@@ -197,15 +201,15 @@ async def test_salon_guide_is_reachable_and_404s_for_an_unknown_cut(client: Asyn
 
 
 @pytest.mark.asyncio
-async def test_makeup_look_uses_confirmed_attributes_and_names_the_gaps(client: AsyncClient,
-                                                                        db_session):
+async def test_makeup_look_uses_user_override_and_scan_estimates(client: AsyncClient,
+                                                                db_session):
     auth = await _register(client, "makeup-look@test.com")
     await _seed_scan(db_session, "makeup-look@test.com")
     await client.put("/api/v1/face/attributes/eye_shape", json={"value": "monolid"}, headers=auth)
 
     body = (await client.get("/api/v1/makeup/looks/soft_glam", headers=auth)).json()
     assert any(t["key"] == "monolid_gradient" for t in body["techniques"])
-    assert "lip_shape" in body["missingAttributes"]
+    assert body["missingAttributes"] == []   # the scan estimated the rest
     assert body["palette"]["season"] == "bright_spring"
     assert body["foundation"]["shadeFamily"]
 

@@ -130,17 +130,19 @@ async def build_face_profile(db: AsyncSession, user_id: str) -> dict:
 
     shape = build_face_shape(analysis, corrections)
 
+    shapes = face.get("featureShapes") or {}
     # Scan-backed starting values, where the existing pipeline really produces one.
     scan_values = {
         "brow_shape": brow_shape_from_map(face.get("eyebrow")),
         "facial_contrast": contrast_from_colour(colours),
-        "eye_shape": None,
-        "lip_shape": None,
-        "cheek_contour": None,
+        **{k: shapes.get(k) for k in ("eye_shape", "lip_shape", "cheek_contour")},
     }
     methods = {
         "brow_shape": "Measured from the brow landmarks in your most recent scan.",
         "facial_contrast": "Derived from the contrast level in your colour analysis — no extra scan.",
+        "eye_shape": "Estimated from your eye landmarks in your most recent scan.",
+        "lip_shape": "Estimated from your lip landmarks in your most recent scan.",
+        "cheek_contour": "Estimated from your cheek-to-jaw width in your most recent scan.",
     }
 
     attributes = [
@@ -175,6 +177,7 @@ async def build_face_profile(db: AsyncSession, user_id: str) -> dict:
             "timeAvailable": onboarding.time_available if onboarding else None,
             "stylePreferences": (onboarding.style_preferences if onboarding else None) or [],
             "genderPresentation": onboarding.gender_presentation if onboarding else None,
+            "ageRange": onboarding.age_range if onboarding else None,
         },
         "proportions": face.get("proportions") or {},
         "browMap": face.get("eyebrow") or {},
@@ -218,5 +221,6 @@ async def studio_context(db: AsyncSession, user_id: str) -> dict:
         "maintenanceTolerance": profile["context"]["maintenanceTolerance"],
         "timeAvailable": profile["context"]["timeAvailable"],
         "genderPresentation": profile["context"]["genderPresentation"],
+        "ageRange": profile["context"]["ageRange"],
         "hasScan": profile["hasScan"],
     }

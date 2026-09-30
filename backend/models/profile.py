@@ -30,6 +30,8 @@ class OnboardingResponse(Base):
     time_available: Mapped[str | None] = mapped_column(String(20), nullable=True)
     keep_using_items: Mapped[str | None] = mapped_column(Text, nullable=True)
     gender_presentation: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # A self-reported bracket such as "25-34", never a birth date.
+    age_range: Mapped[str | None] = mapped_column(String(10), nullable=True)
     modesty_preference: Mapped[str | None] = mapped_column(String(40), nullable=True)
     skipped_fields: Mapped[list | None] = mapped_column(JSON, nullable=True)
 

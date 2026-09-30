@@ -52,6 +52,24 @@ async def test_onboarding_save_is_a_partial_upsert(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_onboarding_stores_style_presentation_and_age_bracket(client: AsyncClient):
+    auth = await _register(client, "onb-age@test.com")
+    res = await client.post("/api/v1/profile/onboarding", headers=auth,
+                            json={"gender_presentation": "masculine", "age_range": "25-34"})
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["gender_presentation"] == "masculine"
+    assert body["age_range"] == "25-34"
+
+
+@pytest.mark.asyncio
+async def test_onboarding_rejects_an_unknown_age_bracket(client: AsyncClient):
+    auth = await _register(client, "onb-age-bad@test.com")
+    res = await client.post("/api/v1/profile/onboarding", headers=auth, json={"age_range": "31"})
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_vibe_profile_empty_state_has_no_scan_no_onboarding(client: AsyncClient):
     auth = await _register(client, "vibe-empty@test.com")
     res = await client.get("/api/v1/profile/vibe", headers=auth)

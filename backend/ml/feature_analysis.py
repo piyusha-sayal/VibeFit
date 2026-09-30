@@ -25,6 +25,7 @@ L_BROW_IN, L_BROW_ARCH, L_BROW_OUT = 55, 105, 46
 R_BROW_IN, R_BROW_ARCH, R_BROW_OUT = 285, 334, 276
 NOSE_BRIDGE, NOSE_TIP, NOSE_L_ALA, NOSE_R_ALA = 168, 1, 98, 327
 LIP_L, LIP_R, LIP_TOP, LIP_BOT = 61, 291, 0, 17
+LIP_IN_TOP, LIP_IN_BOT = 13, 14
 JAW_L, JAW_R, CHIN = 172, 397, 152
 CHEEK_L, CHEEK_R = 234, 454
 MIDLINE_TOP, MIDLINE_BOT = 168, 152
@@ -164,6 +165,61 @@ def eyebrow_map(pts: list) -> dict:
     }
 
 
+# Shape estimates (eye, lip, cheek) from the same landmarks. 2D ratios only, so
+# they are starting values the user can override, not diagnoses. Keys match the
+# option vocabulary in rules/face_attributes.py.
+def eye_shape(pts: list) -> str:
+    widths, heights, tilts, lids = [], [], [], []
+    for outer, inner, top, bot, arch in (
+        (L_EYE_OUTER, L_EYE_INNER, L_EYE_TOP, L_EYE_BOT, L_BROW_ARCH),
+        (R_EYE_OUTER, R_EYE_INNER, R_EYE_TOP, R_EYE_BOT, R_BROW_ARCH),
+    ):
+        w = _dist(pts[outer], pts[inner]) or 1.0
+        widths.append(w)
+        heights.append(_dist(pts[top], pts[bot]) / w)
+        # Image y grows downward: outer corner above inner -> positive tilt.
+        tilts.append((pts[inner][1] - pts[outer][1]) / w)
+        lids.append((pts[top][1] - pts[arch][1]) / w)
+    aspect, tilt, lid = (sum(v) / 2.0 for v in (heights, tilts, lids))
+    if tilt > 0.10:
+        return "upturned"
+    if tilt < -0.06:
+        return "downturned"
+    if lid < 0.42:
+        return "hooded"
+    if aspect > 0.42:
+        return "round"
+    return "almond"
+
+
+def lip_shape(pts: list) -> str:
+    mouth = _dist(pts[LIP_L], pts[LIP_R]) or 1.0
+    upper = _dist(pts[LIP_TOP], pts[LIP_IN_TOP])
+    lower = _dist(pts[LIP_IN_BOT], pts[LIP_BOT])
+    if mouth / _face_width(pts) > 0.52:
+        return "wide"
+    balance = upper / (lower or 1.0)
+    if balance > 0.95:
+        return "top_heavy"
+    if balance < 0.45:
+        return "bottom_heavy"
+    return "full" if (upper + lower) / mouth >= 0.30 else "thin"
+
+
+def cheek_contour(pts: list) -> str:
+    ratio = _dist(pts[JAW_L], pts[JAW_R]) / _face_width(pts)
+    if ratio < 0.78:
+        return "high"
+    if ratio > 0.90:
+        return "flat"
+    return "soft"
+
+
+def feature_shapes(pts: list) -> dict:
+    return {"eye_shape": eye_shape(pts), "lip_shape": lip_shape(pts),
+            "cheek_contour": cheek_contour(pts)}
+
+
 def analyze_features(image_bytes: bytes) -> dict:
     """FaceMesh once -> feature scores + canon + eyebrow map. Empty on no face."""
     img = _load_image(image_bytes)
@@ -190,6 +246,7 @@ def analyze_features(image_bytes: bytes) -> dict:
             "featureScores": scores,
             "canon": facial_canon(pts),
             "eyebrow": eyebrow_map(pts),
+            "shapes": feature_shapes(pts),
         }
     except (IndexError, ZeroDivisionError):
         return {"featureScores": {}, "canon": {}, "eyebrow": {}}

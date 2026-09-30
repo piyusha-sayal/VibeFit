@@ -18,6 +18,7 @@ from models.beauty import (
 from models.profile import OnboardingResponse
 from rules.color_season import build_color_report
 from rules.style_aesthetics import AESTHETIC_BY_KEY
+from services.face_service import correction_key, latest_corrections
 
 # Which attributes count toward the completion ring, in display order.
 ATTRIBUTE_ORDER = (
@@ -40,7 +41,7 @@ _ACTIONS = {
     "personal_colour": {"label": "Run a colour analysis", "route": "/scan"},
     "undertone": {"label": "Run a colour analysis", "route": "/scan"},
     "face_shape": {"label": "Scan your face", "route": "/scan"},
-    "eye_shape": {"label": "Confirm your eye shape", "route": "/face/features"},
+    "eye_shape": {"label": "Scan your face", "route": "/scan"},
     "hair_type": {"label": "Tell us your hair texture", "route": "/onboarding"},
     "hair_length": {"label": "Set your hair length", "route": "/hair"},
     "body_type": {"label": "Choose a body type — or skip it", "route": "/style/questionnaire"},
@@ -89,6 +90,14 @@ def _look_swatches(look: SavedLook) -> list[dict]:
             if isinstance(p, dict) and isinstance(p.get("colour"), dict)][:4]
 
 
+async def _eye_shape(db: AsyncSession, user_id: str, face: dict) -> str | None:
+    """The user's eye shape if they set one, else the scan's estimate."""
+    correction = (await latest_corrections(db, user_id)).get(correction_key("eye_shape"))
+    if correction:
+        return str(correction.corrected_value)
+    return (face.get("featureShapes") or {}).get("eye_shape")
+
+
 async def _latest_analysis(db: AsyncSession, user_id: str) -> Analysis | None:
     result = await db.execute(
         select(Analysis)
@@ -130,7 +139,6 @@ async def build_passport(db: AsyncSession, user_id: str) -> dict:
     colours = (analysis.color_analysis if analysis else None) or {}
     face = (analysis.face_analysis if analysis else None) or {}
     hair = (analysis.hair_analysis if analysis else None) or {}
-    features = (analysis.skin_analysis if analysis else None) or {}
     report = build_color_report(colours) if colours else None
 
     attributes = [
@@ -140,7 +148,7 @@ async def build_passport(db: AsyncSession, user_id: str) -> dict:
               route="/colors/report"),
         _attr("undertone", "Undertone", colours.get("skinUndertone"), route="/colors/report"),
         _attr("face_shape", "Face shape", face.get("shape"), route="/face/shape"),
-        _attr("eye_shape", "Eye shape", features.get("eyeShape"), route="/face/features"),
+        _attr("eye_shape", "Eye shape", await _eye_shape(db, user_id, face), route="/face/features"),
         _attr("hair_type", "Hair type",
               (onboarding.hair_texture_reported if onboarding else None) or hair.get("texture"),
               route="/hair"),

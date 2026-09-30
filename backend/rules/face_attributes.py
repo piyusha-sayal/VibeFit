@@ -2,10 +2,10 @@
 
 Three kinds of attribute live here, and the difference matters:
 
-1. `measured` — the existing MediaPipe/OpenCV pass really produces this.
-2. `self_select` — no reliable classifier exists, so the user chooses from a
-   described list. Guided self-selection is honest; a fabricated AI reading is
-   not, and no paid vision provider is being added to pretend otherwise.
+1. `measured` — the existing MediaPipe pass produces this, as a landmark
+   measurement or a 2D-ratio estimate the user can override.
+2. `self_select` — no measurement exists, so the user chooses from a
+   described list. No paid vision provider is used.
 3. Derived — computed from (1) without new image work, e.g. facial contrast
    from the colour analysis that already ran.
 
@@ -125,11 +125,11 @@ FACIAL_CONTRAST = [
 
 FACE_ATTRIBUTES: dict[str, FaceAttribute] = {
     "eye_shape": FaceAttribute(
-        key="eye_shape", label="Eye shape", source="self_select",
-        intro="Eye shape drives almost every eye-makeup decision. MyLookFit does not "
-              "classify it from a photo, because no reliable landmark rule separates "
-              "hooded from deep-set at selfie resolution.",
-        method="You choose from the descriptions below, in a mirror.",
+        key="eye_shape", label="Eye shape", source="measured",
+        intro="Your scan estimates eye shape from corner tilt, openness and lid space. "
+              "Hooded and deep-set look alike at selfie resolution, so change it if a "
+              "mirror says otherwise.",
+        method="Estimated from your eye landmarks in your most recent scan.",
         options=EYE_SHAPES,
     ),
     "brow_shape": FaceAttribute(
@@ -140,17 +140,17 @@ FACE_ATTRIBUTES: dict[str, FaceAttribute] = {
         options=BROW_SHAPES,
     ),
     "lip_shape": FaceAttribute(
-        key="lip_shape", label="Lip shape", source="self_select",
-        intro="Your scan measures lip width relative to your face, but not the balance "
-              "between the two lips, which is what most lip technique depends on.",
-        method="You choose; the measured proportion is shown alongside for context.",
+        key="lip_shape", label="Lip shape", source="measured",
+        intro="Your scan estimates lip shape from mouth width and the balance between "
+              "your upper and lower lip. You can override it.",
+        method="Estimated from your lip landmarks in your most recent scan.",
         options=LIP_SHAPES,
     ),
     "cheek_contour": FaceAttribute(
-        key="cheek_contour", label="Cheeks", source="self_select",
-        intro="Cheek shape decides blush placement. Photographic lighting changes "
-              "apparent cheek contour more than the cheek itself does, so this one is yours to set.",
-        method="You choose, ideally in even daylight.",
+        key="cheek_contour", label="Cheeks", source="measured",
+        intro="Your scan estimates cheek shape from cheekbone width against jaw width. "
+              "Lighting changes how cheeks read, so override it if it looks wrong.",
+        method="Estimated from your cheek-to-jaw width in your most recent scan.",
         options=CHEEK_CONTOURS,
     ),
     "facial_contrast": FaceAttribute(

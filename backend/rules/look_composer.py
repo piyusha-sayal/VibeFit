@@ -446,7 +446,7 @@ def _explanations(context: dict, outfit: dict, hair: dict, makeup: dict,
             add("makeup", BASIS_OCCASION, "Chosen for the occasion, not from your features.")
         if makeup.get("missingAttributes"):
             add("makeup", BASIS_GENERAL,
-                "Confirm your eye, brow and lip shapes to get technique specific to you.")
+                "Scan your face to get technique specific to your eyes, brows and lips.")
 
     if lipstick.get("offered"):
         add("lipstick", BASIS_PERSONAL_COLOUR, "Drawn from your personal lipstick palette.")

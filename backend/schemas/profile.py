@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel
 
 
@@ -23,6 +23,7 @@ class OnboardingIn(BaseModel):
     time_available: Optional[str] = None
     keep_using_items: Optional[str] = None
     gender_presentation: Optional[str] = None
+    age_range: Optional[Literal["18-24", "25-34", "35-44", "45-54", "55+"]] = None
     modesty_preference: Optional[str] = None
     skipped_fields: Optional[list[str]] = None
     # Not a column. An explicit statement that the person reached the end of

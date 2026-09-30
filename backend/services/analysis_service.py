@@ -46,6 +46,8 @@ def _merge_features(face: dict, features: dict) -> dict:
         merged["canon"] = features["canon"]
     if features.get("eyebrow"):
         merged["eyebrow"] = features["eyebrow"]
+    if features.get("shapes"):
+        merged["featureShapes"] = features["shapes"]
     return merged
 
 
@@ -59,7 +61,7 @@ class AnalysisService:
         """Run all analyzers on one image -> dict of result blocks (hash-cached)."""
         # Bump when analyzer semantics change so old cached fallback profiles
         # cannot survive a deployment that fixes them.
-        img_key = f"imghash:v3:{hashlib.sha256(image_bytes).hexdigest()}"
+        img_key = f"imghash:v4:{hashlib.sha256(image_bytes).hexdigest()}"
         cached = await self._cache.get(img_key)  # F12: skip recompute
         if cached:
             return cached
