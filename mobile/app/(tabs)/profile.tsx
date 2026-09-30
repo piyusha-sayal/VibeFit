@@ -3,7 +3,7 @@ import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, SectionHeader, Txt } from '../../components/ds';
+import { Button, Card, Chip, ListGroup, ListRow, SectionHeader, Txt } from '../../components/ds';
 import { FaceFigure } from '../../components/visual';
 import { AGE_RANGES, PRESENTATION_OPTIONS } from '../../constants/onboarding';
 import { usePersona } from '../../hooks/usePersona';
@@ -15,16 +15,6 @@ import { useProgress } from '../../hooks/useProgress';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeProvider';
 import { success } from '../../utils/haptics';
-
-const LINKS = [
-  { emoji: '✏️', label: 'Name and password', route: '/settings/account' },
-  { emoji: '🌈', label: 'Vibe profile', route: '/vibe-profile' },
-  { emoji: '🗓️', label: 'Action plan', route: '/plan' },
-  { emoji: '📖', label: 'Beauty guides', route: '/academy' },
-  { emoji: '🧰', label: 'All tools', route: '/(tabs)/more' },
-  { emoji: '⚙️', label: 'Settings and privacy', route: '/settings' },
-  { emoji: '🛟', label: 'Help', route: '/settings/help' },
-] as const;
 
 /** Who you are, how the app unlocks, and everything account-shaped. */
 export default function ProfileScreen() {
@@ -55,7 +45,7 @@ export default function ProfileScreen() {
         <View style={[styles.avatar, { backgroundColor: colors.goldSoft, borderColor: colors.gold }]}>
           <Txt variant="display" serif>{initial}</Txt>
         </View>
-        <Txt variant="title" serif style={{ marginTop: SPACE.md }}>{name}</Txt>
+        <Txt variant="title" serif style={{ marginTop: SPACE.md }} accessibilityRole="header">{name}</Txt>
         <Txt variant="bodySm" tone="muted">{user?.email ?? 'Guest session'}</Txt>
         <View style={styles.chips}>
           <View style={[styles.chip, { backgroundColor: colors.goldSoft }]}>
@@ -112,6 +102,17 @@ export default function ProfileScreen() {
             ))}
           </View>
         </Card>
+        <View style={{ marginTop: SPACE.lg }}>
+          <ListGroup>
+            <ListRow
+              icon="🌈"
+              title="Style preferences"
+              subtitle="Fit, colours and looks you gravitate to"
+              onPress={() => router.push('/vibe-profile' as never)}
+              last
+            />
+          </ListGroup>
+        </View>
       </View>
 
       {/* ------------------------------------------------------ unlock */}
@@ -142,25 +143,56 @@ export default function ProfileScreen() {
         </Card>
       </View>
 
-      {/* ------------------------------------------------------- links */}
+      {/* ------------------------------------------------------- account */}
       <View style={styles.section}>
-        <SectionHeader title="Your account" />
-        <Card style={{ paddingVertical: SPACE.xs }}>
-          {LINKS.map((link, i) => (
-            <PressScale
-              key={link.route}
-              onPress={() => router.push(link.route as never)}
-              accessibilityLabel={link.label}
-              scaleTo={0.98}
-            >
-              <View style={[styles.linkRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
-                <Text style={styles.linkEmoji} accessibilityElementsHidden importantForAccessibility="no">{link.emoji}</Text>
-                <Txt variant="body" style={{ flex: 1 }}>{link.label}</Txt>
-                <Txt variant="body" tone="subtle">›</Txt>
-              </View>
-            </PressScale>
-          ))}
-        </Card>
+        <SectionHeader title="Account" />
+        <ListGroup>
+          <ListRow
+            icon="✏️"
+            title="Name and password"
+            onPress={() => router.push('/settings/account' as never)}
+          />
+          <ListRow
+            icon="🧰"
+            title="More"
+            subtitle="Saved looks, action plan, ask the stylist and more"
+            onPress={() => router.push('/(tabs)/more' as never)}
+            last
+          />
+        </ListGroup>
+      </View>
+
+      {/* ------------------------------------------------------- privacy */}
+      <View style={styles.section}>
+        <SectionHeader title="Privacy" />
+        <ListGroup>
+          <ListRow
+            icon="🔒"
+            title="Privacy and data"
+            subtitle="Photos, consent and what we store"
+            onPress={() => router.push('/settings/privacy' as never)}
+            last
+          />
+        </ListGroup>
+      </View>
+
+      {/* ---------------------------------------------------------- help */}
+      <View style={styles.section}>
+        <SectionHeader title="Help" />
+        <ListGroup>
+          <ListRow
+            icon="🛟"
+            title="Help and FAQ"
+            onPress={() => router.push('/settings/help' as never)}
+          />
+          <ListRow
+            icon="📜"
+            title="Legal"
+            subtitle="Privacy policy and terms of service"
+            onPress={() => router.push('/settings/legal' as never)}
+            last
+          />
+        </ListGroup>
       </View>
 
       <Button
@@ -195,6 +227,4 @@ const styles = StyleSheet.create({
   },
   ageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   emoji: { fontSize: 26 },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, minHeight: 52 },
-  linkEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
 });

@@ -18,6 +18,7 @@ export default function ProgressScreen() {
   const { passport, activity, level, badges, game } = useProgress();
   const data = passport.data;
   const earned = badges.filter((b) => b.earned).length;
+  const nextBadge = badges.find((b) => !b.earned) ?? null;
 
   const stats = [
     { emoji: '🔥', value: game.streak.count, label: 'Streak' },
@@ -109,14 +110,9 @@ export default function ProgressScreen() {
         </Card>
       </View>
 
-      {/* -------------------------------------------------------- quiz */}
-      <View style={styles.section}>
-        <DailyQuiz />
-      </View>
-
       {/* ------------------------------------------------------ badges */}
       <View style={styles.section}>
-        <SectionHeader title={`Badges · ${earned}/${badges.length}`} />
+        <SectionHeader title={`Achievements · ${earned}/${badges.length}`} />
         <View style={styles.badgeGrid}>
           {badges.map((b) => (
             <View
@@ -141,6 +137,30 @@ export default function ProgressScreen() {
             </View>
           ))}
         </View>
+      </View>
+
+      {/* -------------------------------------------------------- quiz */}
+      <View style={styles.section}>
+        <DailyQuiz />
+      </View>
+
+      {/* ------------------------------------------------ next milestone */}
+      <View style={styles.section}>
+        <SectionHeader title="Next milestone" />
+        {nextBadge ? (
+          <Card variant="tinted" accent="lavender">
+            <Text style={styles.badgeEmoji} accessibilityElementsHidden importantForAccessibility="no">{nextBadge.emoji}</Text>
+            <Txt variant="body" weight="semibold" style={{ marginTop: SPACE.xs }}>{nextBadge.title}</Txt>
+            <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{nextBadge.hint}</Txt>
+          </Card>
+        ) : (
+          <Card variant="tinted" accent="gold">
+            <Txt variant="body" weight="semibold">Every badge earned ✨</Txt>
+            <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
+              You have completed the full collection. New milestones arrive as new features do.
+            </Txt>
+          </Card>
+        )}
       </View>
     </ScrollView>
   );

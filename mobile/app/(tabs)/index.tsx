@@ -1,17 +1,18 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, EmptyState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
+import { Card, Chip, EmptyState, Hero, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { useColorReport, usePassport } from '../../hooks/useBeauty';
 import { useDrafts } from '../../hooks/useLook';
 import { LookSwatches } from '../../components/look';
 import { useAuthStore } from '../../store/authStore';
+import { useGameStore } from '../../store/gameStore';
 import { useTheme } from '../../theme/ThemeProvider';
 import { EXPERIENCES, OCCASIONS, tipOfTheDay } from '../../constants/experiences';
+import { localDay } from '../../constants/gamification';
 import { recommendedStart } from '../../constants/onboarding';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { ACADEMY_GUIDES } from '../../constants/academy';
@@ -19,7 +20,9 @@ import { INSPIRATION } from '../../constants/inspiration';
 import { PressScale } from '../../components/ds/PressScale';
 import { ProgressRing } from '../../components/ds/ProgressRing';
 import { BiometricOffer } from '../../components/home/BiometricOffer';
-import { ToolGrid } from '../../components/home/ToolGrid';
+import { CoreExperiences } from '../../components/home/CoreExperiences';
+import { SecondaryTools } from '../../components/home/SecondaryTools';
+import { PassportSnapshot } from '../../components/home/PassportSnapshot';
 import { useProgress } from '../../hooks/useProgress';
 import { WakingBanner } from '../../components/ds/WakingBanner';
 
@@ -32,6 +35,7 @@ export default function HomeScreen() {
   const { level, game } = useProgress();
   const report = useColorReport();
   const drafts = useDrafts();
+  const lastQuizDay = useGameStore((s) => s.lastQuizDay);
   // Onboarding interests order this list; nothing is ever removed from it, so
   // every experience stays one tap away whatever was or was not answered.
   const interests = useOnboardingStore((s) => s.interests);
@@ -55,9 +59,72 @@ export default function HomeScreen() {
 
   const firstName = (user?.name ?? '').trim().split(' ')[0];
   const tip = useMemo(tipOfTheDay, []);
+  const quizPlayedToday = lastQuizDay === localDay();
+
+  const data = passport.data;
+  const isNew = !data || data.completed === 0;
+
+  // A. One line grounded in what is actually known, never a guess.
+  const supportingLine = useMemo(() => {
+    const season = data?.attributes.find((a) => a.key === 'personal_colour' && a.status === 'present')?.value;
+    if (typeof season === 'string') return `Your ${season} palette is ready to explore.`;
+    return 'Everything here comes from what you tell us — nothing is guessed.';
+  }, [data]);
+
+  // B. The one thing most worth doing right now.
+  const heroAction = useMemo(() => {
+    const colourDone = data?.attributes.find((a) => a.key === 'personal_colour')?.status === 'present';
+
+    if (!colourDone) {
+      if (isNew && firstStep) {
+        return {
+          eyebrow: 'Start here',
+          title: firstStep.title,
+          body: `You said you wanted to explore ${firstStep.eyebrow.toLowerCase()}. Start there.`,
+          actionLabel: 'Start',
+          route: firstStep.route,
+        };
+      }
+      return {
+        eyebrow: 'Start here',
+        title: 'Discover your colours',
+        body: 'One selfie unlocks your palette, undertone and more.',
+        actionLabel: 'Scan now',
+        route: '/(tabs)/scan',
+      };
+    }
+
+    if (data?.nextAction) {
+      return {
+        eyebrow: 'Your next step',
+        title: data.nextAction.label,
+        body: `Passport ${Math.round(data.completion * 100)}% complete.`,
+        actionLabel: 'Continue',
+        route: data.nextAction.route,
+      };
+    }
+
+    const draft = drafts.data?.drafts?.[0];
+    if (draft) {
+      return {
+        eyebrow: 'Pick up where you left off',
+        title: `Continue "${draft.name ?? 'your look'}"`,
+        body: 'Your draft is saved and ready to finish.',
+        actionLabel: 'Continue look',
+        route: `/look/builder?draftId=${draft.id}`,
+      };
+    }
+
+    return {
+      eyebrow: 'Tonight',
+      title: 'Create a look for tonight',
+      body: 'Pick an occasion and let your passport do the styling.',
+      actionLabel: 'Start a look',
+      route: '/(tabs)/create',
+    };
+  }, [data, drafts.data, isNew, firstStep]);
 
   const recommendations = useMemo(() => {
-    const data = passport.data;
     if (!data) return [];
     const by = Object.fromEntries(data.attributes.map((a) => [a.key, a]));
     const out: { title: string; body: string; route: string; accent: 'blush' | 'peach' | 'lavender' | 'sage' | 'gold' }[] = [];
@@ -102,10 +169,14 @@ export default function HomeScreen() {
       });
     }
     return out.slice(0, 4);
-  }, [passport.data]);
+  }, [data]);
 
-  const data = passport.data;
-  const isNew = !data || data.completed === 0;
+  const hasRecentWork = Boolean(
+    (drafts.data?.drafts?.length ?? 0) > 0
+    || (data?.recentLooks.length ?? 0) > 0
+    || report.data
+    || (data?.timeline.length ?? 0) > 0,
+  );
 
   return (
     <ScrollView
@@ -117,7 +188,10 @@ export default function HomeScreen() {
       <View style={[styles.header, { paddingTop: insets.top + SPACE.lg }]}>
         <View style={{ flex: 1 }}>
           <Txt variant="caption" tone="muted">{greeting()}</Txt>
-          <Txt variant="title" serif numberOfLines={1}>Hi{firstName ? `, ${firstName}` : ''} 👋</Txt>
+          <Txt variant="title" serif numberOfLines={1} accessibilityRole="header">
+            Hello{firstName ? `, ${firstName}` : ''}
+          </Txt>
+          <Txt variant="bodySm" tone="muted" numberOfLines={1} style={{ marginTop: 2 }}>{supportingLine}</Txt>
         </View>
         <PressScale
           onPress={() => router.push('/(tabs)/progress' as never)}
@@ -144,73 +218,54 @@ export default function HomeScreen() {
 
       {/* ---------------------------------------------------- B. hero */}
       {passport.isLoading ? null : (
-      <View style={styles.sectionTight}>
-        <LinearGradient
-          colors={[colors.goldSoft, colors.blushSoft, colors.lavenderSoft]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.hero}
-        >
-          {isNew ? (
-            <>
-              <Txt variant="overline" tone="muted">Start here ✨</Txt>
-              <Txt variant="title" serif style={{ marginTop: SPACE.xs }}>Discover your colours.</Txt>
-              <Txt variant="title" serif>Define your style.</Txt>
-              <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm, marginBottom: SPACE.lg }}>
-                {firstStep
-                  ? `You said you wanted to explore ${firstStep.eyebrow.toLowerCase()}. Start there.`
-                  : 'One selfie unlocks your palette, face shape and more.'}
-              </Txt>
-              <Button
-                label={firstStep ? firstStep.title : 'Start my analysis'}
-                onPress={() => router.push((firstStep?.route ?? '/(tabs)/scan') as never)}
-              />
-            </>
-          ) : (
-            <>
-              <Txt variant="overline" tone="muted">Your next step</Txt>
-              <Txt variant="title" serif style={{ marginTop: SPACE.xs }}>
-                {data?.nextAction ? data.nextAction.label : 'Your passport is complete 🎉'}
-              </Txt>
-              <View style={styles.heroRow}>
-                <Txt variant="bodySm" tone="muted" style={{ flex: 1 }}>
-                  Passport {Math.round((data?.completion ?? 0) * 100)}% complete
-                </Txt>
-                <Button
-                  label={data?.nextAction ? 'Go' : 'Create a look'}
-                  onPress={() => router.push((data?.nextAction?.route ?? '/(tabs)/create') as never)}
-                />
-              </View>
-            </>
-          )}
-        </LinearGradient>
-      </View>
+        <View style={styles.sectionTight}>
+          <Hero
+            eyebrow={heroAction.eyebrow}
+            title={heroAction.title}
+            body={heroAction.body}
+            actionLabel={heroAction.actionLabel}
+            onAction={() => router.push(heroAction.route as never)}
+          />
+        </View>
       )}
 
-      {/* ------------------------------------------- C. fingerprint offer */}
+      {/* ------------------------------------------- fingerprint offer */}
       <View style={styles.sectionTight}>
         <BiometricOffer />
       </View>
 
-      {/* --------------------------------------------------- D. tools */}
+      {/* --------------------------------------------- C. passport snapshot */}
+      {data ? (
+        <View style={styles.sectionTight}>
+          <PassportSnapshot attributes={data.attributes} />
+        </View>
+      ) : null}
+
+      {/* ---------------------------------------------- D. core experiences */}
       <View style={styles.section}>
-        <SectionHeader title="Your tools" />
-        <ToolGrid />
+        <SectionHeader title="Your core experiences" />
+        <CoreExperiences />
       </View>
 
-      {/* --------------------------------------------------- E. today */}
+      {/* --------------------------------------------------- E. more tools */}
+      <View style={styles.section}>
+        <SectionHeader title="More to explore" />
+        <SecondaryTools />
+      </View>
+
+      {/* --------------------------------------------------- F. today */}
       <View style={styles.section}>
         <SectionHeader title="Today" />
-        <View style={styles.todayRow}>
-          <Card variant="tinted" accent="sage" style={{ flex: 1 }}>
+        {quizPlayedToday ? (
+          <Card variant="tinted" accent="sage">
             <Text style={styles.todayEmoji} accessibilityElementsHidden importantForAccessibility="no">💡</Text>
             <Txt variant="overline" tone="muted">Tip of the day</Txt>
             <Txt variant="bodySm" style={{ marginTop: SPACE.xs }}>{tip}</Txt>
           </Card>
+        ) : (
           <Card
             variant="tinted"
             accent="gold"
-            style={{ flex: 1 }}
             onPress={() => router.push('/(tabs)/progress' as never)}
             accessibilityLabel="Daily quiz. Open progress to play"
           >
@@ -221,65 +276,98 @@ export default function HomeScreen() {
             </Txt>
             <Txt variant="caption" tone="accent" weight="semibold" style={{ marginTop: SPACE.sm }}>Play →</Txt>
           </Card>
-        </View>
+        )}
       </View>
 
-      {/* ----------------------------------------- B. create your next look */}
-      <View style={styles.section}>
-        <SectionHeader
-          title="Create your next look"
-          action="Open studio"
-          onAction={() => router.push('/(tabs)/create' as never)}
-        />
+      {/* --------------------------------------------- G. recent / continue */}
+      {hasRecentWork ? (
+        <View style={styles.section}>
+          <SectionHeader
+            title="Your recent work"
+            action="Open studio"
+            onAction={() => router.push('/(tabs)/create' as never)}
+          />
 
-        {/* Unfinished work first — it is the thing most likely to be wanted. */}
-        {(drafts.data?.drafts ?? []).slice(0, 2).map((draft) => (
-          <Card
-            key={draft.id}
-            variant="tinted"
-            accent="peach"
-            style={{ marginBottom: SPACE.sm }}
-            onPress={() => router.push(`/look/builder?draftId=${draft.id}` as never)}
-          >
-            <Txt variant="overline" tone="muted">Continue</Txt>
-            <Txt variant="body" weight="semibold">{draft.name ?? 'Unnamed look'}</Txt>
-            <LookSwatches
-              swatches={(draft.composition?.outfit?.pieces ?? [])
-                .map((piece) => piece.colour)
-                .filter(Boolean) as { hex: string; name: string }[]}
-            />
-          </Card>
-        ))}
-
-        <View style={styles.wrap}>
-          {OCCASIONS.slice(0, 6).map((entry) => (
-            <Chip
-              key={entry.key}
-              label={entry.label}
-              accent="gold"
-              onPress={() => router.push(`/look/new?occasion=${entry.key}` as never)}
-            />
+          {/* Unfinished work first — it is the thing most likely to be wanted. */}
+          {(drafts.data?.drafts ?? []).slice(0, 2).map((draft) => (
+            <Card
+              key={draft.id}
+              variant="tinted"
+              accent="peach"
+              style={{ marginBottom: SPACE.sm }}
+              onPress={() => router.push(`/look/builder?draftId=${draft.id}` as never)}
+            >
+              <Txt variant="overline" tone="muted">Continue</Txt>
+              <Txt variant="body" weight="semibold">{draft.name ?? 'Unnamed look'}</Txt>
+              <LookSwatches
+                swatches={(draft.composition?.outfit?.pieces ?? [])
+                  .map((piece) => piece.colour)
+                  .filter(Boolean) as { hex: string; name: string }[]}
+              />
+            </Card>
           ))}
-        </View>
 
-        {(data?.recentLooks ?? []).length ? (
-          <View style={{ marginTop: SPACE.lg }}>
-            {data!.recentLooks.slice(0, 2).map((look) => (
-              <Card
-                key={look.id}
-                style={{ marginBottom: SPACE.sm }}
-                onPress={() => router.push(`/look/${look.id}` as never)}
-              >
-                <Txt variant="overline" tone="muted">Recently saved</Txt>
-                <Txt variant="body" weight="semibold">{look.name}</Txt>
-                <LookSwatches swatches={look.swatches} />
-              </Card>
+          <View style={styles.wrap}>
+            {OCCASIONS.slice(0, 6).map((entry) => (
+              <Chip
+                key={entry.key}
+                label={entry.label}
+                accent="gold"
+                onPress={() => router.push(`/look/new?occasion=${entry.key}` as never)}
+              />
             ))}
           </View>
-        ) : null}
-      </View>
 
-      {/* ------------------------------------------- D. recommended for you */}
+          {(data?.recentLooks ?? []).length ? (
+            <View style={{ marginTop: SPACE.lg }}>
+              {data!.recentLooks.slice(0, 2).map((look) => (
+                <Card
+                  key={look.id}
+                  style={{ marginBottom: SPACE.sm }}
+                  onPress={() => router.push(`/look/${look.id}` as never)}
+                >
+                  <Txt variant="overline" tone="muted">Recently saved</Txt>
+                  <Txt variant="body" weight="semibold">{look.name}</Txt>
+                  <LookSwatches swatches={look.swatches} />
+                </Card>
+              ))}
+            </View>
+          ) : null}
+
+          {report.data ? (
+            <Card style={{ marginTop: SPACE.lg }} onPress={() => router.push('/colors/report' as never)}>
+              <Txt variant="overline" tone="muted">Your palette</Txt>
+              <Txt variant="heading" serif style={{ marginTop: SPACE.xs }}>{report.data.label}</Txt>
+              <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.lg }}>
+                {report.data.summary}
+              </Txt>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {report.data.palettes.best.map((s) => (
+                  <Swatch key={s.hex} hex={s.hex} name={s.name} size={52} />
+                ))}
+              </ScrollView>
+            </Card>
+          ) : null}
+
+          {data && data.timeline.length ? (
+            <>
+              <Txt variant="overline" tone="muted" style={{ marginTop: SPACE.lg, marginBottom: SPACE.sm }}>
+                Recent activity
+              </Txt>
+              {data.timeline.slice(0, 3).map((item) => (
+                <Card key={item.id} style={{ marginBottom: SPACE.sm }}>
+                  <Txt variant="bodySm">{item.summary}</Txt>
+                  <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </Txt>
+                </Card>
+              ))}
+            </>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* ------------------------------------------- recommended for you */}
       {recommendations.length ? (
         <View style={styles.section}>
           <SectionHeader title="Recommended for you" />
@@ -292,40 +380,7 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      {/* ------------------------------------ H. continue where you left off */}
-      {data && data.timeline.length ? (
-        <View style={styles.section}>
-          <SectionHeader title="Continue where you left off" action="All activity" onAction={() => router.push('/(tabs)/passport' as never)} />
-          {data.timeline.slice(0, 3).map((item) => (
-            <Card key={item.id} style={{ marginBottom: SPACE.sm }}>
-              <Txt variant="bodySm">{item.summary}</Txt>
-              <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
-                {new Date(item.createdAt).toLocaleDateString()}
-              </Txt>
-            </Card>
-          ))}
-        </View>
-      ) : null}
-
-      {/* --------------------------------------- your colours, if analysed */}
-      {report.data ? (
-        <View style={styles.section}>
-          <SectionHeader title="Your palette" action="Full report" onAction={() => router.push('/colors/report' as never)} />
-          <Card>
-            <Txt variant="heading" serif>{report.data.label}</Txt>
-            <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.lg }}>
-              {report.data.summary}
-            </Txt>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {report.data.palettes.best.map((s) => (
-                <Swatch key={s.hex} hex={s.hex} name={s.name} size={52} />
-              ))}
-            </ScrollView>
-          </Card>
-        </View>
-      ) : null}
-
-      {/* --------------------------------------------------- I. inspiration */}
+      {/* --------------------------------------------------- inspiration */}
       <View style={styles.section}>
         <SectionHeader title="Beauty inspiration" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACE.md }}>
@@ -373,14 +428,10 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: SPACE.xxxl },
   header: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, paddingHorizontal: SPACE.xl },
   pill: { paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, borderRadius: RADIUS.pill },
-  hero: { borderRadius: RADIUS.xl, padding: SPACE.xl },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.md },
   sectionTight: { paddingHorizontal: SPACE.xl, marginTop: SPACE.lg },
-  todayRow: { flexDirection: 'row', gap: SPACE.sm },
   todayEmoji: { fontSize: 24, marginBottom: SPACE.xs },
   section: { paddingHorizontal: SPACE.xl, marginTop: SPACE.xxl },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.lg },
   inspoCard: { width: 190 },
   inspoSwatches: { flexDirection: 'row', gap: SPACE.xs },
   inspoDot: { width: 26, height: 42, borderRadius: RADIUS.sm },
