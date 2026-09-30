@@ -14,7 +14,7 @@ async def _register(client: AsyncClient, email: str) -> dict:
     return {"Authorization": f"Bearer {reg.json()['access_token']}"}
 
 
-async def _seed_scan(db, email: str, *, shape="square") -> str:
+async def _seed_scan(db, email: str, *, shape="square", with_shapes=True) -> str:
     user = (await db.execute(select(User).where(User.email == email))).scalars().first()
     analysis = Analysis(
         user_id=user.id, image_url="local://test", status="complete",
@@ -25,8 +25,8 @@ async def _seed_scan(db, email: str, *, shape="square") -> str:
             "shapeMeasurements": {"lengthToWidth": 1.2, "jawToCheek": 0.95,
                                   "foreheadToCheek": 0.96, "chinToJaw": 0.6},
             "eyebrow": {"shape": "arched"},
-            "featureShapes": {"eye_shape": "almond", "lip_shape": "full",
-                              "cheek_contour": "high"},
+            **({"featureShapes": {"eye_shape": "almond", "lip_shape": "full",
+                                  "cheek_contour": "high"}} if with_shapes else {}),
         },
         hair_analysis={"texture": "wavy", "length": "medium"},
         quality={"acceptable": True},
@@ -83,6 +83,27 @@ async def test_a_scan_populates_every_face_attribute(client: AsyncClient, db_ses
         assert by_key[key]["source"] == "scan", key
         assert by_key[key]["value"] == value
     assert body["completion"] == 1.0
+
+
+@pytest.mark.asyncio
+async def test_a_scan_from_before_shape_estimates_still_reads(client: AsyncClient, db_session):
+    """Analyses saved before eye/lip/cheek estimates existed have no
+    featureShapes; they must load with those left unset, not invented."""
+    auth = await _register(client, "face-oldscan@test.com")
+    await _seed_scan(db_session, "face-oldscan@test.com", with_shapes=False)
+
+    res = await client.get("/api/v1/face/profile", headers=auth)
+    assert res.status_code == 200
+    by_key = {a["key"]: a for a in res.json()["attributes"]}
+    assert by_key["brow_shape"]["source"] == "scan"
+    for key in ("eye_shape", "lip_shape", "cheek_contour"):
+        assert by_key[key]["source"] == "unset", key
+        assert by_key[key]["value"] is None
+
+    passport = (await client.get("/api/v1/passport", headers=auth)).json()
+    passport = passport.get("data", passport)
+    eye = next(a for a in passport["attributes"] if a["key"] == "eye_shape")
+    assert eye["status"] == "missing"
 
 
 @pytest.mark.asyncio

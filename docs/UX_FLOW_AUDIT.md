@@ -235,3 +235,13 @@ Also check on the device: BackBar clears the status bar on your phone; Home
 scroll length for a returning user; processing stage timing vs real analysis
 time; TalkBack reading of selectable cards and banners; 200 % font scale on
 Home, Results and Passport; light mode across the redesigned screens.
+
+---
+
+## Status: UX code freeze for RC device QA (2026-09-30)
+
+Pushed `850c201..c4ff94b`; production verified on the new build (18/18
+smoke checks, disposable account deleted). Open P2/P3 items above are
+hypotheses until seen on a device. Before the preview APK, only objectively
+broken behaviour or a P0/P1 changes the UI. Device findings then take
+priority over this static audit.
