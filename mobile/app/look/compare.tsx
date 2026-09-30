@@ -12,7 +12,7 @@ import {
   Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Txt,
 } from '../../components/ds';
 import { LookSwatches } from '../../components/look';
-import { RADIUS, SPACE } from '../../constants/theme';
+import { SPACE } from '../../constants/theme';
 import { useCompareLooks, useSavedLooks } from '../../hooks/useLook';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -88,32 +88,49 @@ export default function CompareLooksScreen() {
                     onRetry={() => { void comparison.refetch(); }} />
       ) : comparison.data ? (
         <View style={{ marginTop: SPACE.xl }}>
-          <SectionHeader title="Side by side" />
-
-          {/* Horizontal because three looks do not fit across a phone. */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {comparison.data.looks.map((entry) => (
-              <Card
-                key={entry.id}
-                style={[styles.column, { borderColor: colors.border }]}
-                onPress={() => router.push(`/look/${entry.id}` as never)}
-                accessibilityLabel={`${entry.name}, ${entry.status}`}
-              >
-                <Txt variant="heading" serif numberOfLines={2}>{entry.name}</Txt>
-                <LookSwatches swatches={entry.swatches} size={22} />
-                {comparison.data!.rows.map((row) => (
-                  <View key={row.key} style={styles.cell}>
-                    <Txt variant="overline" tone="subtle">{row.label}</Txt>
-                    <Txt variant="bodySm" numberOfLines={3}>{entry.values[row.key]}</Txt>
-                  </View>
-                ))}
-                <Txt variant="bodySm" tone="accent" weight="semibold"
-                     style={{ marginTop: SPACE.sm }}>
-                  Open →
+          {/* Each look gets one summary card, then every category is its own
+              card with each look's value stacked underneath — a phone-width
+              column reads better than a cramped side-by-side table. */}
+          <SectionHeader title="These looks" />
+          {comparison.data.looks.map((entry) => (
+            <Card
+              key={entry.id}
+              style={{ marginBottom: SPACE.sm }}
+              onPress={() => router.push(`/look/${entry.id}` as never)}
+              accessibilityLabel={`${entry.name}, ${entry.status}. Open`}
+            >
+              <View style={styles.rowBetween}>
+                <Txt variant="body" weight="semibold" style={{ flex: 1 }} numberOfLines={1}>
+                  {entry.name}
                 </Txt>
-              </Card>
-            ))}
-          </ScrollView>
+                <Txt variant="bodySm" tone="accent" weight="semibold">Open →</Txt>
+              </View>
+              <LookSwatches swatches={entry.swatches} size={22} />
+            </Card>
+          ))}
+
+          <SectionHeader title="Category by category" style={{ marginTop: SPACE.lg }} />
+          {comparison.data.rows.map((row) => (
+            <Card key={row.key} style={{ marginBottom: SPACE.sm }}>
+              <Txt variant="overline" tone="subtle">{row.label}</Txt>
+              {comparison.data!.looks.map((entry, index) => (
+                <View
+                  key={entry.id}
+                  style={[
+                    styles.compareLine,
+                    index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+                  ]}
+                >
+                  <Txt variant="caption" tone="muted" numberOfLines={1} style={styles.compareName}>
+                    {entry.name}
+                  </Txt>
+                  <Txt variant="bodySm" numberOfLines={3} style={{ flex: 1 }}>
+                    {entry.values[row.key]}
+                  </Txt>
+                </View>
+              ))}
+            </Card>
+          ))}
         </View>
       ) : null}
     </ScrollView>
@@ -123,6 +140,7 @@ export default function CompareLooksScreen() {
 const styles = StyleSheet.create({
   scroll: { padding: SPACE.xl, paddingTop: SPACE.xxl, paddingBottom: SPACE.xxxl * 2 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.lg },
-  column: { width: 230, marginRight: SPACE.sm, borderRadius: RADIUS.md },
-  cell: { marginTop: SPACE.sm },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  compareLine: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm, paddingTop: SPACE.sm, marginTop: SPACE.xs },
+  compareName: { width: 96 },
 });

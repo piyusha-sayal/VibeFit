@@ -27,6 +27,7 @@ import type { Explanation, LookOption, Selection } from '../../services/lookServ
 import { newClientToken } from '../../services/lookService';
 import { useLookDraft } from '../../store/lookDraft';
 import { useTheme } from '../../theme/ThemeProvider';
+import { success as successHaptic } from '../../utils/haptics';
 
 const AUTOSAVE_DELAY_MS = 1_200;
 
@@ -153,7 +154,7 @@ export default function LookBuilderScreen() {
       const lookId = draft.editingLookId;
       updateLook.mutate(
         { id: lookId, patch: { name: name.trim() || composition.name, status, composition } },
-        { onSuccess: () => { setSavedMode('updated'); setSavedId(lookId); draft.clear(); } },
+        { onSuccess: () => { successHaptic(); setSavedMode('updated'); setSavedId(lookId); draft.clear(); } },
       );
       return;
     }
@@ -170,6 +171,7 @@ export default function LookBuilderScreen() {
       },
       {
         onSuccess: (look) => {
+          successHaptic();
           setSavedMode('created');
           setSavedId(look.id);
           draft.clear();
@@ -195,12 +197,17 @@ export default function LookBuilderScreen() {
   if (savedId) {
     return (
       <View style={[styles.empty, { backgroundColor: colors.bg }]}>
-        <Txt variant="display" serif>{savedMode === 'updated' ? 'Updated' : 'Saved'}</Txt>
-        <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
+        <View style={[styles.savedBadge, { backgroundColor: colors.goldSoft, borderColor: colors.gold }]}>
+          <Txt variant="h1" tone="accent" style={{ lineHeight: 40 }}>✓</Txt>
+        </View>
+        <Txt variant="display" serif style={{ marginTop: SPACE.lg }}>
+          {savedMode === 'updated' ? 'Updated' : 'Saved'}
+        </Txt>
+        <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, textAlign: 'center' }}>
           It is in your passport, and on your timeline.
         </Txt>
         <Button label="Open it" onPress={() => router.replace(`/look/${savedId}` as never)}
-                style={{ marginTop: SPACE.lg }} />
+                style={{ marginTop: SPACE.lg, alignSelf: 'stretch' }} />
         <Button label="Build another" variant="ghost"
                 onPress={() => router.replace('/look/new' as never)} />
       </View>
@@ -447,6 +454,10 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACE.xl, paddingTop: SPACE.xxl, paddingBottom: SPACE.xxxl * 2 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACE.xxl },
+  savedBadge: {
+    width: 72, height: 72, borderRadius: 36, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
   input: {
     minHeight: 48,
     borderWidth: StyleSheet.hairlineWidth * 2,

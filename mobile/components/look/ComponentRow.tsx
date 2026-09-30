@@ -4,7 +4,7 @@
  * A label, what is currently chosen, why it is there, and one button that
  * opens the alternatives for that component alone.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Txt } from '../ds';
@@ -38,6 +38,8 @@ export function ComponentRow({
   changeLabel = 'Change', unavailableNote,
 }: Props) {
   const { colors } = useTheme();
+  const [whyOpen, setWhyOpen] = useState(false);
+  const hasWhy = explanations.length > 0;
 
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -69,7 +71,23 @@ export function ComponentRow({
         ) : null}
       </View>
 
-      {explanations.map((explanation) => (
+      {hasWhy ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: whyOpen }}
+          accessibilityLabel={`Why ${label.toLowerCase()} works`}
+          hitSlop={HIT_SLOP}
+          onPress={() => setWhyOpen((v) => !v)}
+          style={styles.whyToggle}
+        >
+          <Txt variant="caption" tone="accent" weight="semibold">
+            {whyOpen ? 'Hide why this works' : 'Why this works'}
+          </Txt>
+          <Txt variant="caption" tone="accent" style={{ marginLeft: 4 }}>{whyOpen ? '▲' : '▼'}</Txt>
+        </Pressable>
+      ) : null}
+
+      {whyOpen && explanations.map((explanation) => (
         <View key={explanation.text} style={styles.why}>
           <Txt variant="caption" tone="subtle">{BASIS_LABEL[explanation.basis]}</Txt>
           <Txt variant="bodySm" tone="muted">{explanation.text}</Txt>
@@ -94,5 +112,8 @@ const styles = StyleSheet.create({
   text: { flex: 1 },
   swatch: { width: 36, height: 36, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
   change: { minHeight: MIN_TOUCH, justifyContent: 'center', paddingLeft: SPACE.sm },
+  whyToggle: {
+    flexDirection: 'row', alignItems: 'center', marginTop: SPACE.sm, minHeight: MIN_TOUCH * 0.6,
+  },
   why: { marginTop: SPACE.sm },
 });

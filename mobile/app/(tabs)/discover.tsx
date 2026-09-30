@@ -1,11 +1,12 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { Card, Txt } from '../../components/ds';
-import { RADIUS, SPACE } from '../../constants/theme';
+import {
+  Card, ListGroup, ListRow, PageHeader, Screen, StatusBanner, Txt,
+} from '../../components/ds';
+import { SPACE } from '../../constants/theme';
 import { usePassport } from '../../hooks/useBeauty';
-import { useTheme } from '../../theme/ThemeProvider';
 
 /** Three doors, each to one experience. Nothing here duplicates a route. */
 const SECTIONS = [
@@ -64,7 +65,6 @@ const SECTIONS = [
 
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const { section } = useLocalSearchParams<{ section?: string }>();
   const passport = usePassport();
 
@@ -73,59 +73,41 @@ export default function DiscoverScreen() {
     : SECTIONS;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}
-    >
-      <Txt variant="display" serif style={{ marginBottom: SPACE.xs }}>Discover</Txt>
-      <Txt variant="body" tone="muted" style={{ marginBottom: SPACE.xxl }}>
-        Three ways to learn what suits you. Each one feeds the same passport.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Discover"
+        subtitle="Three ways to learn what suits you. Each one feeds the same passport."
+        back={false}
+      />
+
+      {passport.data && passport.data.completed === 0 ? (
+        <StatusBanner
+          tone="info"
+          title="Nothing is filled in yet"
+          body="A scan takes under a minute and unlocks the colour report, the face tools and the recommendations on your home screen."
+        />
+      ) : null}
 
       {ordered.map((s) => (
-        <View key={s.key} style={{ marginBottom: SPACE.xxl }}>
+        <View key={s.key} style={{ marginTop: SPACE.xxl }}>
           <Card variant="tinted" accent={s.accent} onPress={() => router.push(s.route as never)}>
             <Txt variant="title" serif>{s.title}</Txt>
             <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>{s.body}</Txt>
           </Card>
-          <View style={[styles.list, { borderColor: colors.border }]}>
-            {s.items.map((item) => (
-              <Card
-                key={item.route + item.label}
-                variant="outlined"
-                onPress={() => router.push(item.route as never)}
-                style={styles.listRow}
-              >
-                <Txt variant="body">{item.label}</Txt>
-                <Txt variant="body" tone="subtle">›</Txt>
-              </Card>
-            ))}
+          <View style={{ marginTop: SPACE.sm }}>
+            <ListGroup>
+              {s.items.map((item, index) => (
+                <ListRow
+                  key={item.route + item.label}
+                  title={item.label}
+                  onPress={() => router.push(item.route as never)}
+                  last={index === s.items.length - 1}
+                />
+              ))}
+            </ListGroup>
           </View>
         </View>
       ))}
-
-      {passport.data && passport.data.completed === 0 ? (
-        <Card variant="tinted" accent="gold">
-          <Txt variant="bodySm">
-            Nothing is filled in yet. A scan takes under a minute and unlocks the colour report,
-            the face tools and the recommendations on your home screen.
-          </Txt>
-        </Card>
-      ) : null}
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
-  list: { marginTop: SPACE.sm, borderRadius: RADIUS.md, overflow: 'hidden' },
-  listRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACE.md,
-    paddingHorizontal: SPACE.sm,
-    borderRadius: 0,
-  },
-});
