@@ -84,6 +84,26 @@ export function IconButton({
 
 // ------------------------------------------------------------------ header
 
+/** Back if there is history; otherwise Home, so a deep link never strands. */
+function useGoBack() {
+  const router = useRouter();
+  return () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
+}
+
+/**
+ * Back control for screens that draw their own title. Clears the status bar
+ * on edge-to-edge Android, where those screens' scroll padding alone did not.
+ */
+export function BackBar() {
+  const goBack = useGoBack();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ paddingTop: Math.max(insets.top - SPACE.xl, 0), marginLeft: -SPACE.md, marginBottom: SPACE.sm }}>
+      <IconButton icon="‹" accessibilityLabel="Back" variant="plain" onPress={goBack} />
+    </View>
+  );
+}
+
 /** Screen header: back, eyebrow + serif title, optional right action. */
 export function PageHeader({
   title, eyebrow, subtitle, right, back = true,
@@ -94,14 +114,13 @@ export function PageHeader({
   right?: React.ReactNode;
   back?: boolean;
 }) {
-  const router = useRouter();
+  const goBack = useGoBack();
   return (
     <View style={{ marginBottom: SPACE.xl }}>
       {back || right ? (
         <View style={styles.headerBar}>
           {back ? (
-            <IconButton icon="‹" accessibilityLabel="Back" variant="plain"
-                        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
+            <IconButton icon="‹" accessibilityLabel="Back" variant="plain" onPress={goBack} />
           ) : <View />}
           {right ?? null}
         </View>

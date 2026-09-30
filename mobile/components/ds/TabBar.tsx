@@ -56,16 +56,24 @@ const TABS = [
   { key: 'profile', label: 'Profile', href: '/(tabs)/profile', Icon: ProfileIcon },
 ] as const;
 
+/**
+ * The tab that owns this path, or null. Screens pushed inside the tab group
+ * (create, results, chat, …) belong to no tab, so none is highlighted rather
+ * than Home claiming them.
+ */
+export function activeTabFor(pathname: string): string | null {
+  if (pathname === '/' || pathname === '') return 'index';
+  const match = TABS.slice(1).find((t) => pathname === `/${t.key}` || pathname.startsWith(`/${t.key}/`));
+  return match ? match.key : null;
+}
+
 export function TabBar() {
   const router = useRouter();
   const pathname = usePathname();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const activeKey = (() => {
-    const match = TABS.slice(1).find((t) => pathname.startsWith(`/${t.key}`));
-    return match ? match.key : 'index';
-  })();
+  const activeKey = activeTabFor(pathname);
 
   return (
     <View

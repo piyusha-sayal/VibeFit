@@ -10,7 +10,7 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import {
+import { BackBar,
   Button, Card, Chip, ErrorState, LoadingState, SectionHeader, Txt,
 } from '../../components/ds';
 import { LookSwatches } from '../../components/look';
@@ -104,6 +104,7 @@ export default function CreateScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
+      <BackBar />
       {/* --------------------------------------------------------- A. hero */}
       <Txt variant="display" serif>Create your perfect look</Txt>
       <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs }}>

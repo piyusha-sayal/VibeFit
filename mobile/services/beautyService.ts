@@ -6,6 +6,7 @@
  */
 import { del, get, patch, post, put } from './api';
 import { ApiResponse } from '../types';
+import { appRoute } from '../utils/appRoute';
 
 export interface Swatch {
   name: string;
@@ -153,7 +154,25 @@ export const getSeason = (season: string): Promise<ApiResponse<ColorReport>> =>
 
 // ----------------------------------------------------------------- passport
 
-export const getPassport = (): Promise<ApiResponse<Passport>> => get<Passport>('/passport');
+export const getPassport = async (): Promise<ApiResponse<Passport>> => {
+  const res = await get<Passport>('/passport');
+  return res.success && res.data ? { ...res, data: withAppRoutes(res.data) } : res;
+};
+
+/** Backend action routes, rewritten to the app's route form. */
+export function withAppRoutes(passport: Passport): Passport {
+  const fix = <T extends { route: string }>(a: T | null | undefined) => (a ? { ...a, route: appRoute(a.route) } : a);
+  return {
+    ...passport,
+    nextAction: fix(passport.nextAction) ?? null,
+    // Guarded: a partial payload must not crash the passport.
+    attributes: (Array.isArray(passport.attributes) ? passport.attributes : []).map((attr) => ({
+      ...attr,
+      route: attr.route ? appRoute(attr.route) : attr.route,
+      action: fix(attr.action) ?? null,
+    })),
+  };
+}
 
 export const getBeautyProfile = (): Promise<ApiResponse<BeautyProfile>> =>
   get<BeautyProfile>('/passport/profile');

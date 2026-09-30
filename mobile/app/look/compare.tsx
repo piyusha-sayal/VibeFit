@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import {
+import { BackBar,
   Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Txt,
 } from '../../components/ds';
 import { LookSwatches } from '../../components/look';
@@ -60,6 +60,7 @@ export default function CompareLooksScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
+      <BackBar />
       <Txt variant="display" serif>Compare looks</Txt>
       <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
         Pick two or three. Nothing you compare is changed.

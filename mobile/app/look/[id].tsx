@@ -9,7 +9,7 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import {
+import { BackBar,
   Button, Card, Chip, ErrorState, LoadingState, SectionHeader, Txt,
 } from '../../components/ds';
 import { BASIS_LABEL, LookComposition } from '../../components/look';
@@ -68,6 +68,7 @@ export default function SavedLookScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
+      <BackBar />
       {renaming ? (
         <View>
           <TextInput

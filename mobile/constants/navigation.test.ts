@@ -10,6 +10,7 @@ import path from 'path';
 
 import { EXPERIENCES, SMALL_TOOLS } from './experiences';
 import { TOOLS } from './tools';
+import { appRoute } from '../utils/appRoute';
 
 const APP_DIR = path.join(__dirname, '..', 'app');
 
@@ -88,4 +89,21 @@ describe('legacy analysis screens', () => {
       expect(routeExists(`/${route}`)).toBe(true);
     },
   );
+});
+
+// The passport's "what next" button pushes routes the backend sends. They
+// were never checked, because only literal strings in the app were scanned.
+describe('backend passport action routes', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', '..', 'backend', 'services', 'passport_service.py'), 'utf8',
+  );
+  const routes = [...source.matchAll(/"route":\s*"([^"]+)"/g)].map((m) => m[1]);
+
+  it('finds the backend routes', () => {
+    expect(routes.length).toBeGreaterThan(5);
+  });
+
+  it.each([...new Set(routes)])('%s resolves to a screen once normalised', (route: string) => {
+    expect(routeExists(appRoute(route))).toBe(true);
+  });
 });

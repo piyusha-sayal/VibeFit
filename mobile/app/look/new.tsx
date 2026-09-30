@@ -9,7 +9,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import {
+import { BackBar,
   Button, Card, Chip, ErrorState, LoadingState, ProgressBar, SectionHeader, Txt,
 } from '../../components/ds';
 import { LookCard } from '../../components/look';
@@ -86,6 +86,7 @@ export default function NewLookScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
+      <BackBar />
       <Txt variant="overline" tone="subtle">
         Step {step + 1} of {STEPS.length} · {STEPS[step]}
       </Txt>

@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import {
+import { BackBar,
   Button, Card, Chip, ErrorState, LoadingState, SectionHeader, Txt,
 } from '../../components/ds';
 import { ComponentRow, ComponentSheet, LookComposition } from '../../components/look';
@@ -227,6 +227,7 @@ export default function LookBuilderScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        <BackBar />
         <Txt variant="display" serif>{composition.name}</Txt>
         <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
           {composition.outfit.summary}
