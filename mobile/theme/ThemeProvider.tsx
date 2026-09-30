@@ -30,7 +30,7 @@ const ThemeContext = createContext<ThemeValue | null>(null);
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
-  const [preference, setPreferenceState] = useState<ThemePreference>('system');
+  const [preference, setPreferenceState] = useState<ThemePreference>('dark');
   const [userReducedMotion, setUserReducedMotion] = useState(false);
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
 

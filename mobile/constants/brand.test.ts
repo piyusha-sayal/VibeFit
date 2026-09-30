@@ -101,6 +101,7 @@ describe('brand palette', () => {
     // The dark gold must be lighter than the dark ground, and the light gold
     // darker than the ivory ground, or the accent disappears.
     expect(PALETTES.dark.gold).not.toBe(PALETTES.light.gold);
-    expect(PALETTES.dark.gold.toLowerCase()).toBe(kit.palette['Champagne Gold'].toLowerCase());
+    // Redesign spec: champagne #C9A96E is the accent on the near-black ground.
+    expect(PALETTES.dark.gold.toLowerCase()).toBe('#c9a96e');
   });
 });

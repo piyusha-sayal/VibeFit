@@ -12,6 +12,8 @@ import {
   TouchableOpacity, View, ViewStyle,
 } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { FONTS } from '../../constants/fonts';
 import { AccentKey, HIT_SLOP, MIN_TOUCH, RADIUS, SPACE, TYPE, accentPair } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -124,25 +126,35 @@ export function Card({ children, onPress, accent, variant = 'plain', style, acce
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  /** `ghost` is the original name for `tertiary`. */
+  variant?: 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'destructive';
+  /** Optional leading glyph, decorative to a screen reader. */
+  icon?: string;
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
   accessibilityHint?: string;
+  accessibilityLabel?: string;
 }
 
 export function Button({
-  label, onPress, variant = 'primary', loading, disabled, style, accessibilityHint,
+  label, onPress, variant = 'primary', icon, loading, disabled, style, accessibilityHint, accessibilityLabel,
 }: ButtonProps) {
   const { colors, reducedMotion } = useTheme();
-  const isPrimary = variant === 'primary';
-  const isGhost = variant === 'ghost';
   const inactive = disabled || loading;
   const [pressed, setPressed] = useState(false);
+  const look = {
+    primary: { bg: colors.gold, border: colors.gold, ink: colors.onAccent },
+    secondary: { bg: 'transparent', border: colors.gold, ink: colors.text },
+    tertiary: { bg: 'transparent', border: 'transparent', ink: colors.gold },
+    ghost: { bg: 'transparent', border: 'transparent', ink: colors.gold },
+    destructive: { bg: 'transparent', border: colors.danger, ink: colors.danger },
+  }[variant];
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       accessibilityHint={accessibilityHint}
       disabled={inactive}
@@ -152,22 +164,19 @@ export function Button({
       style={[
         styles.button,
         {
-          backgroundColor: isPrimary ? colors.text : isGhost ? 'transparent' : colors.surface,
-          borderColor: isGhost ? 'transparent' : isPrimary ? colors.text : colors.borderStrong,
-          opacity: inactive ? 0.5 : pressed && !reducedMotion ? 0.85 : 1,
+          backgroundColor: look.bg,
+          borderColor: look.border,
+          opacity: inactive ? 0.5 : pressed ? 0.85 : 1,
+          transform: pressed && !reducedMotion ? [{ scale: 0.98 }] : [],
         },
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={isPrimary ? colors.bg : colors.text} />
+        <ActivityIndicator size="small" color={look.ink} />
       ) : (
-        <Text
-          style={[
-            TYPE.body,
-            { fontFamily: FONTS.sansSemiBold, color: isPrimary ? colors.bg : colors.text },
-          ]}
-        >
+        <Text style={[TYPE.body, { fontFamily: FONTS.sansSemiBold, color: look.ink, textAlign: 'center' }]}>
+          {icon ? <Text accessibilityElementsHidden>{`${icon}  `}</Text> : null}
           {label}
         </Text>
       )}
@@ -370,16 +379,18 @@ export function Screen({
   children, scroll = true, padded = true,
 }: { children: React.ReactNode; scroll?: boolean; padded?: boolean }) {
   const { colors } = useTheme();
+  // Android draws edge to edge, so content must clear the status bar itself.
+  const insets = useSafeAreaInsets();
   const body = (
     <View style={padded ? { paddingHorizontal: SPACE.xl, paddingBottom: SPACE.xxxl * 2 } : undefined}>
       {children}
     </View>
   );
-  if (!scroll) return <View style={{ flex: 1, backgroundColor: colors.bg }}>{body}</View>;
+  if (!scroll) return <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}>{body}</View>;
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={{ paddingTop: SPACE.xxl }}
+      contentContainerStyle={{ paddingTop: insets.top + SPACE.lg }}
       showsVerticalScrollIndicator={false}
     >
       {body}
@@ -391,8 +402,9 @@ const styles = StyleSheet.create({
   button: {
     minHeight: MIN_TOUCH,
     paddingHorizontal: SPACE.xl,
+    paddingVertical: SPACE.md,
     borderRadius: RADIUS.pill,
-    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -414,3 +426,5 @@ const styles = StyleSheet.create({
   track: { height: 6, borderRadius: RADIUS.pill, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: RADIUS.pill },
 });
+
+export * from './kit';

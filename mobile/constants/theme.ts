@@ -9,6 +9,9 @@
  *   Black #080808 · Charcoal #1E1E1E · Rich gold #D4AF37
  *   Champagne #F1D9A7 · Soft ivory #FAF7EE
  *
+ * Accent gold is champagne #C9A96E in dark mode; light mode uses a deeper
+ * shade of the same hue so gold text keeps 4.5:1 contrast on ivory.
+ *
  * Gold carries the brand in both themes, so it is the accent used for primary
  * actions and for anything that should read as premium. The blush / peach /
  * lavender / sage accents stay for categorising, used on small areas and never
@@ -24,8 +27,10 @@ export type ThemeName = 'light' | 'dark';
 export interface Palette {
   /** Page ground. */
   bg: string;
-  /** Raised surface on the ground: cards, sheets. */
+  /** Raised surface on the ground: cards. */
   surface: string;
+  /** Floating surfaces: sheets, modals, menus. */
+  surfaceRaised: string;
   /** A surface on a surface: inputs, inner wells. */
   surfaceAlt: string;
   /** Hairlines and dividers. */
@@ -54,6 +59,8 @@ export interface Palette {
   successSoft: string;
   danger: string;
   dangerSoft: string;
+  warning: string;
+  warningSoft: string;
   /** Scrim for overlays and pressed states. */
   scrim: string;
   shadow: string;
@@ -62,6 +69,7 @@ export interface Palette {
 const light: Palette = {
   bg: '#faf7ee',
   surface: '#ffffff',
+  surfaceRaised: '#ffffff',
   surfaceAlt: '#f2ecdd',
   border: 'rgba(43,38,34,0.10)',
   borderStrong: 'rgba(43,38,34,0.22)',
@@ -73,16 +81,18 @@ const light: Palette = {
   peach: '#d99873',
   lavender: '#9187b8',
   sage: '#7f9480',
-  gold: '#a8862f',
+  gold: '#86672a',
   blushSoft: 'rgba(201,127,134,0.12)',
   peachSoft: 'rgba(217,152,115,0.14)',
   lavenderSoft: 'rgba(145,135,184,0.12)',
   sageSoft: 'rgba(127,148,128,0.14)',
-  goldSoft: 'rgba(168,134,47,0.12)',
+  goldSoft: 'rgba(201,169,110,0.18)',
   success: '#4f8a63',
   successSoft: 'rgba(79,138,99,0.12)',
   danger: '#b4554f',
   dangerSoft: 'rgba(180,85,79,0.10)',
+  warning: '#9a6a1c',
+  warningSoft: 'rgba(154,106,28,0.12)',
   scrim: 'rgba(43,38,34,0.06)',
   shadow: 'rgba(43,38,34,0.10)',
 };
@@ -91,7 +101,8 @@ const dark: Palette = {
   // Near-black rather than a warm brown: gold reads as gold against it, and
   // the ground disappears on an OLED panel instead of glowing.
   bg: '#080808',
-  surface: '#161616',
+  surface: '#141414',
+  surfaceRaised: '#1c1c1c',
   surfaceAlt: '#1e1e1e',
   border: 'rgba(250,247,238,0.10)',
   borderStrong: 'rgba(250,247,238,0.24)',
@@ -103,18 +114,19 @@ const dark: Palette = {
   peach: '#e8b28d',
   lavender: '#b3a8d8',
   sage: '#a3b8a4',
-  // The kit's champagne rather than its rich gold: #D4AF37 is the flat
-  // fallback for a gradient and reads dull as UI text on #080808.
-  gold: '#f1d9a7',
+  // Champagne accent: 8.8:1 on #080808, warmer than the kit's #D4AF37.
+  gold: '#c9a96e',
   blushSoft: 'rgba(224,160,166,0.14)',
   peachSoft: 'rgba(232,178,141,0.14)',
   lavenderSoft: 'rgba(179,168,216,0.14)',
   sageSoft: 'rgba(163,184,164,0.14)',
-  goldSoft: 'rgba(241,217,167,0.14)',
+  goldSoft: 'rgba(201,169,110,0.16)',
   success: '#7cc094',
   successSoft: 'rgba(124,192,148,0.14)',
   danger: '#e08a84',
   dangerSoft: 'rgba(224,138,132,0.12)',
+  warning: '#e3b76a',
+  warningSoft: 'rgba(227,183,106,0.14)',
   scrim: 'rgba(0,0,0,0.55)',
   shadow: 'rgba(0,0,0,0.6)',
 };
@@ -140,14 +152,23 @@ export const RADIUS = {
   pill: 999,
 } as const;
 
-/** Type scale. Display and titles are serif; everything else is the sans. */
+/**
+ * Type scale. Display and h1–h3 are set serif by callers; the rest is sans.
+ * `title`, `heading` and `bodySm` are the original names, kept as aliases so
+ * existing screens keep their sizes.
+ */
 export const TYPE = {
   display: { fontSize: 34, lineHeight: 40, letterSpacing: -0.5 },
+  h1: { fontSize: 28, lineHeight: 34, letterSpacing: -0.3 },
   title: { fontSize: 26, lineHeight: 32, letterSpacing: -0.3 },
+  h2: { fontSize: 22, lineHeight: 28, letterSpacing: -0.2 },
+  h3: { fontSize: 18, lineHeight: 24 },
   heading: { fontSize: 19, lineHeight: 25 },
   body: { fontSize: 15, lineHeight: 22 },
+  small: { fontSize: 13, lineHeight: 19 },
   bodySm: { fontSize: 13, lineHeight: 19 },
   caption: { fontSize: 12, lineHeight: 16 },
+  label: { fontSize: 11, lineHeight: 14, letterSpacing: 1.2, textTransform: 'uppercase' as const },
   overline: { fontSize: 10, lineHeight: 14, letterSpacing: 1.4, textTransform: 'uppercase' as const },
 } as const;
 

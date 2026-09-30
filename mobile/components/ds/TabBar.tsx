@@ -95,14 +95,14 @@ export function TabBar() {
                 <Icon color={colors.onAccent} />
               </View>
             ) : (
-              <Icon color={active ? colors.text : colors.textSubtle} />
+              <Icon color={active ? colors.gold : colors.textMuted} />
             )}
             <Text
               style={[
                 TYPE.caption,
                 {
                   fontFamily: active || centre ? FONTS.sansSemiBold : FONTS.sans,
-                  color: active || centre ? colors.text : colors.textSubtle,
+                  color: active ? colors.gold : centre ? colors.text : colors.textMuted,
                   marginTop: 2,
                 },
               ]}
