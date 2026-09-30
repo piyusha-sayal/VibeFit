@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { useGoogleAuth } from '../../hooks/useGoogleAuth';
 import { GoldButton } from '../../components/ui/GoldButton';
@@ -19,6 +20,7 @@ import { WakingBanner } from '../../components/ds/WakingBanner';
 export default function LoginScreen() {
   const { C, GRADIENTS } = useLegacyTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
+  const insets = useSafeAreaInsets();
   const { login, loginAsGuest, isLoading, error, clearError } = useAuth();
   const { signInWithGoogle, loading: googleLoading, error: googleError } = useGoogleAuth();
   const [email, setEmail] = useState('');
@@ -49,10 +51,13 @@ export default function LoginScreen() {
   return (
     <LinearGradient colors={GRADIENTS.heroAlt} style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* The supplied brand lockup, at its own aspect ratio. */}
           <View style={styles.logoRow}>
-            <Logo variant="horizontal" width={240} showTagline />
+            <Logo variant="horizontal" width={200} showTagline />
           </View>
 
           <Text style={styles.headline}>Welcome back</Text>
@@ -86,17 +91,20 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Password</Text>
+              {/* The reset link shares the label row so it adds no height of its own. */}
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Password</Text>
+                <Link href={`/(auth)/forgot-password?email=${encodeURIComponent(email.trim())}` as never} asChild>
+                  <TouchableOpacity accessibilityRole="link" hitSlop={12}>
+                    <Text style={styles.forgotText}>Forgot password?</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
               <PasswordInput
                 value={password}
                 onChangeText={setPassword}
                 placeholder="••••••••"
               />
-              <Link href={`/(auth)/forgot-password?email=${encodeURIComponent(email.trim())}` as never} asChild>
-                <TouchableOpacity accessibilityRole="link" style={styles.forgot}>
-                  <Text style={styles.forgotText}>Forgot password?</Text>
-                </TouchableOpacity>
-              </Link>
             </View>
 
             <GoldButton
@@ -112,7 +120,7 @@ export default function LoginScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <GoogleButton onPress={signInWithGoogle} loading={googleLoading} />
+            <GoogleButton onPress={() => { clearError(); void signInWithGoogle(); }} loading={googleLoading} />
 
             {isGuestLoginEnabled ? (
               <GoldButton
@@ -141,28 +149,28 @@ export default function LoginScreen() {
 const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  scroll: { padding: 28, paddingTop: 80, flexGrow: 1 },
-  logoRow: { alignItems: 'center', marginBottom: 40 },
+  scroll: { paddingHorizontal: 28, flexGrow: 1, justifyContent: 'center' },
+  logoRow: { alignItems: 'center', marginBottom: 24 },
   brand: { fontFamily: FONTS.serif, fontSize: 28, color: C.gold },
   brandLogo: { width: 160, height: 48, marginVertical: 4 },
-  headline: { fontFamily: FONTS.serif, fontSize: 36, color: C.text, marginBottom: 8 },
-  sub: { fontFamily: FONTS.sans, fontSize: 15, color: C.textMuted, marginBottom: 32 },
+  headline: { fontFamily: FONTS.serif, fontSize: 30, color: C.text, marginBottom: 4 },
+  sub: { fontFamily: FONTS.sans, fontSize: 15, color: C.textMuted, marginBottom: 20 },
   errorBox: { backgroundColor: C.redDim, borderWidth: 0.5, borderColor: C.redBorder, borderRadius: 10, padding: 12, marginBottom: 16 },
   errorText: { fontFamily: FONTS.sans, fontSize: 13, color: C.red },
-  form: { gap: 16 },
-  field: { gap: 8 },
+  form: { gap: 12 },
+  field: { gap: 6 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   label: { fontFamily: FONTS.sansBold, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', color: C.textMuted },
   input: {
     backgroundColor: C.surface2, borderWidth: 0.5, borderColor: C.white08,
     borderRadius: 12, padding: 14, fontFamily: FONTS.sans, fontSize: 15, color: C.text,
   },
-  btn: { marginTop: 8 },
-  forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
+  btn: { marginTop: 4 },
   forgotText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: C.gold },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dividerLine: { flex: 1, height: 0.5, backgroundColor: C.white08 },
   dividerText: { fontFamily: FONTS.sansBold, fontSize: 11, color: C.textSubtle, letterSpacing: 1.2 },
-  registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8 },
+  registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', minHeight: 44 },
   registerText: { fontFamily: FONTS.sans, fontSize: 14, color: C.textMuted },
   registerLink: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: C.gold },
 });

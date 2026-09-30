@@ -10,6 +10,7 @@ import { useTheme, ThemePreference } from '../../theme/ThemeProvider';
 import { getConsent, type PhotoConsent } from '../../services/privacyService';
 import { retentionStatus } from '../../utils/retention';
 import * as biometrics from '../../services/biometrics';
+import { useBiometricLock } from '../../hooks/useBiometricLock';
 
 const THEMES: { key: ThemePreference; label: string }[] = [
   { key: 'system', label: 'System' },
@@ -21,37 +22,11 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { colors, preference, setPreference, reducedMotion, setReducedMotion } = useTheme();
 
-  // Biometric unlock. The capability is asked for fresh because a sensor can
-  // be enrolled or cleared in device settings while the app is open.
   const userId = useAuthStore((s) => s.user?.id) ?? null;
-  const [lockOn, setLockOn] = useState(false);
-  const [lockable, setLockable] = useState<biometrics.BiometricCapability | null>(null);
-  const [lockError, setLockError] = useState<string | null>(null);
-  const [lockBusy, setLockBusy] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const capability = await biometrics.capability();
-      const enabled = userId ? await biometrics.isEnabled(userId) : false;
-      if (cancelled) return;
-      setLockable(capability);
-      setLockOn(enabled);
-    })();
-    return () => { cancelled = true; };
-  }, [userId]);
-
-  const toggleLock = async (next: boolean) => {
-    if (!userId || lockBusy) return;
-    setLockBusy(true);
-    setLockError(null);
-    // Both directions prove it is the same person first, so that a phone
-    // handed over unlocked cannot quietly have the lock removed.
-    const result = await biometrics.setEnabled(userId, next);
-    if (result.ok) setLockOn(next);
-    else if (result.error) setLockError(result.error);
-    setLockBusy(false);
-  };
+  const {
+    enabled: lockOn, capability: lockable, error: lockError, busy: lockBusy, toggle,
+  } = useBiometricLock();
+  const toggleLock = async (next: boolean) => { await toggle(next); };
   const settings = useSettings();
   const update = useUpdateSettings();
   const user = useAuthStore((s) => s.user);

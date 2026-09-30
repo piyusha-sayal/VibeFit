@@ -57,6 +57,8 @@ function errorMessage(err: unknown): string {
       case 'auth/too-many-requests': return 'Too many attempts. Try again later.';
       case 'auth/operation-not-allowed':
         return 'Anonymous sign-in is disabled. Enable it in Firebase console → Authentication → Sign-in method.';
+      case 'auth/admin-restricted-operation':
+        return 'New sign-ups are switched off for this app right now. Please try again later.';
       case 'auth/network-request-failed': return 'Network error. Check your connection.';
       default: return code.replace('auth/', '').replace(/-/g, ' ');
     }

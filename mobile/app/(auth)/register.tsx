@@ -116,7 +116,7 @@ export default function RegisterScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <GoogleButton onPress={signInWithGoogle} loading={googleLoading} />
+            <GoogleButton onPress={() => { clearError(); void signInWithGoogle(); }} loading={googleLoading} />
 
             <View style={styles.loginRow}>
               <Text style={styles.loginText}>Already have an account? </Text>

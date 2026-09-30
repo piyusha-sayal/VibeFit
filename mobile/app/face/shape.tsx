@@ -5,7 +5,9 @@ import { useRouter } from 'expo-router';
 import {
   Button, Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Txt,
 } from '../../components/ds';
-import { SPACE } from '../../constants/theme';
+import { FaceFigure, faceShapeFor } from '../../components/visual';
+import { PressScale } from '../../components/ds/PressScale';
+import { RADIUS, SPACE } from '../../constants/theme';
 import { NotFoundError } from '../../hooks/useBeauty';
 import { useFaceProfile, useSetFaceShape } from '../../hooks/useFace';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -53,13 +55,20 @@ export default function FaceShapeReportScreen() {
           onPress={() => router.push('/(tabs)/scan' as never)}
         />
         <SectionHeader title="Or choose your own" style={{ marginTop: SPACE.xxl }} />
-        <View style={styles.chips}>
+        <View style={styles.shapeGrid}>
           {(shape?.options ?? []).map((option) => (
-            <Chip
+            <PressScale
               key={option}
-              label={option.replace('_', ' ')}
               onPress={() => setShape.mutate(option)}
-            />
+              accessibilityLabel={`Choose ${option.replace('_', ' ')}`}
+              containerStyle={styles.shapeCell}
+              style={[styles.shapeTile, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            >
+              <FaceFigure faceShape={faceShapeFor(option) ?? 'oval'} hairLength="short" seed="shape" size={72} />
+              <Txt variant="caption" weight="semibold" style={{ textTransform: 'capitalize' }}>
+                {option.replace('_', ' ')}
+              </Txt>
+            </PressScale>
           ))}
         </View>
       </ScrollView>
@@ -70,10 +79,15 @@ export default function FaceShapeReportScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="overline" tone="muted">Face shape report</Txt>
-      <Txt variant="display" serif style={{ marginTop: 2, textTransform: 'capitalize' }}>
-        {shape.value.replace('_', ' ')}
-      </Txt>
+      <View style={styles.reportHead}>
+        <View style={{ flex: 1 }}>
+          <Txt variant="overline" tone="muted">Face shape report</Txt>
+          <Txt variant="display" serif style={{ marginTop: 2, textTransform: 'capitalize' }}>
+            {shape.value.replace('_', ' ')}
+          </Txt>
+        </View>
+        <FaceFigure faceShape={faceShapeFor(shape.value) ?? 'oval'} hairLength="short" seed="shape" size={96} />
+      </View>
       <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs }}>
         {guide?.summary}
       </Txt>
@@ -176,4 +190,11 @@ const styles = StyleSheet.create({
   scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACE.xs },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
+  shapeGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: SPACE.md },
+  shapeCell: { width: '33.33%', paddingHorizontal: SPACE.xs },
+  shapeTile: {
+    alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, borderRadius: RADIUS.lg,
+    paddingVertical: SPACE.sm,
+  },
+  reportHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
 });

@@ -141,3 +141,14 @@ export function orderExperiences<T extends { key: string }>(
   };
   return [...experiences].sort((a, b) => rank(a.key) - rank(b.key));
 }
+
+// ------------------------------------------------------------ about you
+
+/** Which styles to show. Stored as the backend's presentation values. */
+export const PRESENTATION_OPTIONS = [
+  { value: 'feminine', label: 'Female' },
+  { value: 'masculine', label: 'Male' },
+] as const;
+
+export const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'] as const;
+

@@ -73,7 +73,7 @@ describe('the launch gate', () => {
   it('still refuses to guess where to send the launch', () => {
     // The fix is to show the wait, not to shorten it by redirecting early:
     // bouncing a signed-in user to login is the bug this gate exists to stop.
-    expect(GATE).toContain("if (!isAuthenticated) return <Redirect href=\"/(auth)/login\" />");
+    expect(GATE).toContain("if (!isAuthenticated) return <Redirect href={\"/(auth)/welcome\" as never} />");
     expect(GATE).toMatch(/status === 'required' \|\| status === 'partial'/);
   });
 });

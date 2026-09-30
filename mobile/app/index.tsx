@@ -73,7 +73,7 @@ export default function Index() {
     return <WakingScreen />;
   }
 
-  if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
+  if (!isAuthenticated) return <Redirect href={"/(auth)/welcome" as never} />;
 
   // The lock sits after "is there a session" and before "which screen", so a
   // locked phone reveals neither the home screen nor how far through

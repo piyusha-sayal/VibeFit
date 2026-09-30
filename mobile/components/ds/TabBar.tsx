@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS } from '../../constants/fonts';
 import { MIN_TOUCH, RADIUS, SPACE, TYPE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
+import { tap } from '../../utils/haptics';
 
 type IconProps = { color: string };
 
@@ -17,17 +18,17 @@ const HomeIcon = ({ color }: IconProps) => (
   </Svg>
 );
 
-const DiscoverIcon = ({ color }: IconProps) => (
+const ProgressIcon = ({ color }: IconProps) => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.7} />
-    <Path d="M15.5 8.5l-2 5-5 2 2-5 5-2z" stroke={color} strokeWidth={1.7} strokeLinejoin="round" />
+    <Path d="M4 20V13M10 20V8M16 20v-5M22 20H2" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+    <Path d="M4 9l6-5 6 5 5-4" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const CreateIcon = ({ color }: IconProps) => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Path d="M12 3v18M3 12h18" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
-    <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={1.7} opacity={0.35} />
+const AnalyzeIcon = ({ color }: IconProps) => (
+  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+    <Path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    <Circle cx={12} cy={12} r={3.2} stroke={color} strokeWidth={2} />
   </Svg>
 );
 
@@ -39,21 +40,20 @@ const PassportIcon = ({ color }: IconProps) => (
   </Svg>
 );
 
-const MoreIcon = ({ color }: IconProps) => (
+const ProfileIcon = ({ color }: IconProps) => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Circle cx={5} cy={12} r={1.6} fill={color} />
-    <Circle cx={12} cy={12} r={1.6} fill={color} />
-    <Circle cx={19} cy={12} r={1.6} fill={color} />
+    <Circle cx={12} cy={8} r={4} stroke={color} strokeWidth={1.7} />
+    <Path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
   </Svg>
 );
 
-/** One route per experience: no feature is reachable from two tabs. */
+/** Five tabs; the centre one is the raised "Analyze" action. */
 const TABS = [
   { key: 'index', label: 'Home', href: '/(tabs)', Icon: HomeIcon },
-  { key: 'discover', label: 'Discover', href: '/(tabs)/discover', Icon: DiscoverIcon },
-  { key: 'create', label: 'Create', href: '/(tabs)/create', Icon: CreateIcon },
+  { key: 'progress', label: 'Progress', href: '/(tabs)/progress', Icon: ProgressIcon },
+  { key: 'scan', label: 'Analyze', href: '/(tabs)/scan', Icon: AnalyzeIcon },
   { key: 'passport', label: 'Passport', href: '/(tabs)/passport', Icon: PassportIcon },
-  { key: 'more', label: 'More', href: '/(tabs)/more', Icon: MoreIcon },
+  { key: 'profile', label: 'Profile', href: '/(tabs)/profile', Icon: ProfileIcon },
 ] as const;
 
 export function TabBar() {
@@ -80,29 +80,36 @@ export function TabBar() {
     >
       {TABS.map(({ key, label, href, Icon }) => {
         const active = key === activeKey;
+        const centre = key === 'scan';
         return (
           <Pressable
             key={key}
             accessibilityRole="tab"
             accessibilityLabel={label}
             accessibilityState={{ selected: active }}
-            onPress={() => router.navigate(href as never)}
+            onPress={() => { tap(); router.navigate(href as never); }}
             style={styles.tab}
           >
-            <Icon color={active ? colors.text : colors.textSubtle} />
+            {centre ? (
+              <View style={[styles.centre, { backgroundColor: colors.gold, borderColor: colors.surface, shadowColor: colors.shadow }]}>
+                <Icon color={colors.onAccent} />
+              </View>
+            ) : (
+              <Icon color={active ? colors.text : colors.textSubtle} />
+            )}
             <Text
               style={[
                 TYPE.caption,
                 {
-                  fontFamily: active ? FONTS.sansSemiBold : FONTS.sans,
-                  color: active ? colors.text : colors.textSubtle,
+                  fontFamily: active || centre ? FONTS.sansSemiBold : FONTS.sans,
+                  color: active || centre ? colors.text : colors.textSubtle,
                   marginTop: 2,
                 },
               ]}
             >
               {label}
             </Text>
-            {active ? <View style={[styles.dot, { backgroundColor: colors.gold }]} /> : null}
+            {active && !centre ? <View style={[styles.dot, { backgroundColor: colors.gold }]} /> : null}
           </Pressable>
         );
       })}
@@ -118,5 +125,18 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { position: 'sticky' as never, bottom: 0 } }),
   },
   tab: { flex: 1, minHeight: MIN_TOUCH, alignItems: 'center', justifyContent: 'center' },
+  centre: {
+    width: 58,
+    height: 58,
+    borderRadius: RADIUS.pill,
+    borderWidth: 4,
+    marginTop: -30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
   dot: { width: 4, height: 4, borderRadius: RADIUS.pill, marginTop: 3 },
 });

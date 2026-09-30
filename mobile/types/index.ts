@@ -295,6 +295,8 @@ export interface OnboardingAnswers {
   timeAvailable?: string | null;
   keepUsingItems?: string | null;
   genderPresentation?: string | null;
+  /** Self-reported bracket such as "25-34"; never a birth date. */
+  ageRange?: string | null;
   modestyPreference?: string | null;
   skippedFields?: string[] | null;
   /** A directive, not a stored column: "this run reached the end". */

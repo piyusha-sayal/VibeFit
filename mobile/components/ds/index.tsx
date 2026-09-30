@@ -6,7 +6,7 @@
  * components rather than ad-hoc JSX because every data screen owes the user all
  * three.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextStyle,
   TouchableOpacity, View, ViewStyle,
@@ -87,6 +87,9 @@ interface CardProps {
 export function Card({ children, onPress, accent, variant = 'plain', style, accessibilityLabel }: CardProps) {
   const { colors, reducedMotion } = useTheme();
   const tint = accent ? accentPair(colors, accent) : null;
+  // Pressed state is tracked here, not via a `style` callback: NativeWind's JSX
+  // transform drops function styles on native, which left pressables unstyled.
+  const [pressed, setPressed] = useState(false);
 
   const base: ViewStyle = {
     backgroundColor: variant === 'tinted' && tint ? tint.bg : variant === 'outlined' ? 'transparent' : colors.surface,
@@ -103,7 +106,9 @@ export function Card({ children, onPress, accent, variant = 'plain', style, acce
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
         base,
         style,
         pressed && { opacity: reducedMotion ? 0.9 : 0.75, transform: reducedMotion ? [] : [{ scale: 0.99 }] },
@@ -133,6 +138,7 @@ export function Button({
   const isPrimary = variant === 'primary';
   const isGhost = variant === 'ghost';
   const inactive = disabled || loading;
+  const [pressed, setPressed] = useState(false);
 
   return (
     <Pressable
@@ -141,7 +147,9 @@ export function Button({
       accessibilityHint={accessibilityHint}
       disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
         styles.button,
         {
           backgroundColor: isPrimary ? colors.text : isGhost ? 'transparent' : colors.surface,

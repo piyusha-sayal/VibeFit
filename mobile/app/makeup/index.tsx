@@ -7,6 +7,8 @@ import { FaceFigure, INSPIRATION_NOTE } from '../../components/visual';
 import type { BlushPlacement, LinerStyle } from '../../components/visual/shapes';
 import { SPACE } from '../../constants/theme';
 import { useAesthetics, useFaceProfile } from '../../hooks/useFace';
+import { usePersona } from '../../hooks/usePersona';
+import { makeupPicks, orderByPicks } from '../../constants/personalise';
 import { useTheme } from '../../theme/ThemeProvider';
 
 /** Which zones an aesthetic actually emphasises, for the illustration. */
@@ -69,6 +71,8 @@ export default function MakeupStudioScreen() {
   const [minutes, setMinutes] = useState<number | undefined>();
   const query = useAesthetics(occasion, minutes);
   const profile = useFaceProfile();
+  const persona = usePersona();
+  const picks = makeupPicks(persona.ageRange, persona.genderPresentation);
 
   const unset = profile.data?.attributes.filter((a) => !a.value).length ?? 0;
 
@@ -84,13 +88,13 @@ export default function MakeupStudioScreen() {
           variant="tinted"
           accent="lavender"
           style={{ marginTop: SPACE.lg }}
-          onPress={() => router.push('/face/features' as never)}
+          onPress={() => router.push('/(tabs)/scan' as never)}
         >
           <Txt variant="body">
             {unset} {unset === 1 ? 'feature is' : 'features are'} still unset.
           </Txt>
           <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
-            Confirm them and every look below gets technique specific to you →
+            Take a selfie scan and they fill in automatically →
           </Txt>
         </Card>
       )}
@@ -128,7 +132,7 @@ export default function MakeupStudioScreen() {
       ) : (
         <View style={{ marginTop: SPACE.xl }}>
           <SectionHeader title={`${query.data!.count} looks`} />
-          {query.data!.aesthetics.map((aesthetic) => (
+          {orderByPicks(query.data!.aesthetics, picks).map((aesthetic) => (
             <Card
               key={aesthetic.key}
               style={{ marginBottom: SPACE.md }}
@@ -153,6 +157,11 @@ export default function MakeupStudioScreen() {
                   <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
                     {aesthetic.summary}
                   </Txt>
+                  {picks.includes(aesthetic.key) ? (
+                    <Txt variant="caption" tone="accent" weight="semibold" style={{ marginTop: SPACE.xs }}>
+                      ✨ Picked for you
+                    </Txt>
+                  ) : null}
                 </View>
               </View>
               {aesthetic.reasons.slice(0, 1).map((reason) => (

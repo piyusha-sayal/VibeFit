@@ -1,27 +1,35 @@
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, EmptyState, ErrorState, LoadingState, ProgressBar, SectionHeader, Swatch, Txt } from '../../components/ds';
+import { Button, Card, Chip, EmptyState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { useColorReport, usePassport } from '../../hooks/useBeauty';
 import { useDrafts } from '../../hooks/useLook';
 import { LookSwatches } from '../../components/look';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeProvider';
-import { EXPERIENCES, OCCASIONS, SMALL_TOOLS, tipOfTheDay } from '../../constants/experiences';
-import { orderExperiences, recommendedStart } from '../../constants/onboarding';
+import { EXPERIENCES, OCCASIONS, tipOfTheDay } from '../../constants/experiences';
+import { recommendedStart } from '../../constants/onboarding';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { ACADEMY_GUIDES } from '../../constants/academy';
 import { INSPIRATION } from '../../constants/inspiration';
-import { Logo } from '../../components/ds/Logo';
+import { PressScale } from '../../components/ds/PressScale';
+import { ProgressRing } from '../../components/ds/ProgressRing';
+import { BiometricOffer } from '../../components/home/BiometricOffer';
+import { ToolGrid } from '../../components/home/ToolGrid';
+import { useProgress } from '../../hooks/useProgress';
 import { WakingBanner } from '../../components/ds/WakingBanner';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const passport = usePassport();
+  const { level, game } = useProgress();
   const report = useColorReport();
   const drafts = useDrafts();
   // Onboarding interests order this list; nothing is ever removed from it, so
@@ -37,9 +45,6 @@ export default function HomeScreen() {
   React.useEffect(() => {
     if (provisional && userId) void resolveOnboarding(userId);
   }, [provisional, userId, resolveOnboarding]);
-  const experiences = useMemo(
-    () => orderExperiences(EXPERIENCES, interests), [interests],
-  );
 
   // A first-timer who said they came for fashion should not be sent to a face
   // scan. The onboarding answer is the only thing we actually know yet.
@@ -99,14 +104,6 @@ export default function HomeScreen() {
     return out.slice(0, 4);
   }, [passport.data]);
 
-  if (passport.isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center' }}>
-        <LoadingState label="Opening your passport…" />
-      </View>
-    );
-  }
-
   const data = passport.data;
   const isNew = !data || data.completed === 0;
 
@@ -116,42 +113,115 @@ export default function HomeScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
-      {/* ------------------------------------------------- A. brand + hero */}
-      {/* The mark appears once, here. Repeating it on every screen would
-          clutter navigation without telling anyone anything new. */}
-      <Logo variant="horizontal" width={150} style={{ marginBottom: SPACE.lg }} />
+      {/* ---------------------------------------------- A. greeting row */}
+      <View style={[styles.header, { paddingTop: insets.top + SPACE.lg }]}>
+        <View style={{ flex: 1 }}>
+          <Txt variant="caption" tone="muted">{greeting()}</Txt>
+          <Txt variant="title" serif numberOfLines={1}>Hi{firstName ? `, ${firstName}` : ''} 👋</Txt>
+        </View>
+        <PressScale
+          onPress={() => router.push('/(tabs)/progress' as never)}
+          accessibilityLabel={`${game.streak.count} day streak. Open progress`}
+          style={[styles.pill, { backgroundColor: colors.peachSoft }]}
+        >
+          <Txt variant="bodySm" weight="bold">🔥 {game.streak.count}</Txt>
+        </PressScale>
+        <PressScale
+          onPress={() => router.push('/(tabs)/progress' as never)}
+          accessibilityLabel={`Level ${level.level}. Open progress`}
+        >
+          <ProgressRing value={level.progress} size={44} stroke={4}>
+            <Txt variant="caption" weight="bold">L{level.level}</Txt>
+          </ProgressRing>
+        </PressScale>
+      </View>
 
-      <WakingBanner />
+      <View style={styles.sectionTight}>
+        <WakingBanner />
+        {/* Home never waits on the passport: it shows now and fills in. */}
+        {passport.isLoading ? <LoadingState label="Opening your passport…" /> : null}
+      </View>
 
-      <View style={[styles.hero, { backgroundColor: colors.goldSoft }]}>
-        {isNew ? (
-          <>
-            <Txt variant="display" serif>Discover Your Colors.</Txt>
-            <Txt variant="display" serif style={{ marginBottom: SPACE.md }}>Define Your Style.</Txt>
-            <Txt variant="body" tone="muted" style={{ marginBottom: SPACE.xl }}>
-              {firstStep
-                ? `You said you wanted to explore ${firstStep.eyebrow.toLowerCase()}. Start there.`
-                : 'Your personal beauty and styling journey starts here.'}
+      {/* ---------------------------------------------------- B. hero */}
+      {passport.isLoading ? null : (
+      <View style={styles.sectionTight}>
+        <LinearGradient
+          colors={[colors.goldSoft, colors.blushSoft, colors.lavenderSoft]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          {isNew ? (
+            <>
+              <Txt variant="overline" tone="muted">Start here ✨</Txt>
+              <Txt variant="title" serif style={{ marginTop: SPACE.xs }}>Discover your colours.</Txt>
+              <Txt variant="title" serif>Define your style.</Txt>
+              <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm, marginBottom: SPACE.lg }}>
+                {firstStep
+                  ? `You said you wanted to explore ${firstStep.eyebrow.toLowerCase()}. Start there.`
+                  : 'One selfie unlocks your palette, face shape and more.'}
+              </Txt>
+              <Button
+                label={firstStep ? firstStep.title : 'Start my analysis'}
+                onPress={() => router.push((firstStep?.route ?? '/(tabs)/scan') as never)}
+              />
+            </>
+          ) : (
+            <>
+              <Txt variant="overline" tone="muted">Your next step</Txt>
+              <Txt variant="title" serif style={{ marginTop: SPACE.xs }}>
+                {data?.nextAction ? data.nextAction.label : 'Your passport is complete 🎉'}
+              </Txt>
+              <View style={styles.heroRow}>
+                <Txt variant="bodySm" tone="muted" style={{ flex: 1 }}>
+                  Passport {Math.round((data?.completion ?? 0) * 100)}% complete
+                </Txt>
+                <Button
+                  label={data?.nextAction ? 'Go' : 'Create a look'}
+                  onPress={() => router.push((data?.nextAction?.route ?? '/(tabs)/create') as never)}
+                />
+              </View>
+            </>
+          )}
+        </LinearGradient>
+      </View>
+      )}
+
+      {/* ------------------------------------------- C. fingerprint offer */}
+      <View style={styles.sectionTight}>
+        <BiometricOffer />
+      </View>
+
+      {/* --------------------------------------------------- D. tools */}
+      <View style={styles.section}>
+        <SectionHeader title="Your tools" />
+        <ToolGrid />
+      </View>
+
+      {/* --------------------------------------------------- E. today */}
+      <View style={styles.section}>
+        <SectionHeader title="Today" />
+        <View style={styles.todayRow}>
+          <Card variant="tinted" accent="sage" style={{ flex: 1 }}>
+            <Text style={styles.todayEmoji} accessibilityElementsHidden importantForAccessibility="no">💡</Text>
+            <Txt variant="overline" tone="muted">Tip of the day</Txt>
+            <Txt variant="bodySm" style={{ marginTop: SPACE.xs }}>{tip}</Txt>
+          </Card>
+          <Card
+            variant="tinted"
+            accent="gold"
+            style={{ flex: 1 }}
+            onPress={() => router.push('/(tabs)/progress' as never)}
+            accessibilityLabel="Daily quiz. Open progress to play"
+          >
+            <Text style={styles.todayEmoji} accessibilityElementsHidden importantForAccessibility="no">🧠</Text>
+            <Txt variant="overline" tone="muted">Daily quiz</Txt>
+            <Txt variant="bodySm" weight="semibold" style={{ marginTop: SPACE.xs }}>
+              3 quick questions. Earn points and badges.
             </Txt>
-            <Button
-              label={firstStep ? firstStep.title : 'Start Exploring'}
-              onPress={() => router.push((firstStep?.route ?? '/(tabs)/scan') as never)}
-            />
-          </>
-        ) : (
-          <>
-            <Txt variant="title" serif>Welcome back{firstName ? `, ${firstName}` : ''}.</Txt>
-            <Txt variant="body" tone="muted" style={{ marginTop: SPACE.sm, marginBottom: SPACE.xl }}>
-              {data?.nextAction
-                ? `Next: ${data.nextAction.label.toLowerCase()}.`
-                : 'Your passport is complete. Build a look with it.'}
-            </Txt>
-            <Button
-              label={data?.nextAction ? data.nextAction.label : 'Create a look'}
-              onPress={() => router.push((data?.nextAction?.route ?? '/(tabs)/create') as never)}
-            />
-          </>
-        )}
+            <Txt variant="caption" tone="accent" weight="semibold" style={{ marginTop: SPACE.sm }}>Play →</Txt>
+          </Card>
+        </View>
       </View>
 
       {/* ----------------------------------------- B. create your next look */}
@@ -209,73 +279,6 @@ export default function HomeScreen() {
         ) : null}
       </View>
 
-      {/* ------------------------------------------ C. beauty passport preview */}
-      {passport.isError ? (
-        <View style={styles.section}>
-          <ErrorState message="Could not load your passport." onRetry={() => passport.refetch()} />
-        </View>
-      ) : data ? (
-        <View style={styles.section}>
-          <SectionHeader title="My Beauty Passport" action="Open" onAction={() => router.push('/(tabs)/passport' as never)} />
-          <Card>
-            <View style={styles.rowBetween}>
-              <Txt variant="bodySm" tone="muted">
-                {data.completed} of {data.total} {data.completionOf ?? 'attributes'}
-              </Txt>
-              <Txt variant="bodySm" weight="semibold">{Math.round(data.completion * 100)}%</Txt>
-            </View>
-            <View style={{ marginTop: SPACE.sm, marginBottom: SPACE.lg }}>
-              <ProgressBar value={data.completion} label="Profile completion" />
-            </View>
-            {data.attributes.slice(0, 5).map((attr) => (
-              <View key={attr.key} style={[styles.attrRow, { borderColor: colors.border }]}>
-                <Txt variant="bodySm" tone="muted">{attr.label}</Txt>
-                {attr.status === 'present' ? (
-                  <Txt variant="bodySm" weight="semibold">
-                    {Array.isArray(attr.value) ? attr.value.slice(0, 2).join(', ') : attr.value}
-                  </Txt>
-                ) : (
-                  <Txt variant="bodySm" tone="accent" weight="semibold">Not yet</Txt>
-                )}
-              </View>
-            ))}
-          </Card>
-        </View>
-      ) : null}
-
-      {/* ------------------------------------------- C. flagship experiences */}
-      <View style={styles.section}>
-        <SectionHeader title="Five ways in" />
-        {experiences.map((exp, i) => {
-          // Deliberately not five identical cards: the first is a wide feature
-          // card, the rest alternate between split rows and compact tiles.
-          const wide = i === 0;
-          return (
-            <Card
-              key={exp.key}
-              accent={exp.accent}
-              variant="tinted"
-              onPress={() => router.push(exp.route as never)}
-              accessibilityLabel={exp.title}
-              style={wide ? styles.featureCard : styles.rowCard}
-            >
-              <View style={wide ? undefined : { flex: 1, paddingRight: SPACE.md }}>
-                <Txt variant="overline" tone="muted">{exp.eyebrow}</Txt>
-                <Txt variant={wide ? 'title' : 'heading'} serif style={{ marginTop: SPACE.xs }}>
-                  {exp.title}
-                </Txt>
-                <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>{exp.body}</Txt>
-              </View>
-              <View style={[styles.expSwatches, wide && { marginTop: SPACE.lg }]}>
-                {exp.swatches.map((hex) => (
-                  <View key={hex} style={[styles.expDot, { backgroundColor: hex }]} />
-                ))}
-              </View>
-            </Card>
-          );
-        })}
-      </View>
-
       {/* ------------------------------------------- D. recommended for you */}
       {recommendations.length ? (
         <View style={styles.section}>
@@ -286,36 +289,6 @@ export default function HomeScreen() {
               <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>{rec.body}</Txt>
             </Card>
           ))}
-        </View>
-      ) : null}
-
-      {/* -------------------------------- E. explore more (only real tools) */}
-      <View style={styles.section}>
-        <SectionHeader title="Explore more" />
-        <View style={styles.wrap}>
-          {SMALL_TOOLS.filter((t) => t.available).map((tool) => (
-            <Chip key={tool.label} label={tool.label} accent={tool.accent} onPress={() => router.push(tool.route as never)} />
-          ))}
-        </View>
-      </View>
-
-      {/* --------------------------------------------- G. your beauty journey */}
-      {data ? (
-        <View style={styles.section}>
-          <SectionHeader title="Your beauty journey" />
-          <View style={styles.statRow}>
-            {[
-              { label: 'Analyses', value: data.journey.analyses },
-              { label: 'Looks saved', value: data.journey.savedLooks },
-              { label: 'Tried', value: data.journey.triedLooks },
-              { label: 'Goals', value: data.journey.activeGoals },
-            ].map((stat) => (
-              <Card key={stat.label} style={styles.statCard}>
-                <Txt variant="title" serif>{stat.value}</Txt>
-                <Txt variant="caption" tone="muted">{stat.label}</Txt>
-              </Card>
-            ))}
-          </View>
         </View>
       ) : null}
 
@@ -370,16 +343,8 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {/* ---------------------------------------------- J. tip + academy */}
       <View style={styles.section}>
-        <Card variant="tinted" accent="sage">
-          <Txt variant="overline" tone="muted">Beauty tip of the day</Txt>
-          <Txt variant="body" style={{ marginTop: SPACE.sm }}>{tip}</Txt>
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader title="Beauty Academy" action="All guides" onAction={() => router.push('/(tabs)/more' as never)} />
+        <SectionHeader title="Beauty Academy" action="All guides" onAction={() => router.push('/academy' as never)} />
         {ACADEMY_GUIDES.slice(0, 3).map((guide) => (
           <Card key={guide.slug} onPress={() => router.push(`/academy/${guide.slug}` as never)} style={{ marginBottom: SPACE.sm }}>
             <Txt variant="bodySm" weight="semibold">{guide.title}</Txt>
@@ -406,30 +371,24 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingBottom: SPACE.xxxl },
-  hero: {
-    paddingHorizontal: SPACE.xl,
-    paddingTop: SPACE.xxxl + SPACE.lg,
-    paddingBottom: SPACE.xxl,
-    borderBottomLeftRadius: RADIUS.xl,
-    borderBottomRightRadius: RADIUS.xl,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, paddingHorizontal: SPACE.xl },
+  pill: { paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, borderRadius: RADIUS.pill },
+  hero: { borderRadius: RADIUS.xl, padding: SPACE.xl },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.md },
+  sectionTight: { paddingHorizontal: SPACE.xl, marginTop: SPACE.lg },
+  todayRow: { flexDirection: 'row', gap: SPACE.sm },
+  todayEmoji: { fontSize: 24, marginBottom: SPACE.xs },
   section: { paddingHorizontal: SPACE.xl, marginTop: SPACE.xxl },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  attrRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACE.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  featureCard: { marginBottom: SPACE.md, minHeight: 170, justifyContent: 'flex-end' },
-  rowCard: { marginBottom: SPACE.md, flexDirection: 'row', alignItems: 'center' },
-  expSwatches: { flexDirection: 'row', gap: SPACE.xs },
-  expDot: { width: 18, height: 18, borderRadius: RADIUS.pill },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
-  statRow: { flexDirection: 'row', gap: SPACE.sm },
-  statCard: { flex: 1, alignItems: 'center', paddingVertical: SPACE.lg, paddingHorizontal: SPACE.xs },
   inspoCard: { width: 190 },
   inspoSwatches: { flexDirection: 'row', gap: SPACE.xs },
   inspoDot: { width: 26, height: 42, borderRadius: RADIUS.sm },
 });
+
+function greeting(date: Date = new Date()): string {
+  const h = date.getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}

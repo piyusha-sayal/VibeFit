@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useAnalysisStore } from '../store/analysisStore';
 import { PhotoPermissionError } from '../utils/photoPermission';
+import { openInAppCamera } from '../utils/cameraBridge';
 
 export function useAnalysis() {
   const store = useAnalysisStore();
@@ -32,19 +33,10 @@ export function useAnalysis() {
     const { status, canAskAgain } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') throw new PhotoPermissionError('camera', canAskAgain);
 
-    // A selfie: open the front camera rather than whatever the phone last used.
-    const result = await ImagePicker.launchCameraAsync({
-      cameraType: ImagePicker.CameraType.front,
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.92,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      return store.upload(asset.uri, asset.mimeType ?? 'image/jpeg');
-    }
-    return null;
+    // A selfie, taken on the in-app camera with a face guide, so the photo is
+    // framed and lit the way the analysis needs.
+    const photo = await openInAppCamera();
+    return photo ? store.upload(photo.uri, photo.mimeType) : null;
   };
 
   return {

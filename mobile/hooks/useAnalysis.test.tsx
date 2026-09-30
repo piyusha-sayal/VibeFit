@@ -12,6 +12,7 @@ jest.mock('expo-image-picker', () => ({
   launchCameraAsync: jest.fn(),
   launchImageLibraryAsync: jest.fn(),
 }));
+jest.mock('../utils/cameraBridge', () => ({ openInAppCamera: jest.fn() }));
 jest.mock('../store/analysisStore', () => {
   const store = { loadLatest: jest.fn(), upload: jest.fn(async () => ({ id: 'a1' })) };
   return { useAnalysisStore: () => store, mockStore: store };
@@ -22,22 +23,23 @@ import { useAnalysis } from './useAnalysis';
 import { PhotoPermissionError } from '../utils/photoPermission';
 
 const picker = ImagePicker as unknown as Record<string, jest.Mock>;
+const camera = jest.requireMock('../utils/cameraBridge') as { openInAppCamera: jest.Mock };
 const store = (jest.requireMock('../store/analysisStore') as { mockStore: { upload: jest.Mock } }).mockStore;
-const photo = { canceled: false, assets: [{ uri: 'file:///selfie.jpg', mimeType: 'image/jpeg' }] };
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('cameraAndAnalyze', () => {
-  it('opens the front camera and uploads the selfie', async () => {
+  it('opens the in-app camera and uploads the selfie', async () => {
     picker.requestCameraPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: true } as never);
-    picker.launchCameraAsync.mockResolvedValue(photo as never);
+    camera.openInAppCamera.mockResolvedValue({ uri: 'file:///selfie.jpg', mimeType: 'image/jpeg' } as never);
     const { result } = renderHook(() => useAnalysis());
 
     await result.current.cameraAndAnalyze();
 
-    expect(picker.launchCameraAsync).toHaveBeenCalledWith(expect.objectContaining({ cameraType: 'front' }));
+    expect(camera.openInAppCamera).toHaveBeenCalled();
+    expect(picker.launchCameraAsync).not.toHaveBeenCalled();
     expect(store.upload).toHaveBeenCalledWith('file:///selfie.jpg', 'image/jpeg');
   });
 
@@ -49,12 +51,12 @@ describe('cameraAndAnalyze', () => {
 
     expect(error).toBeInstanceOf(PhotoPermissionError);
     expect((error as PhotoPermissionError).canAskAgain).toBe(false);
-    expect(picker.launchCameraAsync).not.toHaveBeenCalled();
+    expect(camera.openInAppCamera).not.toHaveBeenCalled();
   });
 
   it('uploads nothing when the camera is closed without a photo', async () => {
     picker.requestCameraPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: true } as never);
-    picker.launchCameraAsync.mockResolvedValue({ canceled: true, assets: null } as never);
+    camera.openInAppCamera.mockResolvedValue(null as never);
     const { result } = renderHook(() => useAnalysis());
     await expect(result.current.cameraAndAnalyze()).resolves.toBeNull();
     expect(store.upload).not.toHaveBeenCalled();

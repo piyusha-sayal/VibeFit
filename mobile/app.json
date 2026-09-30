@@ -62,7 +62,15 @@
           "faceIDPermission": "Allow MyLookFit to unlock with Face ID."
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MyLookFit uses your camera to take a selfie for style analysis.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "scheme": [
       "mylookfit",

@@ -46,4 +46,12 @@ describe('guest sign-in', () => {
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/Anonymous sign-in/i);
   });
+
+  it('says sign-ups are off instead of showing the raw code when Firebase refuses new accounts', async () => {
+    mockSignInAnonymously = async () => {
+      throw Object.assign(new Error('nope'), { code: 'auth/admin-restricted-operation' });
+    };
+    const res = await loginAsGuest();
+    expect(res.error).toMatch(/sign-ups are switched off/i);
+  });
 });

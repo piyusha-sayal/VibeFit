@@ -8,3 +8,8 @@ node_modules/
 
 expo-env.d.ts
 # @end expo-cli
+# local native builds (Expo generates these)
+/android
+/ios
+*.apk
+*.aab

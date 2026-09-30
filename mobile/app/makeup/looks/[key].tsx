@@ -69,14 +69,14 @@ export default function MakeupLookScreen() {
       {look.missingAttributes.length > 0 && (
         <Card
           style={{ marginTop: SPACE.lg }}
-          onPress={() => router.push('/face/features' as never)}
+          onPress={() => router.push('/(tabs)/scan' as never)}
         >
           <Txt variant="body">
             We have no technique for your{' '}
             {look.missingAttributes.map((a) => ATTRIBUTE_LABEL[a] ?? a).join(', ')} yet.
           </Txt>
           <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
-            Confirm them in the feature explorer and this look fills in →
+            Take a selfie scan and this look fills in →
           </Txt>
         </Card>
       )}

@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXPERIENCES, SMALL_TOOLS } from './experiences';
+import { TOOLS } from './tools';
 
 const APP_DIR = path.join(__dirname, '..', 'app');
 
@@ -55,6 +56,13 @@ describe('small tools', () => {
     expect(routes).toEqual(expect.arrayContaining([
       '/hair/cuts', '/hair/bangs', '/makeup', '/accessories/glasses',
     ]));
+  });
+});
+
+describe('home tools grid', () => {
+  it('links every tile to a real screen', () => {
+    const missing = TOOLS.filter((t) => !routeExists(t.route)).map((t) => t.route);
+    expect(missing).toEqual([]);
   });
 });
 

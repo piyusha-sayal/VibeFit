@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import { EXPERIENCES } from './experiences';
 import {
-  EVERYTHING, INTERESTS, STYLE_CHOICES, UNSURE,
+  AGE_RANGES, EVERYTHING, INTERESTS, PRESENTATION_OPTIONS, STYLE_CHOICES, UNSURE,
   applyInterest, applyStyle, isEverythingSelected, orderExperiences, recommendedStart,
 } from './onboarding';
 import { AESTHETICS } from './wardrobe';
@@ -113,6 +113,12 @@ describe('what onboarding does not ask', () => {
   });
 
   it('never asks for an identity it has no business asking for', () => {
-    expect(asked).not.toMatch(/ethnicity|race|religion|nationality|gender/);
+    expect(asked).not.toMatch(/ethnicity|race|religion|nationality/);
+  });
+
+  it('asks only which styles to show and an age bracket, never a birth date', () => {
+    expect(PRESENTATION_OPTIONS.map((o) => o.label)).toEqual(['Female', 'Male']);
+    expect(PRESENTATION_OPTIONS.map((o) => o.value)).toEqual(['feminine', 'masculine']);
+    expect(AGE_RANGES.every((r) => /^\d{2}(-\d{2}|\+)$/.test(r))).toBe(true);
   });
 });

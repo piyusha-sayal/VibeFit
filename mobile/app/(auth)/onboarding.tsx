@@ -14,24 +14,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Chip, Txt } from '../../components/ds';
 import { Logo } from '../../components/ds/Logo';
 import { EXPERIENCES } from '../../constants/experiences';
 import {
-  EVERYTHING, INTERESTS, OCCASIONS, REGIONS, STYLE_CHOICES, UNSURE,
+  AGE_RANGES, EVERYTHING, INTERESTS, OCCASIONS, PRESENTATION_OPTIONS, REGIONS, STYLE_CHOICES, UNSURE,
   applyInterest, applyStyle, isEverythingSelected, recommendedStart,
 } from '../../constants/onboarding';
 import { MIN_TOUCH, SPACE } from '../../constants/theme';
 import { useAuthStore } from '../../store/authStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
+import { usePersonaStore } from '../../store/personaStore';
+import { FaceFigure } from '../../components/visual';
 import { useTheme } from '../../theme/ThemeProvider';
 
-const STEPS = ['Welcome', 'Interests', 'Style', 'About you', 'Start'] as const;
+const STEPS = ['Welcome', 'You', 'Interests', 'Style', 'About you', 'Start'] as const;
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const draft = useOnboardingStore((s) => s.draft);
   const saveDraft = useOnboardingStore((s) => s.saveDraft);
@@ -40,6 +44,8 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [interests, setInterests] = useState<string[]>([]);
   const [styles_, setStyles] = useState<string[]>([]);
+  const [presentation, setPresentation] = useState<string | null>(null);
+  const [ageRange, setAgeRange] = useState<string | null>(null);
   const [region, setRegion] = useState<string | null>(null);
   const [occasions, setOccasions] = useState<string[]>([]);
   const [skipped, setSkipped] = useState<string[]>([]);
@@ -51,6 +57,8 @@ export default function OnboardingScreen() {
     if (draft.areasOfInterest) setInterests(draft.areasOfInterest);
     if (draft.stylePreferences) setStyles(draft.stylePreferences);
     if (draft.market) setRegion(draft.market);
+    if (draft.genderPresentation) setPresentation(draft.genderPresentation);
+    if (draft.ageRange) setAgeRange(draft.ageRange);
     if (draft.skippedFields) setSkipped(draft.skippedFields);
   }, [draft]);
 
@@ -71,6 +79,8 @@ export default function OnboardingScreen() {
       areasOfInterest: interests.length ? interests : null,
       stylePreferences: styles_.length ? styles_ : null,
       market: region,
+      genderPresentation: presentation,
+      ageRange,
       skippedFields: skippedNow.length ? skippedNow : null,
     });
     setStep(to);
@@ -93,6 +103,8 @@ export default function OnboardingScreen() {
       areasOfInterest: interests.length ? interests : null,
       stylePreferences: styles_.length ? styles_ : null,
       market: region,
+      genderPresentation: presentation,
+      ageRange,
       // Occasions live with the style answers; there is no second store.
       keepUsingItems: draft.keepUsingItems ?? null,
       skippedFields: skipped.length ? skipped : null,
@@ -113,16 +125,30 @@ export default function OnboardingScreen() {
         + 'set your preferences later in Settings.');
       return;
     }
+    // Screens tailor art and suggestions from these straight away.
+    usePersonaStore.setState({ genderPresentation: presentation, ageRange });
     // `timedOut` and `true` both go in. If the write does eventually fail, the
     // next launch asks again, which is the same thing a lost connection has
     // always done here.
-    router.replace(firstExperience ? (firstExperience.route as never) : ('/(tabs)' as never));
+    // Land on the tabs first so the bottom bar is underneath, then open the
+    // recommended place to start on top of it.
+    router.replace('/(tabs)' as never);
+    if (firstExperience && !firstExperience.route.startsWith('/(tabs)')) {
+      router.push(firstExperience.route as never);
+    }
   };
 
   const exploreAnyway = () => router.replace('/(tabs)' as never);
 
   return (
-    <View style={[stylesheet.root, { backgroundColor: colors.bg }]}>
+    <View
+      style={[stylesheet.root, {
+        backgroundColor: colors.bg,
+        // Android draws edge to edge: without the insets the buttons sit under the navigation bar.
+        paddingTop: insets.top + SPACE.xl,
+        paddingBottom: insets.bottom + SPACE.xl,
+      }]}
+    >
       <Progress step={step} />
 
       <ScrollView
@@ -134,10 +160,17 @@ export default function OnboardingScreen() {
         {step === 0 ? (
           <Welcome name={user?.name} />
         ) : step === 1 ? (
-          <Interests selected={interests} onToggle={(v) => setInterests(applyInterest(interests, v))} />
+          <You
+            presentation={presentation}
+            ageRange={ageRange}
+            onPresentation={(v) => setPresentation(presentation === v ? null : v)}
+            onAge={(v) => setAgeRange(ageRange === v ? null : v)}
+          />
         ) : step === 2 ? (
-          <Style selected={styles_} onToggle={(v) => setStyles(applyStyle(styles_, v))} />
+          <Interests selected={interests} onToggle={(v) => setInterests(applyInterest(interests, v))} />
         ) : step === 3 ? (
+          <Style selected={styles_} onToggle={(v) => setStyles(applyStyle(styles_, v))} />
+        ) : step === 4 ? (
           <About
             region={region}
             occasions={occasions}
@@ -202,6 +235,63 @@ function Welcome({ name }: { name?: string }) {
           Welcome, {name}. This takes about a minute, and you can skip any of it.
         </Txt>
       ) : null}
+    </View>
+  );
+}
+
+function You({ presentation, ageRange, onPresentation, onAge }: {
+  presentation: string | null;
+  ageRange: string | null;
+  onPresentation: (value: string) => void;
+  onAge: (value: string) => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View>
+      <Txt variant="display" serif>Tell us about you</Txt>
+      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>
+        So hairstyles, looks and tips suit you. Both are optional and you can change them in Profile.
+      </Txt>
+
+      <Txt variant="body" style={{ marginTop: SPACE.xl }}>Show me styles for</Txt>
+      <View style={stylesheet.personaRow}>
+        {PRESENTATION_OPTIONS.map((option) => {
+          const selected = presentation === option.value;
+          return (
+            <Card
+              key={option.value}
+              onPress={() => onPresentation(option.value)}
+              accessibilityLabel={`${option.label}${selected ? ', selected' : ''}`}
+              variant={selected ? 'plain' : 'outlined'}
+              style={{
+                flex: 1,
+                alignItems: 'center',
+                borderColor: selected ? colors.gold : colors.border,
+                borderWidth: selected ? 2 : StyleSheet.hairlineWidth * 2,
+              }}
+            >
+              <FaceFigure
+                presentation={option.value === 'masculine' ? 'male' : 'female'}
+                hairLength={option.value === 'masculine' ? 'short' : 'long'}
+                hairTexture={option.value === 'masculine' ? 'straight' : 'wavy'}
+                seed={option.value}
+                size={84}
+                label={option.label}
+              />
+              <Txt variant="body" weight="semibold" style={{ marginTop: SPACE.sm }}>
+                {selected ? '✓ ' : ''}{option.label}
+              </Txt>
+            </Card>
+          );
+        })}
+      </View>
+
+      <Txt variant="body" style={{ marginTop: SPACE.xl }}>Your age</Txt>
+      <View style={stylesheet.chips}>
+        {AGE_RANGES.map((range) => (
+          <Chip key={range} label={range} accent="lavender" selected={ageRange === range} onPress={() => onAge(range)} />
+        ))}
+      </View>
     </View>
   );
 }
@@ -393,7 +483,7 @@ function Progress({ step }: { step: number }) {
 }
 
 const stylesheet = StyleSheet.create({
-  root: { flex: 1, paddingHorizontal: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xl },
+  root: { flex: 1, paddingHorizontal: SPACE.xl },
   progress: { flexDirection: 'row', gap: SPACE.xs, marginBottom: SPACE.xl },
   body: { flex: 1 },
   bodyContent: { flexGrow: 1, paddingBottom: SPACE.xl },
@@ -403,4 +493,5 @@ const stylesheet = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
   actions: { gap: SPACE.sm },
   minor: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  personaRow: { flexDirection: 'row', gap: SPACE.md, marginTop: SPACE.md },
 });

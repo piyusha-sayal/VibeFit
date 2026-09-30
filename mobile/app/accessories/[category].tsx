@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { Card, Chip, EmptyState, ErrorState, LoadingState, Txt } from '../../components/ds';
+import { FaceFigure, faceShapeFor, frameStyleFor } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useAccessories } from '../../hooks/useFace';
 import type { AccessoriesBundle, AccessoryItem } from '../../services/faceService';
@@ -57,12 +58,25 @@ export default function AccessoryCategoryScreen() {
             accent="sage"
             style={{ marginBottom: SPACE.md }}
           >
-            <View style={styles.rowBetween}>
-              <Txt variant="heading">{item.name}</Txt>
-              {item.suited ? <Chip label="often suits you" accent="sage" /> : null}
+            <View style={styles.itemRow}>
+              {category === 'glasses' ? (
+                <FaceFigure
+                  glasses={frameStyleFor(`${item.key} ${item.name}`)}
+                  faceShape={faceShapeFor(query.data!.faceShape) ?? 'oval'}
+                  seed={item.key}
+                  size={76}
+                  label={`${item.name} frames, illustration`}
+                />
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <View style={styles.rowBetween}>
+                  <Txt variant="heading" style={{ flexShrink: 1 }}>{item.name}</Txt>
+                  {item.suited ? <Chip label="suits you" accent="sage" /> : null}
+                </View>
+                <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{item.description}</Txt>
+                {item.note ? <Txt variant="bodySm" style={{ marginTop: SPACE.sm }}>{item.note}</Txt> : null}
+              </View>
             </View>
-            <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{item.description}</Txt>
-            {item.note ? <Txt variant="bodySm" style={{ marginTop: SPACE.sm }}>{item.note}</Txt> : null}
           </Card>
         ))}
       </View>
@@ -73,6 +87,7 @@ export default function AccessoryCategoryScreen() {
 }
 
 const styles = StyleSheet.create({
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
   scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
 });

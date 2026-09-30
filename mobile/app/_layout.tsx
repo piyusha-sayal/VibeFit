@@ -31,7 +31,9 @@ const FONT_TIMEOUT_MS = 3_000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 1000 * 60 * 5, retry: 2 },
+    // The API client already retries idempotent requests; retrying again here
+    // multiplied a stalled request into minutes of spinner.
+    queries: { staleTime: 1000 * 60 * 5, retry: 0 },
     mutations: { retry: 0 },
   },
 });
@@ -55,6 +57,7 @@ function ThemedStack() {
         <Stack.Screen name="colors" options={{ animation: push }} />
         <Stack.Screen name="style" options={{ animation: push }} />
         <Stack.Screen name="settings" options={{ animation: push }} />
+        <Stack.Screen name="camera" options={{ animation: fade }} />
         <Stack.Screen name="plan" options={{ animation: push }} />
         <Stack.Screen name="vibe-profile" options={{ animation: push }} />
       </Stack>

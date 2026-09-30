@@ -18,6 +18,10 @@ import {
   type BlushPlacement, type Fringe, type HairSilhouette, type LinerStyle,
 } from './shapes';
 import { useTheme } from '../../theme/ThemeProvider';
+import { usePersonaStore } from '../../store/personaStore';
+import {
+  faceOutline, lensPath, type FaceShape, type FrameStyle, type Presentation,
+} from './features';
 
 const SIZE = 120;
 
@@ -64,12 +68,17 @@ export interface FaceFigureProps {
   blush?: BlushPlacement;
   /** The liner shape. A swatch cannot show the difference between these. */
   liner?: LinerStyle;
+  /** Female or male features. Defaults to the styles the person asked to see. */
+  presentation?: Presentation;
+  faceShape?: FaceShape;
+  glasses?: FrameStyle;
+  glassesColour?: string;
   size?: number;
   label?: string;
 }
 
 export function FaceFigure({
-  hairLength = 'medium',
+  hairLength: hairLengthProp,
   hairSilhouette,
   fringe = 'none',
   hairTexture = 'straight',
@@ -80,10 +89,18 @@ export function FaceFigure({
   emphasisColour,
   blush = 'none',
   liner = 'none',
+  presentation: presentationProp,
+  faceShape = 'oval',
+  glasses,
+  glassesColour = '#2B2622',
   size = 120,
   label,
 }: FaceFigureProps) {
   const { colors } = useTheme();
+  const stored = usePersonaStore((st) => st.genderPresentation);
+  const presentation: Presentation = presentationProp ?? (stored === 'masculine' ? 'male' : 'female');
+  const male = presentation === 'male';
+  const hairLength = hairLengthProp ?? (male ? 'short' : 'medium');
   const skin = tone ?? toneFor(seed);
   const hair = HAIR_COLOURS[hairColour as string] ?? (hairColour as string);
   const accent = emphasisColour ?? colors.gold;
@@ -108,15 +125,27 @@ export function FaceFigure({
       accessibilityRole="image"
       accessibilityLabel={label ?? `${hairTexture} ${hairLength} hair`}
     >
+      {/* Shoulders and neck, so the figure reads as a person, not a mask. */}
+      <Path
+        d={male ? 'M8 120 C10 104 30 98 60 98 C90 98 110 104 112 120 Z' : 'M16 120 C18 106 34 100 60 100 C86 100 102 106 104 120 Z'}
+        fill={male ? '#8E9FAE' : '#D8C3B0'}
+      />
+      <Rect x={52} y={84} width={16} height={18} rx={6} fill={skin.shade} />
+
       {/* Hair behind the face. Scaled from the crown so the same silhouette
           reads as short, medium or long without needing three copies. */}
       <G transform={`translate(0 ${24 - 24 * reach}) scale(1 ${reach})`}>
         <Path d={outline} fill={hair} />
       </G>
 
-      {/* Face. */}
-      <Ellipse cx={60} cy={62} rx={26} ry={32} fill={skin.hex} />
-      <Path d="M60 30 a26 32 0 0 0 0 64 z" fill={skin.shade} opacity={0.25} />
+      {/* Ears, then the face in the chosen shape. */}
+      <Ellipse cx={33} cy={64} rx={4} ry={6.5} fill={skin.shade} />
+      <Ellipse cx={87} cy={64} rx={4} ry={6.5} fill={skin.shade} />
+      <Path d={faceOutline(faceShape, presentation)} fill={skin.hex} />
+      {male ? (
+        // A light shadow along the jaw reads as a masculine face at icon size.
+        <Path d="M40 78 Q60 100 80 78 Q72 90 60 91 Q48 90 40 78 Z" fill={skin.shade} opacity={0.35} />
+      ) : null}
 
       {/* Hair front. Without a fringe this is the plain hairline; with one it
           is the fringe itself, which is what makes the eight options look
@@ -134,21 +163,52 @@ export function FaceFigure({
       )}
       {edge ? <Path d={edge} stroke={hair} strokeWidth={5} fill="none" strokeLinecap="round" /> : null}
 
-      {/* Brows. */}
-      <G opacity={shows('brows') ? 1 : 0.5}>
-        <Rect x={42} y={52} width={14} height={shows('brows') ? 3.5 : 2} rx={1.5}
-              fill={shows('brows') ? accent : hair} />
-        <Rect x={64} y={52} width={14} height={shows('brows') ? 3.5 : 2} rx={1.5}
-              fill={shows('brows') ? accent : hair} />
+      {/* Brows: arched and finer for female, straighter and heavier for male. */}
+      <G opacity={shows('brows') ? 1 : 0.85}>
+        <Path
+          d={male ? 'M42 54 Q49 51.5 56 53.5' : 'M42 54 Q49 49.5 56 53'}
+          stroke={shows('brows') ? accent : hair}
+          strokeWidth={male ? 3 : shows('brows') ? 3 : 2}
+          fill="none"
+          strokeLinecap="round"
+        />
+        <Path
+          d={male ? 'M64 53.5 Q71 51.5 78 54' : 'M64 53 Q71 49.5 78 54'}
+          stroke={shows('brows') ? accent : hair}
+          strokeWidth={male ? 3 : shows('brows') ? 3 : 2}
+          fill="none"
+          strokeLinecap="round"
+        />
       </G>
 
-      {/* Eyes. */}
-      <G>
-        <Ellipse cx={49} cy={62} rx={6} ry={shows('eyes') ? 4.5 : 3.5}
-                 fill={shows('eyes') ? accent : colors.textSubtle} opacity={shows('eyes') ? 0.9 : 0.6} />
-        <Ellipse cx={71} cy={62} rx={6} ry={shows('eyes') ? 4.5 : 3.5}
-                 fill={shows('eyes') ? accent : colors.textSubtle} opacity={shows('eyes') ? 0.9 : 0.6} />
-      </G>
+      {/* Eyeshadow sits on the lid, above the eye it frames. */}
+      {shows('eyes') ? (
+        <G opacity={0.75}>
+          <Ellipse cx={49} cy={59} rx={7} ry={3.2} fill={accent} />
+          <Ellipse cx={71} cy={59} rx={7} ry={3.2} fill={accent} />
+        </G>
+      ) : null}
+
+      {/* Eyes: white, iris, pupil, and a lash line. */}
+      {[49, 71].map((cx) => (
+        <G key={cx}>
+          <Ellipse cx={cx} cy={62} rx={5.4} ry={3.3} fill="#FFFFFF" />
+          <Circle cx={cx} cy={62} r={2.5} fill="#5A3E2B" />
+          <Circle cx={cx} cy={62} r={1.1} fill="#1E1612" />
+          <Circle cx={cx + 0.9} cy={61.1} r={0.6} fill="#FFFFFF" />
+          <Path
+            d={`M${cx - 5.6} ${62} Q${cx} ${57.6} ${cx + 5.6} ${62}`}
+            stroke="#2B2622"
+            strokeWidth={male ? 1 : 1.5}
+            fill="none"
+            strokeLinecap="round"
+          />
+        </G>
+      ))}
+
+      {/* Nose. */}
+      <Path d="M60 64 Q57.5 72 59 74 Q61 75 63 73.5" stroke={skin.shade} strokeWidth={1.6}
+            fill="none" strokeLinecap="round" />
 
       {/* Cheeks. A named placement moves and reshapes the zone; the plain
           emphasis keeps the original pair of circles. */}
@@ -180,12 +240,31 @@ export function FaceFigure({
         </G>
       ) : null}
 
-      {/* Lips. */}
-      <Path
-        d="M52 82 q8 -4 16 0 q-8 7 -16 0 z"
-        fill={shows('lips') ? accent : skin.shade}
-        opacity={shows('lips') ? 0.95 : 0.7}
-      />
+      {/* Lips: fuller with a cupid's bow for female, a quieter line for male. */}
+      {male && !shows('lips') ? (
+        <Path d="M53 82 Q60 84.5 67 82" stroke={skin.shade} strokeWidth={2.2} fill="none" strokeLinecap="round" />
+      ) : (
+        <Path
+          d="M51 81.5 Q55 78.5 60 80.5 Q65 78.5 69 81.5 Q60 89 51 81.5 Z"
+          fill={shows('lips') ? accent : '#C47A72'}
+          opacity={shows('lips') ? 0.95 : 0.8}
+        />
+      )}
+
+      {/* Glasses over everything else on the face. */}
+      {glasses ? (
+        <G>
+          <Path d={lensPath(glasses, 49, -1)} stroke={glassesColour} strokeWidth={2.4}
+                fill="rgba(255,255,255,0.22)" strokeLinejoin="round" />
+          <Path d={lensPath(glasses, 71, 1)} stroke={glassesColour} strokeWidth={2.4}
+                fill="rgba(255,255,255,0.22)" strokeLinejoin="round" />
+          <Path d="M57.5 61 Q60 58.5 62.5 61" stroke={glassesColour} strokeWidth={2} fill="none" />
+          <Path d="M38.5 60 L34 59 M81.5 60 L86 59" stroke={glassesColour} strokeWidth={2} strokeLinecap="round" />
+          {glasses === 'browline' ? (
+            <Path d="M39 57 H59 M61 57 H81" stroke={glassesColour} strokeWidth={4.5} strokeLinecap="round" />
+          ) : null}
+        </G>
+      ) : null}
     </Svg>
   );
 }

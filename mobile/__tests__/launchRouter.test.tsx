@@ -33,7 +33,7 @@ jest.mock('../components/ds/AgeGate', () => ({ AgeGate: () => mockLabel('age-gat
 jest.mock('../components/ds/LockScreen', () => ({ LockScreen: () => mockLabel('lock-screen') }));
 jest.mock('../components/ds/WakingScreen', () => ({ WakingScreen: () => mockLabel('waking') }));
 
-import Index from './index';
+import Index from '../app/index';
 
 const checkEligibility = jest.fn(async () => undefined);
 
@@ -101,10 +101,10 @@ describe('launch router after sign-in', () => {
     expect(screen.getByText('redirect:/(tabs)')).toBeTruthy();
   });
 
-  it('sends a signed-out launch to login', () => {
+  it('sends a signed-out launch to the welcome screen', () => {
     signedIn();
     mockState.auth = { isAuthenticated: false, isRestoring: false, user: null };
     render(<Index />);
-    expect(screen.getByText('redirect:/(auth)/login')).toBeTruthy();
+    expect(screen.getByText('redirect:/(auth)/welcome')).toBeTruthy();
   });
 });

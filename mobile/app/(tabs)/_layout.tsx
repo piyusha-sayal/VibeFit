@@ -7,9 +7,9 @@ import { TabBar } from '../../components/ds/TabBar';
 import { useTheme } from '../../theme/ThemeProvider';
 
 /**
- * Five experiences, one route each. scan / results / chat stay as routes so
- * existing links and deep links keep working, but they are reached from Home,
- * Discover and More rather than owning a tab of their own.
+ * Home, Progress, Analyze (scan), Passport and Profile own the tab bar.
+ * discover / create / more / results / chat stay as routes so existing links
+ * and deep links keep working; they are reached from the Home tools grid.
  */
 export default function TabsLayout() {
   const { colors } = useTheme();
@@ -21,9 +21,11 @@ export default function TabsLayout() {
           tabBar={() => null}
         >
           <Tabs.Screen name="index" />
+          <Tabs.Screen name="progress" />
+          <Tabs.Screen name="passport" />
+          <Tabs.Screen name="profile" />
           <Tabs.Screen name="discover" />
           <Tabs.Screen name="create" />
-          <Tabs.Screen name="passport" />
           <Tabs.Screen name="more" />
           <Tabs.Screen name="scan" />
           <Tabs.Screen name="results" />
