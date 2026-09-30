@@ -1,8 +1,8 @@
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Card, EmptyState, LoadingState, SectionHeader, Txt } from '../../../components/ds';
+import { Card, EmptyState, LoadingState, PageHeader, Screen, SectionHeader, Txt } from '../../../components/ds';
 import { SPACE } from '../../../constants/theme';
 import { useSalonGuide } from '../../../hooks/useFace';
 import { useSaveLook } from '../../../hooks/useBeauty';
@@ -22,18 +22,31 @@ export default function SalonGuideScreen() {
   const guide = query.data;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="overline" tone="muted">Salon consultation</Txt>
-      <Txt variant="display" serif style={{ marginTop: 2 }}>{guide.title}</Txt>
+    <Screen>
+      <PageHeader eyebrow="Salon consultation" title={guide.title} />
 
-      <SectionHeader title="Say this" style={{ marginTop: SPACE.xl }} />
-      <Card>
+      {/* Large, high-contrast and legible at arm's length: this is the card a
+          person holds up to their stylist, not one they read themselves. */}
+      <View
+        style={{
+          backgroundColor: colors.text, borderRadius: 24, padding: SPACE.xl,
+        }}
+      >
+        <Txt variant="overline" style={{ color: colors.bg, opacity: 0.7 }}>Show your stylist</Txt>
         {guide.askFor.map((line) => (
-          <Txt key={line} variant="body" style={{ marginBottom: SPACE.sm }}>• {line}</Txt>
+          <Txt
+            key={line}
+            variant="title"
+            serif
+            weight="semibold"
+            style={{ color: colors.bg, marginTop: SPACE.md }}
+          >
+            {line}
+          </Txt>
         ))}
-      </Card>
+      </View>
 
-      <SectionHeader title="Worth knowing" style={{ marginTop: SPACE.xl }} />
+      <SectionHeader title="Worth knowing" style={{ marginTop: SPACE.xxl }} />
       <Card variant="tinted" accent="peach">
         {guide.watchOut.map((line) => (
           <Txt key={line} variant="bodySm" style={{ marginBottom: SPACE.sm }}>• {line}</Txt>
@@ -57,10 +70,6 @@ export default function SalonGuideScreen() {
       </Txt>
 
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xl }}>{guide.disclaimer}</Txt>
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
-});

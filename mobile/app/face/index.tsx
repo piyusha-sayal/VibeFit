@@ -1,48 +1,39 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, LoadingState, ProgressBar, SectionHeader, Txt } from '../../components/ds';
+import {
+  Button, FeatureCard, Hero, LoadingState, PageHeader, ProgressBar, Screen, Section, Txt,
+} from '../../components/ds';
+import { FaceFigure, faceShapeFor } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useFaceProfile } from '../../hooks/useFace';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const TOOLS = [
   {
-    label: 'Face shape report',
-    body: 'Your shape, the measurements behind it, and what it means for styling.',
-    route: '/face/shape',
-    accent: 'gold' as const,
-  },
-  {
     label: 'Feature explorer',
-    body: 'Eyes, brows, lips, cheeks and contrast — confirm each one in a mirror.',
+    body: 'Eyes, brows, lips, cheeks and contrast.',
     route: '/face/features',
-    accent: 'lavender' as const,
   },
   {
     label: 'Hair Studio',
-    body: 'Cuts, fringes, colour and a script for the salon.',
+    body: 'Cuts, fringes, colour and a salon script.',
     route: '/hair',
-    accent: 'peach' as const,
   },
   {
     label: 'Makeup Studio',
-    body: 'Fourteen aesthetics, built around what you confirmed.',
+    body: 'Fourteen aesthetics, built around you.',
     route: '/makeup',
-    accent: 'blush' as const,
   },
   {
     label: 'Accessories',
     body: 'Glasses, earrings, necklines and metals.',
     route: '/accessories',
-    accent: 'sage' as const,
   },
 ];
 
 export default function DiscoverMyFaceScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const profile = useFaceProfile();
 
   const shape = profile.data?.faceShape;
@@ -50,67 +41,65 @@ export default function DiscoverMyFaceScreen() {
   const total = profile.data?.total ?? 0;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Discover My Face</Txt>
-      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
-        Your features as a starting point for styling — never as a score.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Discover My Face"
+        subtitle="Your features as a starting point for styling — never a score."
+      />
 
       {profile.isLoading ? (
         <LoadingState label="Reading your profile…" />
       ) : (
-        <Card variant="tinted" accent="gold" onPress={() => router.push('/face/features' as never)}>
-          <Txt variant="overline" tone="muted">Your face profile</Txt>
-          <Txt variant="title" serif style={{ marginTop: 2 }}>
-            {shape?.value
-              ? `${shape.value.replace('_', ' ')} face shape`
-              : 'Not measured yet'}
-          </Txt>
-          <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-            {shape?.source === 'user'
+        <Hero
+          eyebrow="Your face profile"
+          title={shape?.value ? `${shape.value.replace('_', ' ')} face shape` : 'Not measured yet'}
+          body={
+            shape?.source === 'user'
               ? 'You confirmed this shape.'
               : shape?.source === 'scan'
                 ? 'Measured from your last scan. You can change it.'
-                : 'Run a scan, or choose your shape yourself.'}
-          </Txt>
+                : 'Run a scan, or choose your shape yourself.'
+          }
+          art={<FaceFigure faceShape={faceShapeFor(shape?.value) ?? 'oval'} hairLength="short" seed="face-home" size={88} />}
+          actionLabel={!profile.data?.hasScan ? 'Run an analysis' : undefined}
+          onAction={!profile.data?.hasScan ? () => router.push('/(tabs)/scan' as never) : undefined}
+        />
+      )}
+
+      {!profile.isLoading && (
+        <View style={{ marginTop: SPACE.lg }}>
           <ProgressBar
             value={profile.data?.completion ?? 0}
             label={`${confirmed} of ${total} features known`}
           />
-          {!profile.data?.hasScan && (
+          {!profile.data?.hasScan ? null : (
             <Button
-              label="Run an analysis"
+              label="Open the face shape report"
               variant="secondary"
               style={{ marginTop: SPACE.lg }}
-              onPress={() => router.push('/(tabs)/scan' as never)}
+              onPress={() => router.push('/face/shape' as never)}
             />
           )}
-        </Card>
+        </View>
       )}
 
-      <View style={{ marginTop: SPACE.xxl }}>
-        <SectionHeader title="Explore" />
-        {TOOLS.map((tool) => (
-          <Card
-            key={tool.route}
-            style={{ marginBottom: SPACE.sm }}
-            onPress={() => router.push(tool.route as never)}
-            accessibilityLabel={tool.label}
-          >
-            <Txt variant="heading">{tool.label}</Txt>
-            <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>{tool.body}</Txt>
-          </Card>
-        ))}
-      </View>
+      <Section title="Explore">
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md }}>
+          {TOOLS.map((tool) => (
+            <FeatureCard
+              key={tool.route}
+              title={tool.label}
+              subtitle={tool.body}
+              onPress={() => router.push(tool.route as never)}
+              style={{ flexBasis: '46%', flexGrow: 0 }}
+            />
+          ))}
+        </View>
+      </Section>
 
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xl }}>
-        {profile.data?.disclaimer ??
-          'Face shape is a styling starting point, not a verdict.'}
+        {profile.data?.disclaimer ?? 'Face shape is a styling starting point, not a verdict.'}
       </Txt>
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
-});

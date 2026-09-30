@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Card, Chip, ErrorState, LoadingState, Swatch, Txt } from '../../components/ds';
+import { Card, Chip, ErrorState, LoadingState, PageHeader, Screen, Swatch, Txt } from '../../components/ds';
 import { SPACE } from '../../constants/theme';
 import { useHairColours } from '../../hooks/useFace';
 import { useSaveLook } from '../../hooks/useBeauty';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const LIFT_LABEL: Record<string, string> = {
   none: 'No lightening',
@@ -15,23 +14,22 @@ const LIFT_LABEL: Record<string, string> = {
 };
 
 export default function HairColourScreen() {
-  const { colors } = useTheme();
   const [maxLift, setMaxLift] = useState<string | undefined>();
   const query = useHairColours(maxLift);
   const saveLook = useSaveLook();
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Hair colour</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        {query.data?.seasonLabel
-          ? `Ranked against your ${query.data.seasonLabel} colouring. Every shade stays listed.`
-          : 'Run a colour analysis and these reorder around your season.'}
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Hair colour"
+        subtitle={
+          query.data?.seasonLabel
+            ? `Ranked against your ${query.data.seasonLabel} colouring. Every shade stays listed.`
+            : 'Run a colour analysis and these reorder around your season.'
+        }
+      />
 
-      <Txt variant="overline" tone="muted" style={{ marginTop: SPACE.xl }}>
-        How much processing are you willing to do?
-      </Txt>
+      <Txt variant="overline" tone="muted">How much processing are you willing to do?</Txt>
       <View style={styles.chips}>
         {(['none', 'low', 'medium'] as const).map((lift) => (
           <Chip
@@ -88,12 +86,11 @@ export default function HairColourScreen() {
           ))}
         </View>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   row: { flexDirection: 'row', alignItems: 'center' },
 });

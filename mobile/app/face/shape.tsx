@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import {
-  Button, Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Txt,
+  Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, Screen, SectionHeader,
+  SelectCard, Sheet, Txt,
 } from '../../components/ds';
 import { FaceFigure, faceShapeFor } from '../../components/visual';
-import { PressScale } from '../../components/ds/PressScale';
-import { RADIUS, SPACE } from '../../constants/theme';
+import { SPACE } from '../../constants/theme';
 import { NotFoundError } from '../../hooks/useBeauty';
 import { useFaceProfile, useSetFaceShape } from '../../hooks/useFace';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const MEASUREMENT_LABELS: Record<string, string> = {
   lengthToWidth: 'Length to width',
@@ -26,9 +25,28 @@ function confidenceWords(value: number | null): string {
   return 'Borderline — two shapes are close';
 }
 
+/** A row of shape options, three per row, each shown against its own illustration. */
+function ShapeGrid({
+  options, selected, onSelect,
+}: { options: string[]; selected?: string | null; onSelect: (value: string) => void }) {
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md }}>
+      {options.map((option) => (
+        <SelectCard
+          key={option}
+          title={option.replace('_', ' ')}
+          selected={option === selected}
+          onPress={() => onSelect(option)}
+          art={<FaceFigure faceShape={faceShapeFor(option) ?? 'oval'} hairLength="short" seed="shape" size={64} />}
+          style={{ flexBasis: '31%', flexGrow: 0, alignItems: 'center' }}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function FaceShapeReportScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const profile = useFaceProfile();
   const setShape = useSetFaceShape();
   const [picking, setPicking] = useState(false);
@@ -43,61 +61,39 @@ export default function FaceShapeReportScreen() {
 
   if (!shape?.value) {
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-        <Txt variant="display" serif>Face shape</Txt>
+      <Screen>
+        <PageHeader title="Face shape" />
         <EmptyState
           title="No shape yet"
           body="Run an analysis and we will measure it, or choose the shape you recognise below. We will not guess one for you."
-        />
-        <Button
-          label="Run an analysis"
-          style={{ marginTop: SPACE.lg }}
-          onPress={() => router.push('/(tabs)/scan' as never)}
+          actionLabel="Run an analysis"
+          onAction={() => router.push('/(tabs)/scan' as never)}
         />
         <SectionHeader title="Or choose your own" style={{ marginTop: SPACE.xxl }} />
-        <View style={styles.shapeGrid}>
-          {(shape?.options ?? []).map((option) => (
-            <PressScale
-              key={option}
-              onPress={() => setShape.mutate(option)}
-              accessibilityLabel={`Choose ${option.replace('_', ' ')}`}
-              containerStyle={styles.shapeCell}
-              style={[styles.shapeTile, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            >
-              <FaceFigure faceShape={faceShapeFor(option) ?? 'oval'} hairLength="short" seed="shape" size={72} />
-              <Txt variant="caption" weight="semibold" style={{ textTransform: 'capitalize' }}>
-                {option.replace('_', ' ')}
-              </Txt>
-            </PressScale>
-          ))}
-        </View>
-      </ScrollView>
+        <ShapeGrid options={shape?.options ?? []} selected={null} onSelect={(value) => setShape.mutate(value)} />
+      </Screen>
     );
   }
 
   const measurements = Object.entries(shape.measurements ?? {});
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <View style={styles.reportHead}>
+    <Screen>
+      <PageHeader title="Face shape report" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.md }}>
         <View style={{ flex: 1 }}>
-          <Txt variant="overline" tone="muted">Face shape report</Txt>
-          <Txt variant="display" serif style={{ marginTop: 2, textTransform: 'capitalize' }}>
+          <Txt variant="h1" serif style={{ textTransform: 'capitalize' }}>
             {shape.value.replace('_', ' ')}
           </Txt>
+          <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs }}>{guide?.summary}</Txt>
         </View>
         <FaceFigure faceShape={faceShapeFor(shape.value) ?? 'oval'} hairLength="short" seed="shape" size={96} />
       </View>
-      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs }}>
-        {guide?.summary}
-      </Txt>
 
       <Card variant="tinted" accent="gold" style={{ marginTop: SPACE.xl }}>
         <Txt variant="overline" tone="muted">How we got here</Txt>
         <Txt variant="body" style={{ marginTop: SPACE.xs }}>
-          {shape.source === 'user'
-            ? 'You chose this shape.'
-            : confidenceWords(shape.confidence)}
+          {shape.source === 'user' ? 'You chose this shape.' : confidenceWords(shape.confidence)}
         </Txt>
         {shape.alternate && shape.source !== 'user' && (
           <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
@@ -111,8 +107,9 @@ export default function FaceShapeReportScreen() {
         )}
         {measurements.length > 0 && (
           <View style={{ marginTop: SPACE.lg }}>
+            <Txt variant="label" tone="muted" weight="semibold">Your proportions</Txt>
             {measurements.map(([key, value]) => (
-              <View key={key} style={styles.row}>
+              <View key={key} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACE.xs }}>
                 <Txt variant="bodySm" tone="muted">{MEASUREMENT_LABELS[key] ?? key}</Txt>
                 <Txt variant="bodySm">{value.toFixed(2)}</Txt>
               </View>
@@ -161,40 +158,22 @@ export default function FaceShapeReportScreen() {
       )}
 
       <SectionHeader title="Not your shape?" style={{ marginTop: SPACE.xxl }} />
-      {picking ? (
-        <View style={styles.chips}>
-          {shape.options.map((option) => (
-            <Chip
-              key={option}
-              label={option.replace('_', ' ')}
-              selected={option === shape.value}
-              onPress={() => {
-                setShape.mutate(option);
-                setPicking(false);
-              }}
-            />
-          ))}
-        </View>
-      ) : (
-        <Button label="Choose a different shape" variant="secondary" onPress={() => setPicking(true)} />
-      )}
+      <Button label="Choose a different shape" variant="secondary" onPress={() => setPicking(true)} />
+
+      <Sheet visible={picking} onClose={() => setPicking(false)} title="Choose your face shape">
+        <ShapeGrid
+          options={shape.options}
+          selected={shape.value}
+          onSelect={(value) => {
+            setShape.mutate(value);
+            setPicking(false);
+          }}
+        />
+      </Sheet>
 
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xl }}>
         {profile.data?.disclaimer}
       </Txt>
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACE.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
-  shapeGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: SPACE.md },
-  shapeCell: { width: '33.33%', paddingHorizontal: SPACE.xs },
-  shapeTile: {
-    alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, borderRadius: RADIUS.lg,
-    paddingVertical: SPACE.sm,
-  },
-  reportHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
-});

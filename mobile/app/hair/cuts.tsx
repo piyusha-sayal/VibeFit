@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, Chip, EmptyState, ErrorState, LoadingState, Txt } from '../../components/ds';
+import {
+  Card, Chip, EmptyState, ErrorState, LoadingState, PageHeader, Screen, Txt,
+} from '../../components/ds';
 import { FaceFigure, INSPIRATION_NOTE } from '../../components/visual';
 import { silhouetteFor } from '../../components/visual/shapes';
 import { SPACE } from '../../constants/theme';
 import { useHairstyles } from '../../hooks/useFace';
 import type { HairFilters } from '../../services/faceService';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const TEXTURES = ['straight', 'wavy', 'curly', 'coily'] as const;
 const LENGTHS = ['short', 'medium', 'long'] as const;
@@ -21,22 +22,23 @@ function toggle<T>(current: T | undefined, next: T): T | undefined {
 
 export default function HaircutFinderScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const [filters, setFilters] = useState<HairFilters>({});
   const query = useHairstyles(filters);
 
   const set = (patch: Partial<HairFilters>) => setFilters((f) => ({ ...f, ...patch }));
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Haircut finder</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        {query.data?.faceShape
-          ? `Ordered for a ${query.data.faceShape.replace('_', ' ')} face shape. Nothing here is off limits.`
-          : 'Showing the full library. Add a face shape to order it for you.'}
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Haircut finder"
+        subtitle={
+          query.data?.faceShape
+            ? `Ordered for a ${query.data.faceShape.replace('_', ' ')} face shape. Nothing here is off limits.`
+            : 'Showing the full library. Add a face shape to order it for you.'
+        }
+      />
 
-      <View style={{ marginTop: SPACE.xl }}>
+      <View>
         <Txt variant="overline" tone="muted">Texture</Txt>
         <View style={styles.chips}>
           {TEXTURES.map((t) => (
@@ -149,12 +151,11 @@ export default function HaircutFinderScreen() {
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.lg }}>
         {INSPIRATION_NOTE} {query.data?.disclaimer}
       </Txt>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
   row: { flexDirection: 'row', alignItems: 'flex-start' },
