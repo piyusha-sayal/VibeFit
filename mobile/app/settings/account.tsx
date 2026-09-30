@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, SectionHeader, Txt } from '../../components/ds';
+import { Button, Card, PageHeader, SectionHeader, Txt } from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useAuthStore } from '../../store/authStore';
@@ -15,6 +16,7 @@ type Notice = { tone: 'success' | 'danger'; text: string } | null;
 export default function AccountScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const hasPassword = canChangePassword();
 
@@ -69,12 +71,15 @@ export default function AccountScreen() {
   ) : null);
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}
-                keyboardShouldPersistTaps="handled">
-      <Txt variant="display" serif accessibilityRole="header">Profile and password</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        {user?.email ? `Signed in as ${user.email}` : 'Guest session'}
-      </Txt>
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={[styles.scroll, { paddingTop: insets.top + SPACE.lg }]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <PageHeader
+        title="Profile and password"
+        subtitle={user?.email ? `Signed in as ${user.email}` : 'Guest session'}
+      />
 
       <View style={styles.section}>
         <SectionHeader title="Your name" />
@@ -140,12 +145,22 @@ export default function AccountScreen() {
       </View>
 
       <Button label="Done" variant="ghost" style={{ marginTop: SPACE.xl }} onPress={() => router.back()} />
+
+      <View style={styles.section}>
+        <SectionHeader title="Leaving" />
+        <Button
+          label="Delete account"
+          variant="destructive"
+          style={{ marginTop: SPACE.sm }}
+          onPress={() => router.push('/settings/delete-account' as never)}
+        />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
+  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl * 2 },
   section: { marginTop: SPACE.xxl },
   input: {
     minHeight: 48,

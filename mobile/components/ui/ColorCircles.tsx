@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface Props {
   colors: string[];
@@ -7,6 +8,9 @@ interface Props {
 }
 
 export function ColorCircles({ colors, size = 46 }: Props) {
+  // The border and rim light come from the active theme, so a stack of
+  // swatches reads as inset on either ground rather than always on black.
+  const { colors: theme } = useTheme();
   const overlap = Math.round(size * 0.26);
 
   return (
@@ -21,6 +25,8 @@ export function ColorCircles({ colors, size = 46 }: Props) {
               height: size,
               borderRadius: size / 2,
               backgroundColor: color,
+              borderColor: theme.bg,
+              shadowColor: theme.gold,
               marginLeft: i > 0 ? -overlap : 0,
               zIndex: colors.length - i,
             },
@@ -38,8 +44,6 @@ const styles = StyleSheet.create({
   },
   circle: {
     borderWidth: 2,
-    borderColor: '#0c0a07',
-    shadowColor: '#fff',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.18,
     shadowRadius: 0.5,

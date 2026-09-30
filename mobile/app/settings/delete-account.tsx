@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, SectionHeader, Txt } from '../../components/ds';
+import { Button, Card, PageHeader, SectionHeader, Txt } from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useAuthStore } from '../../store/authStore';
@@ -25,6 +26,7 @@ const GOES = [
 export default function DeleteAccountScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const logout = useAuthStore((s) => s.logout);
 
   const [phrase, setPhrase] = useState('');
@@ -84,11 +86,12 @@ export default function DeleteAccountScreen() {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Delete account</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        This is permanent. Nothing here can be restored afterwards.
-      </Txt>
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={[styles.scroll, { paddingTop: insets.top + SPACE.lg }]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <PageHeader title="Delete account" subtitle="This is permanent. Nothing here can be restored afterwards." />
 
       <View style={styles.section}>
         <SectionHeader title="What gets deleted" />
@@ -154,7 +157,7 @@ export default function DeleteAccountScreen() {
 
         <Button
           label="Delete my account"
-          variant="secondary"
+          variant="destructive"
           disabled={!ready}
           loading={busy}
           style={{ marginTop: SPACE.xl }}
@@ -172,7 +175,7 @@ export default function DeleteAccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
+  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl * 2 },
   section: { marginTop: SPACE.xxl },
   input: {
     minHeight: 48,

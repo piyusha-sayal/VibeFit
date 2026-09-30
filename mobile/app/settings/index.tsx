@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, Chip, ErrorState, LoadingState, SectionHeader, Txt } from '../../components/ds';
+import {
+  Card, ErrorState, ListGroup, ListRow, LoadingState, OptionRow, PageHeader, Screen, Txt,
+} from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { useSettings, useUpdateSettings } from '../../hooks/useBeauty';
 import { useAuthStore } from '../../store/authStore';
@@ -60,98 +62,57 @@ export default function SettingsScreen() {
     update.mutate({ reducedMotion: next });
   };
 
+  const confirmSignOut = () => Alert.alert(
+    'Sign out?',
+    'Your saved looks and analyses stay on your account.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: () => logout() },
+    ],
+  );
+
   if (settings.isLoading) return <LoadingState label="Loading settings…" />;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Settings</Txt>
+    <Screen>
+      <PageHeader title="Settings" />
 
       {settings.isError ? (
         <ErrorState message="Could not load your settings." onRetry={() => settings.refetch()} />
       ) : null}
 
-      {/* ------------------------------------------------------------ account */}
-      <View style={styles.section}>
-        <SectionHeader title="Account" />
-        <Card>
-          <Txt variant="bodySm" tone="muted">Signed in as</Txt>
-          <Txt variant="body" weight="semibold" style={{ marginTop: 2 }}>
-            {user?.email || user?.name || 'Guest session'}
-          </Txt>
-          {!user?.email ? (
-            <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xs }}>
-              A guest session is stored on this device only. Create an account to keep your passport.
-            </Txt>
-          ) : null}
-        </Card>
-        <Button
-          label="Profile and password"
-          variant="secondary"
-          style={{ marginTop: SPACE.md }}
-          onPress={() => router.push('/settings/account' as never)}
-        />
-        <Button
-          label="Sign out"
-          variant="secondary"
-          style={{ marginTop: SPACE.sm }}
-          onPress={() =>
-            Alert.alert('Sign out?', 'Your saved looks and analyses stay on your account.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign out', style: 'destructive', onPress: () => logout() },
-            ])
-          }
-        />
-        <Button
-          label="Delete account"
-          variant="ghost"
-          style={{ marginTop: SPACE.sm }}
-          onPress={() => router.push('/settings/delete-account' as never)}
-        />
-      </View>
-
-      {/* --------------------------------------------------------- appearance */}
-      <View style={styles.section}>
-        <SectionHeader title="Appearance" />
-        <View style={styles.wrap}>
-          {THEMES.map((t) => (
-            <Chip
-              key={t.key}
-              label={t.label}
-              accent="lavender"
-              selected={preference === t.key}
-              onPress={() => chooseTheme(t.key)}
-            />
-          ))}
-        </View>
-        <Card style={{ marginTop: SPACE.md }}>
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Txt variant="body">Reduce motion</Txt>
-              <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                Removes screen transitions and press animations. Follows your system setting too.
-              </Txt>
-            </View>
+      {/* ---------------------------------------------------------- appearance */}
+      <ListGroup label="Appearance">
+        {THEMES.map((t) => (
+          <OptionRow
+            key={t.key}
+            label={t.label}
+            selected={preference === t.key}
+            onPress={() => chooseTheme(t.key)}
+          />
+        ))}
+      </ListGroup>
+      <ListGroup>
+        <ListRow
+          title="Reduce motion"
+          subtitle="Removes screen transitions and press animations. Follows your system setting too."
+          right={(
             <Switch
               value={reducedMotion}
               onValueChange={toggleMotion}
               accessibilityLabel="Reduce motion"
               trackColor={{ true: colors.sage, false: colors.surfaceAlt }}
             />
-          </View>
-        </Card>
-        <Card style={{ marginTop: SPACE.md }}>
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Txt variant="body">
-                {`Unlock with ${biometrics.labelFor(lockable?.kind ?? 'none')}`}
-              </Txt>
-              <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                {lockable?.available
-                  ? 'Asks for it each time the app starts. Your session stays '
-                    + 'signed in; this keeps another person from opening it.'
-                  : lockable?.reason ?? 'Checking what this device supports…'}
-              </Txt>
-            </View>
+          )}
+        />
+        <ListRow
+          title={`Unlock with ${biometrics.labelFor(lockable?.kind ?? 'none')}`}
+          subtitle={lockable?.available
+            ? 'Asks for it each time the app starts. Your session stays signed in; '
+              + 'this keeps another person from opening it.'
+            : lockable?.reason ?? 'Checking what this device supports…'}
+          last
+          right={(
             <Switch
               value={lockOn}
               onValueChange={(next) => { void toggleLock(next); }}
@@ -159,62 +120,57 @@ export default function SettingsScreen() {
               accessibilityLabel={`Unlock with ${biometrics.labelFor(lockable?.kind ?? 'none')}`}
               trackColor={{ true: colors.sage, false: colors.surfaceAlt }}
             />
-          </View>
-          {lockError ? (
-            <Txt variant="caption" tone="danger" live="assertive"
-                 style={{ marginTop: SPACE.sm }}>
-              {lockError}
-            </Txt>
-          ) : null}
-        </Card>
-      </View>
+          )}
+        />
+      </ListGroup>
+      {lockError ? <ErrorState message={lockError} /> : null}
 
       {/* ------------------------------------------------------ personalisation */}
       <View style={styles.section}>
-        <SectionHeader title="Personalisation" />
         <Card>
-          <Txt variant="bodySm" tone="muted">Country or region</Txt>
-          <TextInput
-            value={country}
-            onChangeText={setCountry}
-            onBlur={() => update.mutate({ country: country.trim() || null })}
-            placeholder="Used only to order wardrobe suggestions"
-            placeholderTextColor={colors.textSubtle}
-            accessibilityLabel="Country or region"
-            style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surfaceAlt }]}
-          />
-          <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.sm }}>
-            Every wardrobe stays available whatever you put here. Nothing is locked by region, and
-            nothing about you is inferred from it.
-          </Txt>
+          <View style={{ marginBottom: SPACE.sm }}>
+            <TextInput
+              value={country}
+              onChangeText={setCountry}
+              onBlur={() => update.mutate({ country: country.trim() || null })}
+              placeholder="Country or region — used only to order wardrobe suggestions"
+              placeholderTextColor={colors.textSubtle}
+              accessibilityLabel="Country or region"
+              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surfaceAlt }]}
+            />
+          </View>
         </Card>
-        <Button
-          label="Styling preferences"
-          variant="secondary"
-          style={{ marginTop: SPACE.md }}
-          onPress={() => router.push('/style' as never)}
-        />
       </View>
+      <ListGroup>
+        <ListRow
+          title="Styling preferences"
+          onPress={() => router.push('/style' as never)}
+          last
+        />
+      </ListGroup>
 
-      {/* ------------------------------------------------------------ privacy */}
-      <View style={styles.section}>
-        <SectionHeader title="Photos and privacy" />
-        <Card>
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Txt variant="body">Reuse my photo for new analyses</Txt>
-              <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                {retention.storageAvailable
-                  ? 'Off by default. With it off, every analysis needs a fresh photo, which is '
-                    + 'never kept beyond the scan itself.'
-                  : 'Unavailable on this version: no photograph is kept, so there is nothing to '
-                    + 'reuse. Every analysis uses a fresh photo, which is deleted when it finishes.'}
-              </Txt>
-            </View>
+      {/* -------------------------------------------------------------- account */}
+      <ListGroup label="Account">
+        <ListRow
+          title={user?.email || user?.name || 'Guest session'}
+          subtitle={!user?.email
+            ? 'Stored on this device only. Create an account to keep your passport.'
+            : 'Signed in'}
+        />
+        <ListRow title="Profile and password" onPress={() => router.push('/settings/account' as never)} />
+        <ListRow title="Sign out" onPress={confirmSignOut} />
+        <ListRow title="Delete account" danger last onPress={() => router.push('/settings/delete-account' as never)} />
+      </ListGroup>
+
+      {/* -------------------------------------------------------------- privacy */}
+      <ListGroup label="Privacy">
+        <ListRow
+          title="Reuse my photo for new analyses"
+          subtitle={retention.storageAvailable
+            ? 'Off by default. Every analysis needs a fresh photo unless this is on.'
+            : 'Unavailable on this version — no photograph is ever kept.'}
+          right={(
             <Switch
-              // What is in effect, not what is stored. The server refuses to
-              // let reuse outlive retention, so a switch reading the raw flag
-              // could show "on" and then silently revert.
               value={retention.reuseOn}
               disabled={!retention.reuseEnabled}
               onValueChange={(next) => update.mutate({ photoReuseConsent: next })}
@@ -223,60 +179,39 @@ export default function SettingsScreen() {
                 : 'Unavailable because no photograph is stored'}
               trackColor={{ true: colors.sage, false: colors.surfaceAlt }}
             />
-          </View>
-        </Card>
-        <Card variant="outlined" style={{ marginTop: SPACE.md }}>
-          <Txt variant="bodySm" tone="muted">
-            MyLookFit does not request body photographs, does not infer ethnicity, nationality or any
-            other personal attribute from a photo, and does not score appearance.
-          </Txt>
-        </Card>
-        <Button
-          label="Photographs, consent and your data"
-          style={{ marginTop: SPACE.md }}
-          onPress={() => router.push('/settings/privacy' as never)}
+          )}
         />
-        <Button
-          label="Manage analyses"
-          variant="secondary"
-          style={{ marginTop: SPACE.sm }}
-          onPress={() => router.push('/(tabs)/results' as never)}
-        />
-      </View>
+        <ListRow title="Photographs, consent and your data" onPress={() => router.push('/settings/privacy' as never)} />
+        <ListRow title="Manage analyses" onPress={() => router.push('/(tabs)/results' as never)} last />
+      </ListGroup>
+      <Card variant="outlined" style={styles.notice}>
+        <Txt variant="bodySm" tone="muted">
+          MyLookFit does not request body photographs, does not infer ethnicity, nationality or any
+          other personal attribute from a photo, and does not score appearance.
+        </Txt>
+      </Card>
 
-      {/* --------------------------------------------------------------- help */}
-      <View style={styles.section}>
-        <SectionHeader title="Help" />
-        <Button label="Photo guidelines and FAQ" variant="secondary" onPress={() => router.push('/settings/help' as never)} />
-        <Button
-          label="Privacy policy"
-          variant="ghost"
-          style={{ marginTop: SPACE.sm }}
-          onPress={() => router.push('/settings/legal?doc=privacy' as never)}
-        />
-        <Button
-          label="Terms of service"
-          variant="ghost"
-          style={{ marginTop: SPACE.xs }}
-          onPress={() => router.push('/settings/legal?doc=terms' as never)}
-        />
-      </View>
+      {/* ------------------------------------------------------------ help/legal */}
+      <ListGroup label="Help">
+        <ListRow title="Photo guidelines and FAQ" onPress={() => router.push('/settings/help' as never)} last />
+      </ListGroup>
+      <ListGroup label="Legal">
+        <ListRow title="Privacy policy" onPress={() => router.push('/settings/legal?doc=privacy' as never)} />
+        <ListRow title="Terms of service" onPress={() => router.push('/settings/legal?doc=terms' as never)} last />
+      </ListGroup>
 
       {update.isError ? (
         <ErrorState message="That change did not save. It is still applied on this device." />
       ) : null}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
-  section: { marginTop: SPACE.xxl },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.md },
+  section: { marginBottom: SPACE.xl },
+  notice: { marginBottom: SPACE.xl },
   input: {
     minHeight: 48,
-    marginTop: SPACE.sm,
     borderWidth: StyleSheet.hairlineWidth * 2,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACE.lg,

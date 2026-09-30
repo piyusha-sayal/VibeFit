@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  Button, Card, ErrorState, LoadingState, SectionHeader, Txt,
+  Button, Card, ErrorState, LoadingState, PageHeader, SectionHeader, Txt,
 } from '../../components/ds';
 import { SPACE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -25,6 +26,7 @@ function whenTaken(iso: string | null): string {
 export default function PrivacyScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [photos, setPhotos] = useState<PhotoList | null>(null);
   const [consent, setConsentState] = useState<PhotoConsent | null>(null);
@@ -134,13 +136,10 @@ export default function PrivacyScreen() {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, { paddingTop: insets.top + SPACE.lg }]}
     >
-      <Txt variant="display" serif>Privacy</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        Your photographs, what we keep, and how to take it all back.
-      </Txt>
-      <Txt variant="bodySm" style={{ marginTop: SPACE.md }}>{retention.summary}</Txt>
+      <PageHeader title="Privacy" subtitle="Your photographs, what we keep, and how to take it all back." />
+      <Txt variant="bodySm">{retention.summary}</Txt>
 
       {error ? <ErrorState message={error} onRetry={load} /> : null}
 
@@ -303,7 +302,7 @@ export default function PrivacyScreen() {
           </Txt>
           <Button
             label="Delete my account"
-            variant="secondary"
+            variant="destructive"
             style={{ marginTop: SPACE.md }}
             onPress={() => router.push('/settings/delete-account' as never)}
           />
@@ -314,7 +313,7 @@ export default function PrivacyScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
+  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl * 2 },
   section: { marginTop: SPACE.xxl },
   rowBetween: {
     flexDirection: 'row', alignItems: 'center',

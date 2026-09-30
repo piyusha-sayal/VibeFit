@@ -73,6 +73,7 @@ export default function RegisterScreen() {
                 placeholderTextColor={C.textSubtle}
                 autoCapitalize="words"
                 autoCorrect={false}
+                accessibilityLabel="Name"
               />
             </View>
 
@@ -87,6 +88,7 @@ export default function RegisterScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                accessibilityLabel="Email"
               />
             </View>
 
@@ -96,6 +98,7 @@ export default function RegisterScreen() {
                 value={password}
                 onChangeText={setPassword}
                 placeholder="••••••••"
+                accessibilityLabel="Password"
               />
             </View>
 
@@ -105,6 +108,7 @@ export default function RegisterScreen() {
                 value={confirm}
                 onChangeText={setConfirm}
                 placeholder="••••••••"
+                accessibilityLabel="Confirm password"
               />
             </View>
 

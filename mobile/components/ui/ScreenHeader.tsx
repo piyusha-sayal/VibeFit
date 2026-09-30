@@ -23,7 +23,9 @@ export function ScreenHeader({ eyebrow, title, right, style }: Props) {
         <Text style={styles.backArrow}>←</Text>
       </TouchableOpacity>
       <View style={styles.headerText}>
-        <Lbl>{eyebrow}</Lbl>
+        {/* Gold, not the muted grey Lbl otherwise carries — the eyebrow above
+            a screen title is the one label meant to read as an accent. */}
+        <Lbl style={{ color: C.gold }}>{eyebrow}</Lbl>
         <Text style={styles.title}>{title}</Text>
       </View>
       {right && <View style={styles.right}>{right}</View>}

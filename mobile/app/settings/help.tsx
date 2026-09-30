@@ -1,7 +1,8 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, SectionHeader, Txt } from '../../components/ds';
+import { Card, PageHeader, SectionHeader, Txt } from '../../components/ds';
 import { SPACE } from '../../constants/theme';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -45,9 +46,13 @@ const SECTIONS = [
 
 export default function HelpScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Help</Txt>
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={[styles.scroll, { paddingTop: insets.top + SPACE.lg }]}
+    >
+      <PageHeader title="Help" />
       {SECTIONS.map((section) => (
         <View key={section.title} style={styles.section}>
           <SectionHeader title={section.title} />
@@ -63,6 +68,6 @@ export default function HelpScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
+  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl * 2 },
   section: { marginTop: SPACE.xxl },
 });

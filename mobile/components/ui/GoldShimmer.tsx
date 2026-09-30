@@ -3,6 +3,7 @@ import { Animated, Text, StyleSheet, TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { FONTS } from '../../constants/fonts';
+import { useLegacyTheme, type LegacyPalette } from '../../theme/legacy';
 
 interface Props {
   children: string;
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export function GoldShimmer({ children, style }: Props) {
+  const { C } = useLegacyTheme();
+  const styles = makeStyles(C);
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -39,7 +42,10 @@ export function GoldShimmer({ children, style }: Props) {
         ]}
       >
         <LinearGradient
-          colors={['#c9a87c', '#f0dcb0', '#c9a87c', '#a87d4c', '#c9a87c']}
+          // A sheen across the theme's own gold, not a fixed hex: the highlight
+          // is the accent faded toward transparent and back, so it reads
+          // correctly against either theme's surface.
+          colors={[C.gold, C.goldDim, C.gold, C.goldDim, C.gold]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={StyleSheet.absoluteFillObject}
@@ -49,10 +55,10 @@ export function GoldShimmer({ children, style }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: LegacyPalette) => StyleSheet.create({
   text: {
     fontFamily: FONTS.serif,
     fontSize: 22,
-    color: '#c9a87c',
+    color: C.gold,
   },
 });
