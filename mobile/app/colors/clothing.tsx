@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
+import {
+  Card, Chip, EmptyState, ErrorState, LoadingState, PageHeader, Screen, SectionHeader, Swatch, Txt,
+} from '../../components/ds';
 import { SPACE } from '../../constants/theme';
 import { NotFoundError, useColorReport } from '../../hooks/useBeauty';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -37,15 +39,15 @@ export default function ClothingColoursScreen() {
 
   if (report.error instanceof NotFoundError) {
     return (
-      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-        <Txt variant="title" serif>Clothing colours</Txt>
+      <Screen>
+        <PageHeader title="Clothing colours" />
         <EmptyState
           title="No palette yet"
           body="Garment advice is only useful once we know which colours are yours."
           actionLabel="Run an analysis"
           onAction={() => router.push('/(tabs)/scan' as never)}
         />
-      </ScrollView>
+      </Screen>
     );
   }
 
@@ -61,12 +63,11 @@ export default function ClothingColoursScreen() {
   const ideas = selected.group === 'Indian' ? report.data.garments.indian : report.data.garments.global;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="title" serif>Clothing colours</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.lg }}>
-        The same season, applied to what you actually wear. Every wardrobe here draws on one palette —
-        there is no separate set of seasons by region.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Clothing colours"
+        subtitle="The same season, applied to what you actually wear. Every wardrobe here draws on one palette — there is no separate set of seasons by region."
+      />
 
       {(['Indian', 'Global'] as const).map((group) => (
         <View key={group} style={{ marginBottom: SPACE.lg }}>
@@ -119,12 +120,11 @@ export default function ClothingColoursScreen() {
           </Card>
         ))}
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
   center: { flex: 1, justifyContent: 'center' },
   section: { marginTop: SPACE.xxl },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },

@@ -2,7 +2,9 @@ import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, EmptyState, ErrorState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
+import {
+  Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, Screen, SectionHeader, Swatch, Txt,
+} from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { NotFoundError, useColorReport } from '../../hooks/useBeauty';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -43,8 +45,8 @@ export default function ColorReportScreen() {
 
   if (report.error instanceof NotFoundError) {
     return (
-      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-        <Txt variant="display" serif>My colour report</Txt>
+      <Screen>
+        <PageHeader title="My colour report" />
         <EmptyState
           title="No analysis to report on"
           body="Either you have not scanned yet, or the last scan did not find a face clearly enough to read colour from. Both are fixable in a minute."
@@ -56,7 +58,7 @@ export default function ColorReportScreen() {
             For the best reading: daylight, no filter, hair back, no makeup on the cheeks, camera at eye level.
           </Txt>
         </Card>
-      </ScrollView>
+      </Screen>
     );
   }
 
@@ -75,12 +77,10 @@ export default function ColorReportScreen() {
   const wasEstimated = data.limitations.some((l) => l.toLowerCase().includes('predates'));
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="overline" tone="muted">Personal colour</Txt>
-      <Txt variant="display" serif style={{ marginTop: SPACE.xs }}>{data.label}</Txt>
-      <Txt variant="body" tone="muted" style={{ marginTop: SPACE.sm }}>{data.summary}</Txt>
+    <Screen>
+      <PageHeader eyebrow="Personal colour" title={data.label} subtitle={data.summary} />
 
-      <Card variant="tinted" accent="gold" style={{ marginTop: SPACE.xl }}>
+      <Card variant="tinted" accent="gold">
         <Txt variant="bodySm" weight="semibold">{confidence.label}</Txt>
         <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>{confidence.note}</Txt>
       </Card>
@@ -193,12 +193,11 @@ export default function ColorReportScreen() {
           onPress={() => router.push('/(tabs)/scan' as never)}
         />
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
   center: { flex: 1, justifyContent: 'center' },
   section: { marginTop: SPACE.xxl },
   measureRow: {

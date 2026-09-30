@@ -3,12 +3,16 @@ import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import {
-  Button, Card, Chip, EmptyState, ErrorState, LoadingState, ProgressBar, SectionHeader, Txt,
+  Button, Card, Chip, EmptyState, ErrorState, ListGroup, ListRow, LoadingState, SectionHeader, Txt,
 } from '../../components/ds';
+import { ProgressRing } from '../../components/ds/ProgressRing';
 import { RADIUS, SPACE } from '../../constants/theme';
 import {
   useCreateGoal, useDeleteLook, useGoals, useLooks, usePassport, useUpdateGoal, useUpdateLook,
 } from '../../hooks/useBeauty';
+import { useFaceProfile } from '../../hooks/useFace';
+import type { PassportAttribute } from '../../services/beautyService';
+import type { FaceAttribute } from '../../services/faceService';
 import { LookSwatches } from '../../components/look';
 import { useCollections } from '../../hooks/useLook';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -30,6 +34,62 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
+/** One row in a passport section: a known value, or a muted "not yet" state. */
+interface PassportRow {
+  key: string;
+  title: string;
+  present: boolean;
+  value?: string;
+  detail?: string | null;
+  route?: string;
+  actionLabel?: string;
+  actionRoute?: string;
+}
+
+function fromAttribute(attr: PassportAttribute): PassportRow {
+  return {
+    key: attr.key,
+    title: attr.label,
+    present: attr.status === 'present',
+    value: attr.status === 'present'
+      ? (Array.isArray(attr.value) ? attr.value.slice(0, 3).join(', ') : attr.value ?? undefined)
+      : undefined,
+    detail: attr.detail,
+    route: attr.route,
+    actionLabel: attr.action?.label,
+    actionRoute: attr.action?.route,
+  };
+}
+
+/** Face features beyond the core passport attributes — read straight from the shared face profile. */
+function fromFaceAttribute(attr: FaceAttribute): PassportRow {
+  const present = !!attr.value;
+  return {
+    key: attr.key,
+    title: attr.label,
+    present,
+    value: present ? (attr.valueLabel ?? attr.value ?? undefined) : undefined,
+    route: '/face/features',
+    actionLabel: `Discover your ${attr.label.toLowerCase()}`,
+    actionRoute: '/face/features',
+  };
+}
+
+const FACE_EXTRA_KEYS = ['brow_shape', 'lip_shape', 'cheek_contour'];
+
+/** The passport, grouped the way a stylist would read it. */
+const PASSPORT_SECTIONS: { key: string; label: string; keys: string[] }[] = [
+  { key: 'colour', label: 'Colour', keys: ['personal_colour', 'undertone'] },
+  { key: 'face', label: 'Face', keys: ['face_shape', 'eye_shape'] },
+  { key: 'hair', label: 'Hair', keys: ['hair_type', 'hair_length'] },
+  {
+    key: 'style',
+    label: 'Style',
+    keys: ['body_type', 'aesthetics', 'fit_preference', 'silhouettes', 'cultural_preferences'],
+  },
+  { key: 'makeup', label: 'Makeup', keys: ['makeup_experience', 'lipstick_palette'] },
+];
+
 export default function PassportScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -38,6 +98,7 @@ export default function PassportScreen() {
   const [goalTitle, setGoalTitle] = useState('');
 
   const passport = usePassport();
+  const faceProfile = useFaceProfile();
   const looks = useLooks(lookFilter ? { status: lookFilter } : undefined);
   const goals = useGoals();
   const updateLook = useUpdateLook();
@@ -56,6 +117,38 @@ export default function PassportScreen() {
 
   const data = passport.data;
 
+  const attrByKey = new Map(data.attributes.map((attr) => [attr.key, attr]));
+  const faceExtras = (faceProfile.data?.attributes ?? [])
+    .filter((attr) => FACE_EXTRA_KEYS.includes(attr.key));
+  const grouped = new Set(PASSPORT_SECTIONS.flatMap((section) => section.keys));
+
+  const sections = PASSPORT_SECTIONS.map((section) => {
+    const rows = section.keys
+      .map((key) => attrByKey.get(key))
+      .filter((attr): attr is PassportAttribute => !!attr)
+      .map(fromAttribute);
+    if (section.key === 'face') rows.push(...faceExtras.map(fromFaceAttribute));
+    if (section.key === 'hair' && rows.length) {
+      rows.push(
+        {
+          key: 'hair_cuts', title: 'Recommended cuts', present: true,
+          detail: 'Styles that work with your texture and length.', route: '/hair/cuts',
+        },
+        {
+          key: 'hair_colour', title: 'Hair colour ideas', present: true,
+          detail: 'Directions to take to a salon, from your own season.', route: '/hair/colour',
+        },
+      );
+    }
+    return { key: section.key, label: section.label, rows };
+  }).filter((section) => section.rows.length > 0);
+
+  // Any attribute the backend adds later still shows up, rather than vanishing.
+  const extraRows = data.attributes
+    .filter((attr) => !grouped.has(attr.key))
+    .map(fromAttribute);
+  if (extraRows.length) sections.push({ key: 'more', label: 'More', rows: extraRows });
+
   const confirmRemove = (id: string, name: string) => {
     Alert.alert('Remove this look?', `“${name}” will be deleted from your passport.`, [
       { text: 'Keep it', style: 'cancel' },
@@ -69,9 +162,9 @@ export default function PassportScreen() {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.md }}>
-        <Logo variant="symbol" width={36} />
-        <Txt variant="display" serif>My Beauty Passport</Txt>
+      <View style={styles.rowBetween}>
+        <Txt variant="display" serif accessibilityRole="header">My Beauty Passport</Txt>
+        <Logo variant="symbol" width={32} />
       </View>
       <Txt variant="body" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
         Everything you have told us, and everything a scan has found. Nothing else.
@@ -79,16 +172,22 @@ export default function PassportScreen() {
 
       {/* --------------------------------------------------------- completion */}
       <Card>
-        <View style={styles.rowBetween}>
-          <Txt variant="heading" serif>{Math.round(data.completion * 100)}% complete</Txt>
-          <Txt variant="bodySm" tone="muted">{data.completed}/{data.total}</Txt>
-        </View>
-        <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
-          {data.completionOf ?? 'Beauty Passport attributes'}. The style questionnaire
-          tracks its own, separate progress.
-        </Txt>
-        <View style={{ marginTop: SPACE.md }}>
-          <ProgressBar value={data.completion} label="Profile completion" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.lg }}>
+          <ProgressRing
+            value={data.completion}
+            size={84}
+            stroke={7}
+            accessibilityLabel={`${Math.round(data.completion * 100)} percent of your passport discovered`}
+          >
+            <Txt variant="h3" serif>{Math.round(data.completion * 100)}%</Txt>
+          </ProgressRing>
+          <View style={{ flex: 1 }}>
+            <Txt variant="heading" serif>{data.completed} of {data.total} discovered</Txt>
+            <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>
+              {data.completionOf ?? 'Beauty Passport attributes'}. The style questionnaire
+              tracks its own, separate progress.
+            </Txt>
+          </View>
         </View>
         {data.nextAction ? (
           <Button
@@ -103,33 +202,36 @@ export default function PassportScreen() {
       {/* --------------------------------------------------------- attributes */}
       <View style={styles.section}>
         <SectionHeader title="Your profile" />
-        {data.attributes.map((attr) => (
-          <Card
-            key={attr.key}
-            style={{ marginBottom: SPACE.sm }}
-            onPress={() => {
-              const route = attr.status === 'present' ? attr.route : attr.action?.route;
-              if (route) router.push(route as never);
-            }}
-            accessibilityLabel={`${attr.label}, ${attr.status === 'present' ? 'set' : 'not set'}`}
-          >
-            <View style={styles.rowBetween}>
-              <Txt variant="bodySm" tone="muted">{attr.label}</Txt>
-              {attr.status === 'present' ? (
-                <Txt variant="bodySm" weight="semibold" style={{ flexShrink: 1, textAlign: 'right' }}>
-                  {Array.isArray(attr.value) ? attr.value.slice(0, 3).join(', ') : attr.value}
-                </Txt>
-              ) : (
-                <Txt variant="bodySm" tone="accent" weight="semibold">
-                  {attr.action?.label ?? 'Add'}
-                </Txt>
-              )}
+        {sections.map((section) => {
+          const missing = section.rows.find((row) => !row.present && row.actionRoute);
+          return (
+            <View key={section.key}>
+              <ListGroup label={section.label.toUpperCase()}>
+                {section.rows.map((row, index) => (
+                  <ListRow
+                    key={row.key}
+                    title={row.title}
+                    value={row.present ? row.value : undefined}
+                    subtitle={row.present ? (row.detail ?? undefined) : 'Not yet discovered'}
+                    last={index === section.rows.length - 1}
+                    onPress={() => {
+                      const target = row.present ? row.route : row.actionRoute;
+                      if (target) router.push(target as never);
+                    }}
+                  />
+                ))}
+              </ListGroup>
+              {missing ? (
+                <Button
+                  label={missing.actionLabel ?? 'Discover'}
+                  variant="secondary"
+                  style={{ marginTop: -SPACE.md, marginBottom: SPACE.xl }}
+                  onPress={() => router.push(missing.actionRoute as never)}
+                />
+              ) : null}
             </View>
-            {attr.detail ? (
-              <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.xs }}>{attr.detail}</Txt>
-            ) : null}
-          </Card>
-        ))}
+          );
+        })}
       </View>
 
       {/* ------------------------------------------------------- my looks */}

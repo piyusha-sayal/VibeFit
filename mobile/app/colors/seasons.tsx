@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Card, Chip, ErrorState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
+import {
+  Card, Chip, ErrorState, LoadingState, PageHeader, Screen, SectionHeader, Swatch, Txt,
+} from '../../components/ds';
 import { SPACE } from '../../constants/theme';
 import { useColorReport, useSeasons } from '../../hooks/useBeauty';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -29,11 +31,11 @@ export default function SeasonsScreen() {
   const shown = family ? seasons.data.filter((s) => s.family === family) : seasons.data;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="title" serif>The twelve seasons</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.lg }}>
-        Four families, three variations each. Yours is one of them; the rest are here to compare against.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="The twelve seasons"
+        subtitle="Four families, three variations each. Yours is one of them; the rest are here to compare against."
+      />
 
       <View style={styles.wrap}>
         <Chip label="All" selected={family === null} onPress={() => setFamily(null)} />
@@ -67,7 +69,7 @@ export default function SeasonsScreen() {
               <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>{season.summary}</Txt>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: SPACE.md }}>
                 {[...season.palettes.best, ...season.palettes.neutrals].map((s) => (
-                  <Swatch key={`${season.season}-${s.hex}`} hex={s.hex} size={40} />
+                  <Swatch key={`${season.season}-${s.hex}`} hex={s.hex} />
                 ))}
               </ScrollView>
             </Card>
@@ -75,19 +77,20 @@ export default function SeasonsScreen() {
         })}
       </View>
 
-      <SectionHeader title="Reading this" />
-      <Card variant="outlined">
-        <Txt variant="bodySm" tone="muted">
-          Seasons in the same family share an undertone. What separates them is depth and clarity — which
-          is why your runner-up is almost always the neighbour that shares two of your three traits.
-        </Txt>
-      </Card>
-    </ScrollView>
+      <View style={{ marginTop: SPACE.xxl }}>
+        <SectionHeader title="Reading this" />
+        <Card variant="outlined">
+          <Txt variant="bodySm" tone="muted">
+            Seasons in the same family share an undertone. What separates them is depth and clarity — which
+            is why your runner-up is almost always the neighbour that shares two of your three traits.
+          </Txt>
+        </Card>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
   center: { flex: 1, justifyContent: 'center' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm },

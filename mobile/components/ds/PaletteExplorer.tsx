@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, EmptyState, ErrorState, LoadingState, Swatch, Txt } from './index';
+import { Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, Screen, Swatch, Txt } from './index';
 import type { Swatch as SwatchData } from '../../services/beautyService';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { NotFoundError, useColorReport, useSaveLook } from '../../hooks/useBeauty';
@@ -50,15 +50,15 @@ export function PaletteExplorer({ title, intro, pick, caveat, lookKind = 'colour
 
   if (report.error instanceof NotFoundError) {
     return (
-      <ScrollView contentContainerStyle={styles.scroll} style={{ backgroundColor: colors.bg }}>
-        <Txt variant="title" serif>{title}</Txt>
+      <Screen>
+        <PageHeader title={title} />
         <EmptyState
           title="No colour analysis yet"
           body="These shades come from your own season, so there is nothing to show until a scan finds your colouring."
           actionLabel="Run an analysis"
           onAction={() => router.push('/(tabs)/scan' as never)}
         />
-      </ScrollView>
+      </Screen>
     );
   }
 
@@ -73,11 +73,8 @@ export function PaletteExplorer({ title, intro, pick, caveat, lookKind = 'colour
   const groups = pick(report.data.palettes);
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="title" serif>{title}</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.lg }}>
-        {intro}
-      </Txt>
+    <Screen>
+      <PageHeader title={title} subtitle={intro} />
       <Card variant="tinted" accent="gold" style={{ marginBottom: SPACE.xl }}>
         <Txt variant="overline" tone="muted">Your season</Txt>
         <Txt variant="heading" serif style={{ marginTop: 2 }}>{report.data.label}</Txt>
@@ -139,12 +136,11 @@ export function PaletteExplorer({ title, intro, pick, caveat, lookKind = 'colour
           {saveLook.isError ? <ErrorState message="Could not save that." /> : null}
         </Card>
       ) : null}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
   center: { flex: 1, justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
   compareRow: { flexDirection: 'row', gap: SPACE.md, marginTop: SPACE.md },

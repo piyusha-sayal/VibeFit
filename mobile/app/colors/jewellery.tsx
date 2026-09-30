@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, Chip, EmptyState, ErrorState, LoadingState, SectionHeader, Txt } from '../../components/ds';
+import {
+  Button, Card, Chip, EmptyState, ErrorState, LoadingState, PageHeader, Screen, SectionHeader, Txt,
+} from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { NotFoundError, useColorReport, useSaveLook } from '../../hooks/useBeauty';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -31,15 +33,15 @@ export default function JewelleryScreen() {
 
   if (report.error instanceof NotFoundError) {
     return (
-      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-        <Txt variant="title" serif>Jewellery metals</Txt>
+      <Screen>
+        <PageHeader title="Jewellery metals" />
         <EmptyState
           title="No season yet"
           body="Which metal lights you up depends on your undertone, so this needs an analysis first."
           actionLabel="Run an analysis"
           onAction={() => router.push('/(tabs)/scan' as never)}
         />
-      </ScrollView>
+      </Screen>
     );
   }
 
@@ -54,12 +56,11 @@ export default function JewelleryScreen() {
   const recommended = report.data.metals;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="title" serif>Jewellery metals</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
-        A leaning, not a rule. Most people wear both; this is the one that tends to look lit rather than
-        placed.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Jewellery metals"
+        subtitle="A leaning, not a rule. Most people wear both; this is the one that tends to look lit rather than placed."
+      />
 
       <Card variant="tinted" accent="gold">
         <Txt variant="overline" tone="muted">Suggested for {report.data.label}</Txt>
@@ -112,14 +113,13 @@ export default function JewelleryScreen() {
           }}
         />
       ) : null}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
   center: { flex: 1, justifyContent: 'center' },
   metalRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.lg },
-  metalDot: { width: 46, height: 46, borderRadius: RADIUS.pill },
+  metalDot: { width: 56, height: 56, borderRadius: RADIUS.pill },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm },
 });

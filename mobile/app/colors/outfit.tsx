@@ -1,8 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, EmptyState, ErrorState, LoadingState, ProgressBar, SectionHeader, Swatch, Txt } from '../../components/ds';
+import {
+  Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, ProgressBar, Screen, SectionHeader,
+  Swatch, Txt,
+} from '../../components/ds';
 import { RADIUS, SPACE } from '../../constants/theme';
 import { NotFoundError, useColorReport, useSaveLook } from '../../hooks/useBeauty';
 import type { Swatch as SwatchData } from '../../services/beautyService';
@@ -26,15 +29,15 @@ export default function OutfitMatcherScreen() {
 
   if (report.error instanceof NotFoundError) {
     return (
-      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-        <Txt variant="title" serif>Outfit colour matcher</Txt>
+      <Screen>
+        <PageHeader title="Outfit colour matcher" />
         <EmptyState
           title="No palette to match from"
           body="The matcher combines colours from your own season."
           actionLabel="Run an analysis"
           onAction={() => router.push('/(tabs)/scan' as never)}
         />
-      </ScrollView>
+      </Screen>
     );
   }
 
@@ -61,12 +64,11 @@ export default function OutfitMatcherScreen() {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="title" serif>Outfit colour matcher</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
-        Pick two colours from your palette. The relationship between them is measured, not guessed —
-        plain geometry on the colour wheel.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Outfit colour matcher"
+        subtitle="Pick two colours from your palette. The relationship between them is measured, not guessed — plain geometry on the colour wheel."
+      />
 
       <SectionHeader title="Your colours" />
       <View style={styles.grid}>
@@ -122,12 +124,11 @@ export default function OutfitMatcherScreen() {
           </Txt>
         </Card>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
   center: { flex: 1, justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
   previewRow: { flexDirection: 'row', gap: SPACE.md },
