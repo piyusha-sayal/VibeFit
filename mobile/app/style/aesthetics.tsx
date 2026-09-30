@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { Button, Card, Chip, LoadingState, SectionHeader, Txt } from '../../components/ds';
+import {
+  Button, Card, Chip, LoadingState, PageHeader, Screen, Section, Txt,
+} from '../../components/ds';
+import { SelectionCheck } from '../../components/style/SelectionCheck';
 import { GarmentFigure } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import {
   useAesthetics, useStyleProfile, useStyleQuiz, useSubmitQuiz, useUpdateStyleProfile,
 } from '../../hooks/useStyle';
-import { useTheme } from '../../theme/ThemeProvider';
 
 export default function AestheticExplorerScreen() {
-  const { colors } = useTheme();
   const aesthetics = useAesthetics();
   const profile = useStyleProfile();
   const quiz = useStyleQuiz();
@@ -46,15 +47,14 @@ export default function AestheticExplorerScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Your aesthetic</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        Choose as many as fit. Nobody is one aesthetic, and none of these is
-        assumed from where you live or how you look.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Your aesthetic"
+        subtitle="Choose as many as fit. Nobody is one aesthetic, and none of these is assumed from where you live or how you look."
+      />
 
       {/* ------------------------------------------------------------- quiz */}
-      <Card variant="tinted" accent="lavender" style={{ marginTop: SPACE.xl }}>
+      <Card variant="tinted" accent="lavender">
         <Txt variant="heading">Not sure where to start?</Txt>
         <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
           {quiz.data?.note ?? 'A short optional quiz that suggests a few to try.'}
@@ -116,7 +116,7 @@ export default function AestheticExplorerScreen() {
       ) : null}
 
       {/* ------------------------------------------------------ the library */}
-      <SectionHeader title="All sixteen" style={{ marginTop: SPACE.xxl }} />
+      <Section title="All sixteen">
       {aesthetics.isLoading ? (
         <LoadingState />
       ) : (
@@ -129,8 +129,9 @@ export default function AestheticExplorerScreen() {
               accent="gold"
               style={{ marginBottom: SPACE.md }}
               onPress={() => toggleAesthetic(aesthetic.key)}
-              accessibilityLabel={aesthetic.name}
+              accessibilityLabel={`${aesthetic.name}. ${selected ? 'In your profile' : 'Not in your profile'}`}
             >
+              <SelectionCheck selected={selected} />
               <View style={styles.rowBetween}>
                 <Txt variant="heading">{aesthetic.name}</Txt>
                 <Txt variant="caption" tone="muted">{aesthetic.effort} effort</Txt>
@@ -162,12 +163,12 @@ export default function AestheticExplorerScreen() {
           );
         })
       )}
-    </ScrollView>
+      </Section>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
 });

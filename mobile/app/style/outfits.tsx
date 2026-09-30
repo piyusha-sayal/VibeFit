@@ -2,32 +2,32 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, Chip, EmptyState, ErrorState, LoadingState, Swatch, Txt } from '../../components/ds';
+import {
+  Card, Chip, EmptyState, ErrorState, LoadingState, PageHeader, Screen, Swatch, Txt,
+} from '../../components/ds';
 import { GarmentFigure, INSPIRATION_NOTE } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useSaveLook } from '../../hooks/useBeauty';
 import { useOutfits } from '../../hooks/useStyle';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const OCCASIONS = ['everyday', 'work', 'college', 'date', 'party', 'wedding',
                    'indian_wedding', 'festival', 'interview', 'vacation'];
 
 export default function OutfitRecommendationsScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const [occasion, setOccasion] = useState<string | undefined>();
   const query = useOutfits(occasion);
   const saveLook = useSaveLook();
   const [savedKey, setSavedKey] = useState<string | null>(null);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Outfits</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        Built from what you have told us. Nothing here needs a photograph of you.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Outfits"
+        subtitle="Built from what you have told us. Nothing here needs a photograph of you."
+      />
 
-      <Txt variant="overline" tone="muted" style={{ marginTop: SPACE.xl }}>Occasion</Txt>
+      <Txt variant="overline" tone="muted">Occasion</Txt>
       <View style={styles.chips}>
         {OCCASIONS.map((o) => (
           <Chip
@@ -152,12 +152,11 @@ export default function OutfitRecommendationsScreen() {
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.lg }}>
         {INSPIRATION_NOTE}
       </Txt>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
 });

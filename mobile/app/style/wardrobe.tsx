@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Card, Chip, SectionHeader, Txt } from '../../components/ds';
+import { Card, Chip, EmptyState, PageHeader, Screen, Section, Txt } from '../../components/ds';
 import { WARDROBE } from '../../constants/wardrobe';
 import { SPACE } from '../../constants/theme';
 import { useBeautyProfile } from '../../hooks/useBeauty';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const GROUPS = ['All', 'Indian', 'Global'] as const;
 
 export default function WardrobeLibraryScreen() {
-  const { colors } = useTheme();
   const profile = useBeautyProfile();
   const [group, setGroup] = useState<(typeof GROUPS)[number]>('All');
 
@@ -18,11 +16,11 @@ export default function WardrobeLibraryScreen() {
   const aesthetics = profile.data?.aesthetics ?? [];
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="title" serif>Wardrobe library</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.lg }}>
-        Every category is available to everyone. Nothing here is unlocked or restricted by where you are.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Wardrobe library"
+        subtitle="Every category is available to everyone. Nothing here is unlocked or restricted by where you are."
+      />
 
       <View style={styles.wrap}>
         {GROUPS.map((g) => (
@@ -37,26 +35,33 @@ export default function WardrobeLibraryScreen() {
         </Card>
       ) : null}
 
-      <View style={styles.section}>
-        <SectionHeader title={`${shown.length} categories`} />
-        {shown.map((item) => (
-          <Card key={item.name} style={{ marginBottom: SPACE.sm }}>
-            <View style={styles.rowBetween}>
-              <Txt variant="body" weight="semibold">{item.name}</Txt>
-              <Txt variant="caption" tone="subtle">{item.group}</Txt>
-            </View>
-            <Txt variant="caption" tone="muted" style={{ marginTop: 2 }}>{item.occasion}</Txt>
-            <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>{item.note}</Txt>
-          </Card>
-        ))}
-      </View>
-    </ScrollView>
+      <Section title={`${shown.length} categories`}>
+        {shown.length === 0 ? (
+          <EmptyState
+            title="Nothing in this group"
+            body="Try another group — every category is one tap away."
+          />
+        ) : (
+          <View style={styles.grid}>
+            {shown.map((item) => (
+              <View key={item.name} style={styles.tile}>
+                <Card style={{ flex: 1 }}>
+                  <Txt variant="body" weight="semibold">{item.name}</Txt>
+                  <Txt variant="caption" tone="subtle" style={{ marginTop: 2 }}>{item.group}</Txt>
+                  <Txt variant="caption" tone="muted" style={{ marginTop: SPACE.sm }}>{item.occasion}</Txt>
+                  <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.sm }}>{item.note}</Txt>
+                </Card>
+              </View>
+            ))}
+          </View>
+        )}
+      </Section>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
-  section: { marginTop: SPACE.xxl },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  tile: { width: '48%', marginBottom: SPACE.md },
 });

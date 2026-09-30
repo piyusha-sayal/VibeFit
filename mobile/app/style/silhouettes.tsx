@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Card, Chip, LoadingState, Txt } from '../../components/ds';
+import { Card, Chip, LoadingState, PageHeader, Screen, Section, Txt } from '../../components/ds';
+import { SelectionCheck } from '../../components/style/SelectionCheck';
 import { GarmentFigure, INSPIRATION_NOTE } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useGarments, useStyleProfile, useUpdateStyleProfile } from '../../hooks/useStyle';
-import { useTheme } from '../../theme/ThemeProvider';
 
 /** What each shape does, in plain terms. No shape is better than another. */
 const SILHOUETTE_NOTES: Record<string, string> = {
@@ -30,7 +30,6 @@ function normalise(value: string): string {
 }
 
 export default function SilhouetteExplorerScreen() {
-  const { colors } = useTheme();
   const garments = useGarments();
   const profile = useStyleProfile();
   const update = useUpdateStyleProfile();
@@ -45,14 +44,13 @@ export default function SilhouetteExplorerScreen() {
   const chosen = profile.data?.silhouettePreferences ?? [];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Silhouettes</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        The shape a garment makes, and what each one does. Keep the ones you
-        like in your profile.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Silhouettes"
+        subtitle="The shape a garment makes, and what each one does. Keep the ones you like in your profile."
+      />
 
-      <View style={{ marginTop: SPACE.xl }}>
+      <Section>
         {shapes.map((shape) => {
           const examples = (garments.data?.garments ?? [])
             .filter((g) => g.silhouette === shape)
@@ -66,7 +64,9 @@ export default function SilhouetteExplorerScreen() {
               accent="gold"
               style={{ marginBottom: SPACE.md }}
               onPress={() => setActive(active === shape ? null : shape)}
+              accessibilityLabel={`${shape.replace(/_/g, ' ')}. ${selected ? 'In your profile' : 'Not in your profile'}`}
             >
+              <SelectionCheck selected={selected} />
               <View style={styles.row}>
                 <GarmentFigure silhouette={shape} seed={shape} width={70} />
                 <View style={{ flex: 1, marginLeft: SPACE.lg }}>
@@ -104,17 +104,16 @@ export default function SilhouetteExplorerScreen() {
             </Card>
           );
         })}
-      </View>
+      </Section>
 
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.lg }}>
         {INSPIRATION_NOTE}
       </Txt>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   row: { flexDirection: 'row', alignItems: 'flex-start' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
 });

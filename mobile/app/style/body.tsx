@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Card, Chip, ErrorState, LoadingState, SectionHeader, Txt } from '../../components/ds';
+import {
+  Button, Card, ErrorState, LoadingState, PageHeader, Screen, Section, SelectCard, StatusBanner, Txt,
+} from '../../components/ds';
+import { GarmentFigure } from '../../components/visual';
 import { BODY_GUIDANCE, BODY_TYPES } from '../../constants/wardrobe';
 import { SPACE } from '../../constants/theme';
 import { useBeautyProfile, useSaveBeautyProfile } from '../../hooks/useBeauty';
-import { useTheme } from '../../theme/ThemeProvider';
+
+/** The silhouette each body type's card illustrates. Decorative only — never
+    a claim about how a body looks, just a shape from the garment library. */
+const BODY_TYPE_ART: Record<string, string> = {
+  pear: 'a_line',
+  apple: 'column',
+  hourglass: 'fit_and_flare',
+  rectangle: 'straight',
+  inverted_triangle: 'wide_leg',
+};
 
 /**
  * Body type, chosen by the person it belongs to.
@@ -17,7 +29,6 @@ import { useTheme } from '../../theme/ThemeProvider';
  */
 export default function BodyStyleScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const profile = useBeautyProfile();
   const save = useSaveBeautyProfile();
   const [choice, setChoice] = useState<string | null>(null);
@@ -28,68 +39,63 @@ export default function BodyStyleScreen() {
   if (profile.isLoading) return <LoadingState label="Loading your styling profile…" />;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="title" serif>Body type</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        You choose this, not a camera. MyLookFit does not ask for body photographs and does not estimate
-        proportions from your face scan.
-      </Txt>
+    <Screen>
+      <PageHeader title="Body type" subtitle="You choose this — not a camera." />
 
-      <View style={styles.section}>
-        <SectionHeader title="Pick what fits, or skip it" />
-        <View style={styles.wrap}>
+      <StatusBanner
+        tone="info"
+        title="Self-selected, always"
+        body="MyLookFit does not ask for body photographs and does not estimate proportions from your face scan."
+      />
+
+      <Section title="Pick what fits, or skip it">
+        <View style={styles.grid}>
           {BODY_TYPES.map((t) => (
-            <Chip
-              key={t.key}
-              label={t.label}
-              accent="sage"
-              selected={selected === t.key}
-              onPress={() => setChoice(t.key)}
-            />
+            <View key={t.key} style={styles.tile}>
+              <SelectCard
+                title={t.label}
+                subtitle={t.note}
+                selected={selected === t.key}
+                onPress={() => setChoice(t.key)}
+                art={<GarmentFigure silhouette={BODY_TYPE_ART[t.key] ?? 'straight'} seed={t.key} width={48} />}
+              />
+            </View>
           ))}
         </View>
-        {selected ? (
-          <Txt variant="bodySm" tone="subtle" style={{ marginTop: SPACE.md }}>
-            {BODY_TYPES.find((t) => t.key === selected)?.note}
-          </Txt>
-        ) : null}
-      </View>
+      </Section>
 
       {guidance ? (
         <>
-          <Card variant="tinted" accent="sage" style={{ marginTop: SPACE.xl }}>
+          <Card variant="tinted" accent="sage" style={{ marginTop: SPACE.lg }}>
             <Txt variant="bodySm">{guidance.summary}</Txt>
             <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.sm }}>
               Options worth trying — not rules, and not a verdict on how you look.
             </Txt>
           </Card>
 
-          <View style={styles.section}>
-            <SectionHeader title="Worth exploring" />
+          <Section title="Worth exploring">
             {guidance.explore.map((item) => (
               <Card key={item} style={{ marginBottom: SPACE.sm }}>
                 <Txt variant="bodySm">{item}</Txt>
               </Card>
             ))}
-          </View>
+          </Section>
 
-          <View style={styles.section}>
-            <SectionHeader title="Indian wardrobe" />
+          <Section title="Indian wardrobe">
             {guidance.indian.map((item) => (
               <Card key={item} variant="tinted" accent="peach" style={{ marginBottom: SPACE.sm }}>
                 <Txt variant="bodySm">{item}</Txt>
               </Card>
             ))}
-          </View>
+          </Section>
 
-          <View style={styles.section}>
-            <SectionHeader title="Global wardrobe" />
+          <Section title="Global wardrobe">
             {guidance.global.map((item) => (
               <Card key={item} variant="tinted" accent="sage" style={{ marginBottom: SPACE.sm }}>
                 <Txt variant="bodySm">{item}</Txt>
               </Card>
             ))}
-          </View>
+          </Section>
         </>
       ) : null}
 
@@ -112,12 +118,11 @@ export default function BodyStyleScreen() {
         style={{ marginTop: SPACE.md }}
         onPress={() => router.push('/style' as never)}
       />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingTop: SPACE.xxxl, paddingBottom: SPACE.xxxl * 2 },
-  section: { marginTop: SPACE.xxl },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  tile: { width: '48%', marginBottom: SPACE.sm },
 });

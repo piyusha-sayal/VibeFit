@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, Chip, ErrorState, LoadingState, SectionHeader, Txt } from '../../components/ds';
+import {
+  Card, Chip, ErrorState, LoadingState, PageHeader, Screen, Section, StatusBanner, Txt,
+} from '../../components/ds';
 import { FaceFigure, INSPIRATION_NOTE } from '../../components/visual';
 import type { BlushPlacement, LinerStyle } from '../../components/visual/shapes';
 import { SPACE } from '../../constants/theme';
 import { useAesthetics, useFaceProfile } from '../../hooks/useFace';
 import { usePersona } from '../../hooks/usePersona';
 import { makeupPicks, orderByPicks } from '../../constants/personalise';
-import { useTheme } from '../../theme/ThemeProvider';
 
 /** Which zones an aesthetic actually emphasises, for the illustration. */
 /** Where the blush sits, per aesthetic. A swatch shows the colour; it cannot
@@ -64,9 +65,12 @@ const EMPHASIS: Record<string, ('eyes' | 'lips' | 'cheeks' | 'brows')[]> = {
 const OCCASIONS = ['everyday', 'work', 'evening', 'wedding', 'festival', 'photography'] as const;
 const TIMES = [5, 10, 20, 40] as const;
 
+function prettify(value: string): string {
+  return value.replace(/_/g, ' ');
+}
+
 export default function MakeupStudioScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const [occasion, setOccasion] = useState<string | undefined>();
   const [minutes, setMinutes] = useState<number | undefined>();
   const query = useAesthetics(occasion, minutes);
@@ -75,63 +79,68 @@ export default function MakeupStudioScreen() {
   const picks = makeupPicks(persona.ageRange, persona.genderPresentation);
 
   const unset = profile.data?.attributes.filter((a) => !a.value).length ?? 0;
+  const season = profile.data?.context.season ?? null;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Makeup Studio</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        Fourteen aesthetics, and technique drawn from the features you have confirmed.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Makeup Studio"
+        subtitle="Fourteen aesthetics, and technique drawn from the features you have confirmed."
+      />
 
-      {unset > 0 && (
-        <Card
-          variant="tinted"
-          accent="lavender"
-          style={{ marginTop: SPACE.lg }}
-          onPress={() => router.push('/(tabs)/scan' as never)}
-        >
-          <Txt variant="body">
-            {unset} {unset === 1 ? 'feature is' : 'features are'} still unset.
-          </Txt>
-          <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
-            Take a selfie scan and they fill in automatically →
-          </Txt>
-        </Card>
-      )}
+      {unset > 0 ? (
+        <StatusBanner
+          tone="info"
+          title={`${unset} ${unset === 1 ? 'feature is' : 'features are'} still unset`}
+          body="Take a selfie scan and they fill in automatically."
+          actionLabel="Scan"
+          onAction={() => router.push('/(tabs)/scan' as never)}
+        />
+      ) : null}
 
-      <Txt variant="overline" tone="muted" style={{ marginTop: SPACE.xl }}>Occasion</Txt>
-      <View style={styles.chips}>
-        {OCCASIONS.map((o) => (
-          <Chip
-            key={o}
-            label={o}
-            accent="blush"
-            selected={occasion === o}
-            onPress={() => setOccasion(occasion === o ? undefined : o)}
-          />
-        ))}
-      </View>
+      <StatusBanner
+        tone={season ? 'success' : 'info'}
+        title={season ? `Palette ready: ${prettify(season)}` : 'No palette yet'}
+        body={season
+          ? 'Every look below can draw its lip, cheek and eye colours from your season.'
+          : 'Run a colour analysis and looks come with your own lip, cheek and eye shades.'}
+        actionLabel={season ? 'View palette' : 'Run analysis'}
+        onAction={() => router.push('/colors' as never)}
+      />
 
-      <Txt variant="overline" tone="muted" style={{ marginTop: SPACE.lg }}>Time you have</Txt>
-      <View style={styles.chips}>
-        {TIMES.map((t) => (
-          <Chip
-            key={t}
-            label={`${t} min`}
-            accent="peach"
-            selected={minutes === t}
-            onPress={() => setMinutes(minutes === t ? undefined : t)}
-          />
-        ))}
-      </View>
+      <Section title="Occasion">
+        <View style={styles.chips}>
+          {OCCASIONS.map((o) => (
+            <Chip
+              key={o}
+              label={o}
+              accent="blush"
+              selected={occasion === o}
+              onPress={() => setOccasion(occasion === o ? undefined : o)}
+            />
+          ))}
+        </View>
+
+        <Txt variant="overline" tone="muted" style={{ marginTop: SPACE.lg }}>Time you have</Txt>
+        <View style={styles.chips}>
+          {TIMES.map((t) => (
+            <Chip
+              key={t}
+              label={`${t} min`}
+              accent="peach"
+              selected={minutes === t}
+              onPress={() => setMinutes(minutes === t ? undefined : t)}
+            />
+          ))}
+        </View>
+      </Section>
 
       {query.isLoading ? (
         <LoadingState />
       ) : query.error ? (
         <ErrorState message="We could not load the aesthetics." onRetry={() => { void query.refetch(); }} />
       ) : (
-        <View style={{ marginTop: SPACE.xl }}>
-          <SectionHeader title={`${query.data!.count} looks`} />
+        <Section title={`${query.data!.count} looks`}>
           {orderByPicks(query.data!.aesthetics, picks).map((aesthetic) => (
             <Card
               key={aesthetic.key}
@@ -139,6 +148,7 @@ export default function MakeupStudioScreen() {
               onPress={() => router.push(
                 `/makeup/looks/${aesthetic.key}${occasion ? `?occasion=${occasion}` : ''}` as never,
               )}
+              accessibilityLabel={`${aesthetic.name}, ${aesthetic.minutes} minutes`}
             >
               <View style={styles.row}>
                 <FaceFigure
@@ -157,6 +167,10 @@ export default function MakeupStudioScreen() {
                   <Txt variant="bodySm" tone="muted" style={{ marginTop: 2 }}>
                     {aesthetic.summary}
                   </Txt>
+                  <View style={styles.chipsTight}>
+                    {aesthetic.intensity ? <Chip label={prettify(aesthetic.intensity)} accent="sage" /> : null}
+                    {aesthetic.occasions[0] ? <Chip label={prettify(aesthetic.occasions[0])} accent="lavender" /> : null}
+                  </View>
                   {picks.includes(aesthetic.key) ? (
                     <Txt variant="caption" tone="accent" weight="semibold" style={{ marginTop: SPACE.xs }}>
                       ✨ Picked for you
@@ -172,15 +186,15 @@ export default function MakeupStudioScreen() {
           <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.md }}>
             {INSPIRATION_NOTE}
           </Txt>
-        </View>
+        </Section>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
+  chipsTight: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs, marginTop: SPACE.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
   row: { flexDirection: 'row', alignItems: 'flex-start' },
 });

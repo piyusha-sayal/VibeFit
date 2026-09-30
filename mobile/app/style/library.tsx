@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Card, Chip, EmptyState, ErrorState, LoadingState, Txt } from '../../components/ds';
+import {
+  Card, Chip, EmptyState, ErrorState, LoadingState, PageHeader, Screen, Txt,
+} from '../../components/ds';
 import { GarmentFigure, INSPIRATION_NOTE } from '../../components/visual';
 import { SPACE } from '../../constants/theme';
 import { useSaveLook } from '../../hooks/useBeauty';
 import { useGarments, useStyleOptions } from '../../hooks/useStyle';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const REGIONS = [
   { key: undefined, label: 'All' },
@@ -17,7 +18,6 @@ const REGIONS = [
 
 export default function FashionLibraryScreen() {
   const { region: initialRegion } = useLocalSearchParams<{ region?: string }>();
-  const { colors } = useTheme();
   const options = useStyleOptions();
   const [region, setRegion] = useState<string | undefined>(initialRegion);
   const [category, setCategory] = useState<string | undefined>();
@@ -29,14 +29,13 @@ export default function FashionLibraryScreen() {
     : region === 'global' ? 'Global fashion' : 'Fashion library';
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>{title}</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        Everything here is available to everyone. Your preferences order the
-        list; they never remove a category.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title={title}
+        subtitle="Everything here is available to everyone. Your preferences order the list; they never remove a category."
+      />
 
-      <Txt variant="overline" tone="muted" style={{ marginTop: SPACE.xl }}>Tradition</Txt>
+      <Txt variant="overline" tone="muted">Tradition</Txt>
       <View style={styles.chips}>
         {REGIONS.map((r) => (
           <Chip
@@ -122,12 +121,11 @@ export default function FashionLibraryScreen() {
       <Txt variant="caption" tone="subtle" style={{ marginTop: SPACE.lg }}>
         {INSPIRATION_NOTE}
       </Txt>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   chipsTight: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs, marginTop: SPACE.sm },
   row: { flexDirection: 'row', alignItems: 'flex-start' },

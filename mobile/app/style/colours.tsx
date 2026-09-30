@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Card, Chip, EmptyState, LoadingState, SectionHeader, Swatch, Txt } from '../../components/ds';
+import {
+  Card, Chip, EmptyState, LoadingState, PageHeader, Screen, Section, Swatch, Txt,
+} from '../../components/ds';
 import { SPACE } from '../../constants/theme';
 import { useOutfitColours } from '../../hooks/useStyle';
-import { useTheme } from '../../theme/ThemeProvider';
 
 const REGIONS = [
   { key: undefined, label: 'All' },
@@ -15,7 +16,6 @@ const REGIONS = [
 
 export default function OutfitColourExplorerScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const [region, setRegion] = useState<string | undefined>();
   const query = useOutfitColours(region);
 
@@ -24,13 +24,13 @@ export default function OutfitColourExplorerScreen() {
   const data = query.data;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Outfit colours</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs }}>
-        {data?.seasonLabel
+    <Screen>
+      <PageHeader
+        title="Outfit colours"
+        subtitle={data?.seasonLabel
           ? `Pairings drawn from your ${data.seasonLabel} palette.`
           : 'Run a colour analysis and these fill with your own palette.'}
-      </Txt>
+      />
 
       <View style={styles.chips}>
         {REGIONS.map((r) => (
@@ -81,22 +81,22 @@ export default function OutfitColourExplorerScreen() {
             </Card>
           ))}
 
-          <SectionHeader title="How this works" style={{ marginTop: SPACE.lg }} />
-          <Card>
-            <Txt variant="bodySm">
-              These relationships are measured from the colours themselves —
-              hue distance and how much colour each one actually carries. The
-              same maths decides a saree and blouse as a shirt and trousers.
-            </Txt>
-          </Card>
+          <Section title="How this works">
+            <Card>
+              <Txt variant="bodySm">
+                These relationships are measured from the colours themselves —
+                hue distance and how much colour each one actually carries. The
+                same maths decides a saree and blouse as a shirt and trousers.
+              </Txt>
+            </Card>
+          </Section>
         </View>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.lg },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },

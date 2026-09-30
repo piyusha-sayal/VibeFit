@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
-import { Button, Card, Chip, LoadingState, SectionHeader, Txt } from '../../components/ds';
+import {
+  Button, Card, Chip, LoadingState, OptionRow, PageHeader, Screen, SelectCard, Txt,
+} from '../../components/ds';
 import { GarmentFigure } from '../../components/visual';
+import { ScoopNeck, SquareNeck, VNeck } from '../../components/illustrations/Necklines';
 import {
   FIT_PREFERENCES, NECKLINES, SILHOUETTES, SLEEVES,
 } from '../../constants/wardrobe';
@@ -25,6 +28,23 @@ const GARMENT_GROUPS = [
   { key: 'casual', label: 'Casualwear', options: ['T-shirts', 'Shirts', 'Co-ord sets', 'Athleisure'] },
   { key: 'formal', label: 'Formalwear', options: ['Blazers', 'Suits', 'Formal dresses', 'Occasion traditional'] },
 ];
+
+/** Body type card art: an abstract silhouette, never a photo. */
+const BODY_TYPE_ART: Record<string, string> = {
+  pear: 'a_line', apple: 'column', hourglass: 'fit_and_flare', rectangle: 'straight', inverted_triangle: 'wide_leg',
+};
+
+/** Silhouette card art, keyed by the label shown to the person. */
+function silhouetteKey(label: string): string {
+  return label.toLowerCase().replace(/[- ]/g, '_');
+}
+
+/** A neckline illustration exists for a few of these; the rest fall back to a plain row. */
+const NECKLINE_ART: Record<string, React.ComponentType<{ color?: string; size?: number }>> = {
+  'V-neck': VNeck,
+  Round: ScoopNeck,
+  Square: SquareNeck,
+};
 
 /** Adds or removes a value without mutating the stored array. */
 function toggleValue(current: string[] | undefined, value: string): string[] {
@@ -102,41 +122,26 @@ export default function StyleQuestionnaireScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.scroll}>
-      <Txt variant="display" serif>Your style profile</Txt>
-      <Txt variant="bodySm" tone="muted" style={{ marginTop: SPACE.xs, marginBottom: SPACE.xl }}>
-        Answer a section, leave, come back. Everything here is optional and
-        everything can be changed later.
-      </Txt>
+    <Screen>
+      <PageHeader
+        title="Your style profile"
+        subtitle="Answer a section, leave, come back. Everything here is optional and everything can be changed later."
+      />
 
       {section('body', 'Body styling', data.bodyTypeNote, (
         <>
-          <View style={styles.bodyGrid}>
+          <View style={styles.grid}>
             {(options.data?.bodyTypes ?? []).map((type) => {
               const selected = data.bodyType === type.key;
               return (
-                <Card
-                  key={type.key}
-                  variant={selected ? 'tinted' : 'plain'}
-                  accent="sage"
-                  style={{ width: '48%', marginBottom: SPACE.sm }}
-                  onPress={() => save({ bodyType: selected ? null : type.key })}
-                  accessibilityLabel={type.label}
-                >
-                  <View style={{ alignItems: 'center' }}>
-                    <GarmentFigure
-                      silhouette={
-                        { pear: 'a_line', apple: 'column', hourglass: 'fit_and_flare',
-                          rectangle: 'straight', inverted_triangle: 'wide_leg' }[type.key] ?? 'straight'
-                      }
-                      seed={type.key}
-                      width={56}
-                    />
-                  </View>
-                  <Txt variant="body" weight="semibold" style={{ marginTop: SPACE.xs }}>
-                    {type.label}
-                  </Txt>
-                </Card>
+                <View key={type.key} style={styles.tile}>
+                  <SelectCard
+                    title={type.label}
+                    selected={selected}
+                    onPress={() => save({ bodyType: selected ? null : type.key })}
+                    art={<GarmentFigure silhouette={BODY_TYPE_ART[type.key] ?? 'straight'} seed={type.key} width={48} />}
+                  />
+                </View>
               );
             })}
           </View>
@@ -168,37 +173,65 @@ export default function StyleQuestionnaireScreen() {
 
       {section('fit', 'Fit and silhouette', 'How you like clothes to sit.', (
         <>
-          <MultiSelect
-            title="Preferred fit"
-            options={FIT_PREFERENCES}
-            selected={data.fitPreference ? [data.fitPreference] : []}
-            onToggle={(value) => save({
-              fitPreference: data.fitPreference === value ? undefined : value.toLowerCase(),
+          <Txt variant="overline" tone="muted" style={{ marginBottom: SPACE.sm }}>Preferred fit</Txt>
+          <View style={{ marginBottom: SPACE.lg }}>
+            {FIT_PREFERENCES.map((option) => (
+              <OptionRow
+                key={option}
+                label={option}
+                selected={data.fitPreference === option.toLowerCase()}
+                onPress={() => save({
+                  fitPreference: data.fitPreference === option.toLowerCase() ? undefined : option.toLowerCase(),
+                })}
+              />
+            ))}
+          </View>
+
+          <Txt variant="overline" tone="muted" style={{ marginBottom: SPACE.sm }}>Silhouettes you like</Txt>
+          <View style={styles.grid}>
+            {SILHOUETTES.map((option) => {
+              const selected = data.silhouettePreferences.includes(option);
+              return (
+                <View key={option} style={styles.tile}>
+                  <SelectCard
+                    title={option}
+                    selected={selected}
+                    multi
+                    onPress={() => save({
+                      silhouettePreferences: toggleValue(data.silhouettePreferences, option),
+                    })}
+                    art={<GarmentFigure silhouette={silhouetteKey(option)} seed={option} width={44} />}
+                  />
+                </View>
+              );
             })}
-            accent="peach"
-          />
-          <MultiSelect
-            title="Silhouettes you like"
-            options={SILHOUETTES}
-            selected={data.silhouettePreferences}
-            onToggle={(value) => save({
-              silhouettePreferences: toggleValue(data.silhouettePreferences, value),
-            })}
-          />
+          </View>
         </>
       ))}
 
       {section('details', 'Necklines and sleeves', 'The details you reach for.', (
         <>
-          <MultiSelect
-            title="Necklines"
-            options={NECKLINES}
-            selected={data.necklinePreferences}
-            onToggle={(value) => save({
-              necklinePreferences: toggleValue(data.necklinePreferences, value),
+          <Txt variant="overline" tone="muted" style={{ marginBottom: SPACE.sm }}>Necklines</Txt>
+          <View style={styles.grid}>
+            {NECKLINES.map((option) => {
+              const selected = data.necklinePreferences.includes(option);
+              const Illustration = NECKLINE_ART[option];
+              return (
+                <View key={option} style={styles.tile}>
+                  <SelectCard
+                    title={option}
+                    selected={selected}
+                    multi
+                    onPress={() => save({
+                      necklinePreferences: toggleValue(data.necklinePreferences, option),
+                    })}
+                    art={Illustration ? <Illustration color={colors.gold} size={40} /> : undefined}
+                  />
+                </View>
+              );
             })}
-            accent="lavender"
-          />
+          </View>
+
           <MultiSelect
             title="Sleeves"
             options={SLEEVES}
@@ -289,24 +322,24 @@ export default function StyleQuestionnaireScreen() {
         </Txt>
       ) : null}
 
-      <SectionHeader title="What happens with this" style={{ marginTop: SPACE.xxl }} />
-      <Card>
+      <Card style={{ marginTop: SPACE.xxl }}>
+        <Txt variant="heading" style={{ marginBottom: SPACE.sm }}>What happens with this</Txt>
         <Txt variant="bodySm">
           Your answers order what you see. They never remove a garment: every
           category stays available whatever you pick, and no body type is
           better than another.
         </Txt>
       </Card>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { padding: SPACE.xl, paddingBottom: SPACE.xxxl },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.sm },
-  bodyGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  tile: { width: '48%', marginBottom: SPACE.sm },
   input: {
     flex: 1, borderWidth: 1, borderRadius: RADIUS.sm,
     paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, fontSize: 15,
