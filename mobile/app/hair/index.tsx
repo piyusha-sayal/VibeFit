@@ -83,7 +83,7 @@ export default function HairStudioScreen() {
           <ListRow
             title="Saved inspiration"
             subtitle="Cuts and colours you kept."
-            onPress={() => router.push('/passport' as never)}
+            onPress={() => router.push('/(tabs)/passport' as never)}
             last
           />
         </ListGroup>
